@@ -5,10 +5,17 @@ on:
     branches:
       - main
 
+env:
+  APP_DIR: ~/DACS1_backend
+  PM2_APP_NAME: backend
+
 jobs:
   deploy:
     name: SSH Deploy
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -21,20 +28,21 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
+          envs: APP_DIR,PM2_APP_NAME
           script: |
             set -e
-            cd ~/DACS1_backend
+            cd $APP_DIR
 
             echo "Pulling latest code..."
             git pull origin main
 
             echo "Installing dependencies..."
-            npm ci --omit=dev
+            npm ci
 
             echo "Building..."
             npm run build
 
             echo "Restarting app with PM2..."
-            pm2 restart backend || pm2 start dist/main.js --name backend
+            pm2 restart $PM2_APP_NAME || pm2 start npm --name $PM2_APP_NAME -- run start:prod
 
             echo "Deploy complete."
