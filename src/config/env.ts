@@ -6,7 +6,7 @@ const EnvSchema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   // Auth (Milestone 1)
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
-  JWT_EXPIRES_IN: z.string().min(1, 'JWT_EXPIRES_IN is required'),
+  JWT_EXPIRES_IN: z.string().min(1, 'JWT_EXPIRES_IN is requiredd'),
 
   // AI service (Milestone 3)
   AI_SERVICE_URL: z.string().url().optional(),
