@@ -1,7 +1,9 @@
-name: Deploy to EC2
+name: Deploy to EC2 (PM2)
+
 on:
   push:
     branches: ["main"]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -14,14 +16,35 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            APP_DIR=${{ secrets.EC2_APP_DIR }}
-            if [ ! -d "$APP_DIR" ]; then
-              git clone ${{ secrets.GIT_REPO_URL }} "$APP_DIR"
-            fi
+
+            APP_DIR="${{ secrets.EC2_APP_DIR }}"
+            mkdir -p "$APP_DIR"
             cd "$APP_DIR"
-            git pull origin main
-            cat > .env << 'EOF'
-            ${{ secrets.ENV_FILE }}
+
+            # Nếu chưa clone repo lần đầu
+            if [ ! -d .git ]; then
+              git clone https://github.com/tnghia05/DACS1_backend.git .
+            fi
+
+            # Tạo .env từ GitHub Secrets
+            cat > .env <<EOF
+            PORT=3000
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
             EOF
-            docker compose down
-            docker compose up -d --build
+
+            git fetch --all
+            git reset --hard origin/main
+
+            # Cài deps + build
+            npm ci
+            npm run build
+
+            # Cài PM2 nếu chưa có
+            command -v pm2 >/dev/null 2>&1 || sudo npm i -g pm2
+
+            # Restart app
+            pm2 restart backend || pm2 start dist/main.js --name backend
+            pm2 save
