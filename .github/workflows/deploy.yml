@@ -14,10 +14,13 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
+            if [ ! -d "${{ secrets.EC2_APP_DIR }}" ]; then
+              git clone ${{ secrets.GIT_REPO_URL }} "${{ secrets.EC2_APP_DIR }}"
+            fi
             cd "${{ secrets.EC2_APP_DIR }}"
+            git pull origin main
             cat > .env << 'EOF'
             ${{ secrets.ENV_FILE }}
             EOF
-            git pull origin main
             docker compose down
             docker compose up -d --build
