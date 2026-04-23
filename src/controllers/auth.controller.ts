@@ -1,41 +1,119 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Headers, Post, Req, Res } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from '../services/auth.service';
 import { RegisterDto } from '../dto/auth/register.dto';
 import { LoginDto } from '../dto/auth/login.dto';
 import { GoogleLoginDto } from '../dto/auth/google-login.dto';
 import { RefreshDto } from '../dto/auth/refresh.dto';
+import type { Request, Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register(@Body() body: RegisterDto) {
-    return this.authService.register(
+  async register(
+    @Body() body: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const data = await this.authService.register(
       body.email,
       body.password,
       body.displayName,
     );
+    setAuthCookies(res, data.refresh_token, data.csrf_token);
+    return stripCookieFields(data);
   }
 
   @Post('login')
-  login(@Body() body: LoginDto) {
-    return this.authService.login(body.email, body.password);
+  @Throttle({ default: { limit: 8, ttl: 60_000 } })
+  async login(
+    @Body() body: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const data = await this.authService.login(body.email, body.password);
+    setAuthCookies(res, data.refresh_token, data.csrf_token);
+    return stripCookieFields(data);
   }
 
   @Post('google')
-  google(@Body() body: GoogleLoginDto) {
-    return this.authService.loginWithGoogleIdToken(body.id_token);
+  async google(
+    @Body() body: GoogleLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const data = await this.authService.loginWithGoogleIdToken(body.id_token);
+    setAuthCookies(res, data.refresh_token, data.csrf_token);
+    return stripCookieFields(data);
   }
 
   @Post('refresh')
-  refresh(@Body() body: RefreshDto) {
-    return this.authService.refresh(body.refresh_token);
+  async refresh(
+    @Req() req: Request,
+    @Headers('x-csrf-token') csrfHeader: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.['refresh_token'];
+    const csrfCookie = req.cookies?.['csrf_token'];
+    if (!refreshToken) return { error: { code: 'UNAUTHORIZED', message: 'Missing refresh token' } };
+    if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
+      return { error: { code: 'FORBIDDEN', message: 'CSRF token mismatch' } };
+    }
+
+    const rotated = await this.authService.rotateRefreshToken(refreshToken);
+    // Keep CSRF the same; rotate refresh cookie only
+    setRefreshCookie(res, rotated.refresh_token);
+    return rotated;
   }
 
   @Post('logout')
-  logout() {
-    // Stateless JWT logout: frontend just discards tokens.
+  async logout(
+    @Req() req: Request,
+    @Headers('x-csrf-token') csrfHeader: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.['refresh_token'];
+    const csrfCookie = req.cookies?.['csrf_token'];
+    if (csrfHeader && csrfCookie && csrfHeader === csrfCookie && refreshToken) {
+      await this.authService.revokeRefreshToken(refreshToken);
+    }
+    clearAuthCookies(res);
     return { ok: true };
   }
+}
+
+function stripCookieFields<T extends { refresh_token: string; csrf_token: string }>(
+  data: T,
+): Omit<T, 'refresh_token' | 'csrf_token'> {
+  const { refresh_token: _rt, csrf_token: _ct, ...rest } = data;
+  return rest;
+}
+
+function cookieBaseOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    secure: isProd,
+    sameSite: 'lax' as const,
+  };
+}
+
+function setRefreshCookie(res: Response, refreshToken: string) {
+  res.cookie('refresh_token', refreshToken, {
+    ...cookieBaseOptions(),
+    httpOnly: true,
+    path: '/api/v1/auth/refresh',
+  });
+}
+
+function setAuthCookies(res: Response, refreshToken: string, csrfToken: string) {
+  setRefreshCookie(res, refreshToken);
+  res.cookie('csrf_token', csrfToken, {
+    ...cookieBaseOptions(),
+    httpOnly: false,
+    path: '/',
+  });
+}
+
+function clearAuthCookies(res: Response) {
+  res.clearCookie('refresh_token', { path: '/api/v1/auth/refresh' });
+  res.clearCookie('csrf_token', { path: '/' });
 }

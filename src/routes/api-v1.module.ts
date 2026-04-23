@@ -7,11 +7,18 @@ import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
 import { UserModelName, UserSchema } from '../models/user.model';
+import {
+  RefreshTokenModelName,
+  RefreshTokenSchema,
+} from '../models/refresh-token.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: UserModelName, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: UserModelName, schema: UserSchema },
+      { name: RefreshTokenModelName, schema: RefreshTokenSchema },
+    ]),
   ],
   controllers: [HealthController, AuthController, UsersController],
   providers: [HealthService, UsersService, AuthService, JwtStrategy],
