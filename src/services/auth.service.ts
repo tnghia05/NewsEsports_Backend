@@ -38,7 +38,7 @@ export class AuthService {
       displayName,
     });
 
-    return this.issueToken(user);
+    return this.issueTokens(user);
   }
 
   async login(email: string, password: string) {
@@ -48,7 +48,7 @@ export class AuthService {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
-    return this.issueToken(user);
+    return this.issueTokens(user);
   }
 
   async loginWithGoogleIdToken(idToken: string) {
@@ -69,7 +69,7 @@ export class AuthService {
     const avatarUrl = payload.picture ?? undefined;
 
     const bySub = await this.usersService.findByGoogleSub(googleSub);
-    if (bySub) return this.issueToken(bySub);
+    if (bySub) return this.issueTokens(bySub);
 
     const byEmail = await this.usersService.findByEmail(email);
     if (byEmail) {
@@ -79,7 +79,7 @@ export class AuthService {
         avatarUrl,
       );
       if (!linked) throw new UnauthorizedException('Failed to link account');
-      return this.issueToken(linked);
+      return this.issueTokens(linked);
     }
 
     const passwordHash = await bcrypt.hash(cryptoFallbackPassword(), 10);
@@ -90,7 +90,40 @@ export class AuthService {
       avatarUrl,
       googleSub,
     });
-    return this.issueToken(user);
+    return this.issueTokens(user);
+  }
+
+  refresh(refreshToken: string): {
+    access_token: string;
+    refresh_token: string;
+    token_type: 'bearer';
+  } {
+    const secret = this.config.getOrThrow<string>('JWT_SECRET', {
+      infer: true,
+    });
+    let decoded: unknown;
+    try {
+      decoded = jwt.verify(refreshToken, secret);
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (!isRefreshJwtPayload(decoded)) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const access_token = jwt.sign(
+      { sub: decoded.sub, role: decoded.role } satisfies JwtPayload,
+      secret,
+      { expiresIn: this.getAccessExpiresIn() },
+    );
+    const refresh_token = jwt.sign(
+      { sub: decoded.sub, role: decoded.role, typ: 'refresh' } satisfies RefreshJwtPayload,
+      secret,
+      { expiresIn: this.getRefreshExpiresIn() },
+    );
+
+    return { access_token, refresh_token, token_type: 'bearer' };
   }
 
   verifyJwt(token: string): JwtPayload {
@@ -107,24 +140,36 @@ export class AuthService {
     }
   }
 
-  private issueToken(userDoc: UserDocument): {
+  private issueTokens(userDoc: UserDocument): {
     access_token: string;
+    refresh_token: string;
     token_type: 'bearer';
+    user: JwtUser;
   } {
     const secret = this.config.getOrThrow<string>('JWT_SECRET', {
       infer: true,
     });
-    const expiresIn = this.config.getOrThrow<string>('JWT_EXPIRES_IN', {
-      infer: true,
-    }) as jwt.SignOptions['expiresIn'];
 
     const payload: JwtPayload = {
       sub: String(userDoc._id),
       role: userDoc.role,
     };
 
-    const access_token = jwt.sign(payload, secret, { expiresIn });
-    return { access_token, token_type: 'bearer' };
+    const access_token = jwt.sign(payload, secret, {
+      expiresIn: this.getAccessExpiresIn(),
+    });
+    const refresh_token = jwt.sign(
+      { ...payload, typ: 'refresh' } satisfies RefreshJwtPayload,
+      secret,
+      { expiresIn: this.getRefreshExpiresIn() },
+    );
+
+    return {
+      access_token,
+      refresh_token,
+      token_type: 'bearer',
+      user: this.toJwtUser(userDoc),
+    };
   }
 
   toJwtUser(userDoc: UserDocument): JwtUser {
@@ -135,6 +180,19 @@ export class AuthService {
       role: userDoc.role,
       avatarUrl: userDoc.avatarUrl ?? undefined,
     };
+  }
+
+  private getAccessExpiresIn(): jwt.SignOptions['expiresIn'] {
+    return this.config.getOrThrow<string>('JWT_EXPIRES_IN', {
+      infer: true,
+    }) as jwt.SignOptions['expiresIn'];
+  }
+
+  private getRefreshExpiresIn(): jwt.SignOptions['expiresIn'] {
+    const v = this.config.get<string>('JWT_REFRESH_EXPIRES_IN', {
+      infer: true,
+    });
+    return (v ?? '30d') as jwt.SignOptions['expiresIn'];
   }
 }
 
@@ -150,5 +208,17 @@ function isJwtPayload(v: unknown): v is JwtPayload {
   return (
     typeof obj['sub'] === 'string' &&
     (obj['role'] === 'user' || obj['role'] === 'admin')
+  );
+}
+
+type RefreshJwtPayload = JwtPayload & { typ: 'refresh' };
+
+function isRefreshJwtPayload(v: unknown): v is RefreshJwtPayload {
+  if (!v || typeof v !== 'object') return false;
+  const obj = v as Record<string, unknown>;
+  return (
+    typeof obj['sub'] === 'string' &&
+    (obj['role'] === 'user' || obj['role'] === 'admin') &&
+    obj['typ'] === 'refresh'
   );
 }

@@ -3,6 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { RegisterDto } from '../dto/auth/register.dto';
 import { LoginDto } from '../dto/auth/login.dto';
 import { GoogleLoginDto } from '../dto/auth/google-login.dto';
+import { RefreshDto } from '../dto/auth/refresh.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -25,5 +26,16 @@ export class AuthController {
   @Post('google')
   google(@Body() body: GoogleLoginDto) {
     return this.authService.loginWithGoogleIdToken(body.id_token);
+  }
+
+  @Post('refresh')
+  refresh(@Body() body: RefreshDto) {
+    return this.authService.refresh(body.refresh_token);
+  }
+
+  @Post('logout')
+  logout() {
+    // Stateless JWT logout: frontend just discards tokens.
+    return { ok: true };
   }
 }

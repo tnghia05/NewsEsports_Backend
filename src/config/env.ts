@@ -7,6 +7,10 @@ const EnvSchema = z.object({
   // Auth (Milestone 1)
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   JWT_EXPIRES_IN: z.string().min(1, 'JWT_EXPIRES_IN is required'),
+  JWT_REFRESH_EXPIRES_IN: z
+    .string()
+    .min(1, 'JWT_REFRESH_EXPIRES_IN is required')
+    .optional(),
 
   // AI service (Milestone 3)
   AI_SERVICE_URL: z.string().url().optional(),
