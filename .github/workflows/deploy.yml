@@ -14,10 +14,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            if [ ! -d "${{ secrets.EC2_APP_DIR }}" ]; then
-              git clone ${{ secrets.GIT_REPO_URL }} "${{ secrets.EC2_APP_DIR }}"
+            APP_DIR=~/DACS1_backend
+            if [ ! -d "$APP_DIR" ]; then
+              git clone ${{ secrets.GIT_REPO_URL }} "$APP_DIR"
             fi
-            cd "${{ secrets.EC2_APP_DIR }}"
+            cd "$APP_DIR"
             git pull origin main
             cat > .env << 'EOF'
             ${{ secrets.ENV_FILE }}
