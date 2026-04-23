@@ -16,6 +16,9 @@ let User = class User {
     email;
     passwordHash;
     displayName;
+    avatarUrl;
+    googleSub;
+    role;
 };
 exports.User = User;
 __decorate([
@@ -36,6 +39,27 @@ __decorate([
     (0, mongoose_1.Prop)({ required: true, trim: true }),
     __metadata("design:type", String)
 ], User.prototype, "displayName", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ trim: true }),
+    __metadata("design:type", String)
+], User.prototype, "avatarUrl", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        trim: true,
+        unique: true,
+        sparse: true,
+        index: true,
+    }),
+    __metadata("design:type", String)
+], User.prototype, "googleSub", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        required: true,
+        enum: ['user', 'admin'],
+        default: 'user',
+    }),
+    __metadata("design:type", String)
+], User.prototype, "role", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);

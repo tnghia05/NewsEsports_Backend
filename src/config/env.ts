@@ -5,12 +5,15 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().optional(),
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   // Auth (Milestone 1)
-  JWT_SECRET: z.string().min(1).optional(),
-  JWT_EXPIRES_IN: z.string().min(1).optional(),
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
+  JWT_EXPIRES_IN: z.string().min(1, 'JWT_EXPIRES_IN is required'),
 
   // AI service (Milestone 3)
   AI_SERVICE_URL: z.string().url().optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
+
+  // Google login (Milestone 1)
+  GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
 
   // RSS import (Milestone 4)
   RSS_SOURCES: z.string().min(1).optional(),
