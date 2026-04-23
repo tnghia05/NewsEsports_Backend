@@ -14,7 +14,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            APP_DIR=~/DACS1_backend
+            APP_DIR=${{ secrets.EC2_APP_DIR }}
             if [ ! -d "$APP_DIR" ]; then
               git clone ${{ secrets.GIT_REPO_URL }} "$APP_DIR"
             fi
