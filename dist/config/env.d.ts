@@ -5,6 +5,7 @@ declare const EnvSchema: z.ZodObject<{
     MONGODB_URI: z.ZodString;
     JWT_SECRET: z.ZodString;
     JWT_EXPIRES_IN: z.ZodString;
+    JWT_REFRESH_EXPIRES_IN: z.ZodOptional<z.ZodString>;
     AI_SERVICE_URL: z.ZodOptional<z.ZodString>;
     AI_TIMEOUT_MS: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     GOOGLE_CLIENT_ID: z.ZodString;

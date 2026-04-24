@@ -11,10 +11,13 @@ import { ApiV1Module } from './routes/api-v1.module';
     ConfigModule,
     MongoModule,
     ApiV1Module,
-    ThrottlerModule.forRoot({
-      ttl: 60_000,
-      limit: 200,
-    }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60, // seconds
+        limit: 200,
+      },
+    ]),
     RouterModule.register([{ path: 'api/v1', module: ApiV1Module }]),
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

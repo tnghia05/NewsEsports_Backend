@@ -8,6 +8,10 @@ const EnvSchema = zod_1.z.object({
     MONGODB_URI: zod_1.z.string().min(1, 'MONGODB_URI is required'),
     JWT_SECRET: zod_1.z.string().min(1, 'JWT_SECRET is required'),
     JWT_EXPIRES_IN: zod_1.z.string().min(1, 'JWT_EXPIRES_IN is required'),
+    JWT_REFRESH_EXPIRES_IN: zod_1.z
+        .string()
+        .min(1, 'JWT_REFRESH_EXPIRES_IN is required')
+        .optional(),
     AI_SERVICE_URL: zod_1.z.string().url().optional(),
     AI_TIMEOUT_MS: zod_1.z.coerce.number().int().positive().optional(),
     GOOGLE_CLIENT_ID: zod_1.z.string().min(1, 'GOOGLE_CLIENT_ID is required'),

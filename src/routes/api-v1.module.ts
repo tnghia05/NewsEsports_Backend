@@ -2,15 +2,21 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { HealthController } from '../controllers/health.controller';
 import { AuthController } from '../controllers/auth.controller';
+import { MeController } from '../controllers/me.controller';
 import { UsersController } from '../controllers/users.controller';
+import { PostsController } from '../controllers/posts.controller';
 import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
+import { PostsService } from '../services/posts.service';
+import { FollowsService } from '../services/follows.service';
 import { UserModelName, UserSchema } from '../models/user.model';
 import {
   RefreshTokenModelName,
   RefreshTokenSchema,
 } from '../models/refresh-token.model';
+import { PostModelName, PostSchema } from '../models/post.model';
+import { FollowModelName, FollowSchema } from '../models/follow.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
 
 @Module({
@@ -18,9 +24,17 @@ import { JwtStrategy } from '../infra/auth/jwt.strategy';
     MongooseModule.forFeature([
       { name: UserModelName, schema: UserSchema },
       { name: RefreshTokenModelName, schema: RefreshTokenSchema },
+      { name: PostModelName, schema: PostSchema },
+      { name: FollowModelName, schema: FollowSchema },
     ]),
   ],
-  controllers: [HealthController, AuthController, UsersController],
-  providers: [HealthService, UsersService, AuthService, JwtStrategy],
+  controllers: [
+    HealthController,
+    AuthController,
+    MeController,
+    UsersController,
+    PostsController,
+  ],
+  providers: [HealthService, UsersService, AuthService, PostsService, FollowsService, JwtStrategy],
 })
 export class ApiV1Module {}

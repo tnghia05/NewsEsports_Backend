@@ -1,4 +1,13 @@
-import { Body, Controller, Headers, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Headers,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from '../services/auth.service';
 import { RegisterDto } from '../dto/auth/register.dto';
@@ -26,7 +35,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ default: { limit: 8, ttl: 60_000 } })
+  @Throttle({ default: { limit: 8, ttl: 60 } })
   async login(
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -54,9 +63,9 @@ export class AuthController {
   ) {
     const refreshToken = req.cookies?.['refresh_token'];
     const csrfCookie = req.cookies?.['csrf_token'];
-    if (!refreshToken) return { error: { code: 'UNAUTHORIZED', message: 'Missing refresh token' } };
+    if (!refreshToken) throw new UnauthorizedException('Missing refresh token');
     if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
-      return { error: { code: 'FORBIDDEN', message: 'CSRF token mismatch' } };
+      throw new ForbiddenException('CSRF token mismatch');
     }
 
     const rotated = await this.authService.rotateRefreshToken(refreshToken);
