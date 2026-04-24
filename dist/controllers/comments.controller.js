@@ -18,13 +18,16 @@ const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 const optional_jwt_auth_guard_1 = require("../guards/optional-jwt-auth.guard");
 const user_decorator_1 = require("../decorators/user.decorator");
 const comments_service_1 = require("../services/comments.service");
+const comment_likes_service_1 = require("../services/comment-likes.service");
 const query_comments_dto_1 = require("../dto/comments/query-comments.dto");
 const create_comment_dto_1 = require("../dto/comments/create-comment.dto");
 const update_comment_dto_1 = require("../dto/comments/update-comment.dto");
 let CommentsController = class CommentsController {
     commentsService;
-    constructor(commentsService) {
+    commentLikesService;
+    constructor(commentsService, commentLikesService) {
         this.commentsService = commentsService;
+        this.commentLikesService = commentLikesService;
     }
     listForPost(user, postId, query) {
         return this.commentsService.listForPost(user, postId, query);
@@ -37,6 +40,9 @@ let CommentsController = class CommentsController {
     }
     remove(user, id) {
         return this.commentsService.remove(user, id);
+    }
+    toggleLike(user, id) {
+        return this.commentLikesService.toggleLike(user, id);
     }
 };
 exports.CommentsController = CommentsController;
@@ -79,8 +85,18 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], CommentsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('comments/:id/like'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], CommentsController.prototype, "toggleLike", null);
 exports.CommentsController = CommentsController = __decorate([
     (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [comments_service_1.CommentsService])
+    __metadata("design:paramtypes", [comments_service_1.CommentsService,
+        comment_likes_service_1.CommentLikesService])
 ], CommentsController);
 //# sourceMappingURL=comments.controller.js.map

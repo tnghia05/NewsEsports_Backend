@@ -21,11 +21,17 @@ const auth_service_1 = require("../services/auth.service");
 const posts_service_1 = require("../services/posts.service");
 const follows_service_1 = require("../services/follows.service");
 const comments_service_1 = require("../services/comments.service");
+const post_likes_service_1 = require("../services/post-likes.service");
+const post_saves_service_1 = require("../services/post-saves.service");
+const comment_likes_service_1 = require("../services/comment-likes.service");
 const user_model_1 = require("../models/user.model");
 const refresh_token_model_1 = require("../models/refresh-token.model");
 const post_model_1 = require("../models/post.model");
 const follow_model_1 = require("../models/follow.model");
 const comment_model_1 = require("../models/comment.model");
+const post_like_model_1 = require("../models/post-like.model");
+const post_save_model_1 = require("../models/post-save.model");
+const comment_like_model_1 = require("../models/comment-like.model");
 const jwt_strategy_1 = require("../infra/auth/jwt.strategy");
 let ApiV1Module = class ApiV1Module {
 };
@@ -39,6 +45,9 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: post_model_1.PostModelName, schema: post_model_1.PostSchema },
                 { name: follow_model_1.FollowModelName, schema: follow_model_1.FollowSchema },
                 { name: comment_model_1.CommentModelName, schema: comment_model_1.CommentSchema },
+                { name: post_like_model_1.PostLikeModelName, schema: post_like_model_1.PostLikeSchema },
+                { name: post_save_model_1.PostSaveModelName, schema: post_save_model_1.PostSaveSchema },
+                { name: comment_like_model_1.CommentLikeModelName, schema: comment_like_model_1.CommentLikeSchema },
             ]),
         ],
         controllers: [
@@ -56,6 +65,9 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             posts_service_1.PostsService,
             follows_service_1.FollowsService,
             comments_service_1.CommentsService,
+            post_likes_service_1.PostLikesService,
+            post_saves_service_1.PostSavesService,
+            comment_likes_service_1.CommentLikesService,
             jwt_strategy_1.JwtStrategy,
         ],
     })

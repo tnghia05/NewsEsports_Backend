@@ -10,8 +10,8 @@ import {
 
 export class QueryPostsDto {
   @IsOptional()
-  @IsEnum(['latest', 'hot', 'following'] as const)
-  tab: 'latest' | 'hot' | 'following' = 'latest';
+  @IsEnum(['latest', 'hot', 'following', 'saved'] as const)
+  tab: 'latest' | 'hot' | 'following' | 'saved' = 'latest';
 
   @IsOptional()
   @Type(() => Number)

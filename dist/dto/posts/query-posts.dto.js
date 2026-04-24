@@ -22,7 +22,7 @@ class QueryPostsDto {
 exports.QueryPostsDto = QueryPostsDto;
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEnum)(['latest', 'hot', 'following']),
+    (0, class_validator_1.IsEnum)(['latest', 'hot', 'following', 'saved']),
     __metadata("design:type", String)
 ], QueryPostsDto.prototype, "tab", void 0);
 __decorate([

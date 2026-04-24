@@ -6,6 +6,7 @@ export declare class Comment {
     parentId?: string;
     authorId: string;
     content: string;
+    likeCount: number;
     isDeleted: boolean;
     deletedAt?: Date;
 }
@@ -46,6 +47,15 @@ export declare const CommentSchema: import("mongoose").Schema<Comment, import("m
         id: string;
     }> | undefined;
     content?: import("mongoose").SchemaDefinitionProperty<string, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    likeCount?: import("mongoose").SchemaDefinitionProperty<number, Comment, import("mongoose").Document<unknown, {}, Comment, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
         _id: import("mongoose").Types.ObjectId;

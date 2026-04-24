@@ -12,6 +12,9 @@ import { AuthService } from '../services/auth.service';
 import { PostsService } from '../services/posts.service';
 import { FollowsService } from '../services/follows.service';
 import { CommentsService } from '../services/comments.service';
+import { PostLikesService } from '../services/post-likes.service';
+import { PostSavesService } from '../services/post-saves.service';
+import { CommentLikesService } from '../services/comment-likes.service';
 import { UserModelName, UserSchema } from '../models/user.model';
 import {
   RefreshTokenModelName,
@@ -20,6 +23,9 @@ import {
 import { PostModelName, PostSchema } from '../models/post.model';
 import { FollowModelName, FollowSchema } from '../models/follow.model';
 import { CommentModelName, CommentSchema } from '../models/comment.model';
+import { PostLikeModelName, PostLikeSchema } from '../models/post-like.model';
+import { PostSaveModelName, PostSaveSchema } from '../models/post-save.model';
+import { CommentLikeModelName, CommentLikeSchema } from '../models/comment-like.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
 
 @Module({
@@ -30,6 +36,9 @@ import { JwtStrategy } from '../infra/auth/jwt.strategy';
       { name: PostModelName, schema: PostSchema },
       { name: FollowModelName, schema: FollowSchema },
       { name: CommentModelName, schema: CommentSchema },
+      { name: PostLikeModelName, schema: PostLikeSchema },
+      { name: PostSaveModelName, schema: PostSaveSchema },
+      { name: CommentLikeModelName, schema: CommentLikeSchema },
     ]),
   ],
   controllers: [
@@ -47,6 +56,9 @@ import { JwtStrategy } from '../infra/auth/jwt.strategy';
     PostsService,
     FollowsService,
     CommentsService,
+    PostLikesService,
+    PostSavesService,
+    CommentLikesService,
     JwtStrategy,
   ],
 })

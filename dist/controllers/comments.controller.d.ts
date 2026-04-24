@@ -1,11 +1,13 @@
 import type { JwtUser } from '../types/auth';
 import { CommentsService } from '../services/comments.service';
+import { CommentLikesService } from '../services/comment-likes.service';
 import { QueryCommentsDto } from '../dto/comments/query-comments.dto';
 import { CreateCommentDto } from '../dto/comments/create-comment.dto';
 import { UpdateCommentDto } from '../dto/comments/update-comment.dto';
 export declare class CommentsController {
     private readonly commentsService;
-    constructor(commentsService: CommentsService);
+    private readonly commentLikesService;
+    constructor(commentsService: CommentsService, commentLikesService: CommentLikesService);
     listForPost(user: JwtUser | undefined, postId: string, query: QueryCommentsDto): Promise<{
         items: (import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
             _id: import("mongoose").Types.ObjectId;
@@ -59,5 +61,8 @@ export declare class CommentsController {
     }>>;
     remove(user: JwtUser, id: string): Promise<{
         ok: boolean;
+    }>;
+    toggleLike(user: JwtUser, id: string): Promise<{
+        liked: boolean;
     }>;
 }

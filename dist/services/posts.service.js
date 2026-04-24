@@ -16,12 +16,18 @@ exports.PostsService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const post_model_1 = require("../models/post.model");
+const post_like_model_1 = require("../models/post-like.model");
+const post_save_model_1 = require("../models/post-save.model");
 const follows_service_1 = require("./follows.service");
 let PostsService = class PostsService {
     postModel;
+    postLikeModel;
+    postSaveModel;
     followsService;
-    constructor(postModel, followsService) {
+    constructor(postModel, postLikeModel, postSaveModel, followsService) {
         this.postModel = postModel;
+        this.postLikeModel = postLikeModel;
+        this.postSaveModel = postSaveModel;
         this.followsService = followsService;
     }
     async create(author, dto) {
@@ -79,12 +85,54 @@ let PostsService = class PostsService {
         const refreshed = await this.postModel.findById(post._id).exec();
         if (!refreshed)
             throw new common_1.NotFoundException('Post not found');
-        return refreshed;
+        if (!author)
+            return refreshed;
+        const [liked, saved] = await Promise.all([
+            this.postLikeModel.exists({ postId: String(refreshed._id), userId: author.id }),
+            this.postSaveModel.exists({ postId: String(refreshed._id), userId: author.id }),
+        ]);
+        return Object.assign(refreshed.toObject(), {
+            likedByMe: Boolean(liked),
+            savedByMe: Boolean(saved),
+        });
     }
     async list(author, query) {
         const page = query.page;
         const limit = query.limit;
         const skip = (page - 1) * limit;
+        if (query.tab === 'saved') {
+            if (!author)
+                throw new common_1.ForbiddenException('Login required for saved feed');
+            const saves = await this.postSaveModel
+                .find({ userId: author.id })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean()
+                .exec();
+            const total = await this.postSaveModel.countDocuments({ userId: author.id }).exec();
+            const postIds = saves.map((s) => s.postId);
+            if (postIds.length === 0) {
+                return { items: [], page, limit, total, hasMore: false };
+            }
+            const baseFilter = { _id: { $in: postIds } };
+            applyVisibility(baseFilter, author);
+            applyGameTagFilters(baseFilter, query);
+            const posts = await this.postModel.find(baseFilter).exec();
+            const byId = new Map(posts.map((p) => [String(p._id), p]));
+            const items = postIds.map((id) => byId.get(String(id))).filter(Boolean);
+            const likedIds = new Set((await this.postLikeModel
+                .find({ userId: author.id, postId: { $in: postIds } })
+                .select({ postId: 1 })
+                .lean()
+                .exec()).map((r) => r.postId));
+            const out = items.map((p) => ({
+                ...p.toObject(),
+                likedByMe: likedIds.has(String(p._id)),
+                savedByMe: true,
+            }));
+            return { items: out, page, limit, total, hasMore: skip + out.length < total };
+        }
         if (query.tab === 'following') {
             if (!author)
                 throw new common_1.ForbiddenException('Login required for following feed');
@@ -103,7 +151,7 @@ let PostsService = class PostsService {
                 .skip(skip)
                 .limit(limit)
                 .exec();
-            return { items, page, limit };
+            return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit);
         }
         const baseFilter = {};
         applyVisibility(baseFilter, author);
@@ -127,8 +175,8 @@ let PostsService = class PostsService {
                 { $skip: skip },
                 { $limit: limit },
             ];
-            const items = await this.postModel.aggregate(pipeline).exec();
-            return { items, page, limit };
+            const rawItems = await this.postModel.aggregate(pipeline).exec();
+            return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, rawItems, page, limit);
         }
         const items = await this.postModel
             .find(baseFilter)
@@ -136,7 +184,48 @@ let PostsService = class PostsService {
             .skip(skip)
             .limit(limit)
             .exec();
-        return { items, page, limit };
+        return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit);
+    }
+    async listLikes(postId, opts) {
+        const post = await this.requirePost(postId);
+        if (post.status !== 'published') {
+            throw new common_1.ForbiddenException('Forbidden');
+        }
+        const page = Math.max(1, Number(opts.page) || 1);
+        const limit = Math.min(100, Math.max(1, Number(opts.limit) || 20));
+        const skip = (page - 1) * limit;
+        const filter = { postId: String(post._id) };
+        const total = await this.postLikeModel.countDocuments(filter).exec();
+        const rows = await this.postLikeModel
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean()
+            .exec();
+        return {
+            items: rows.map((r) => ({ userId: r.userId, createdAt: r.createdAt })),
+            page,
+            limit,
+            total,
+            hasMore: skip + rows.length < total,
+        };
+    }
+    async pin(postId) {
+        const updated = await this.postModel
+            .findByIdAndUpdate(postId, { $set: { isPinned: true, pinnedAt: new Date() } }, { new: true })
+            .exec();
+        if (!updated)
+            throw new common_1.NotFoundException('Post not found');
+        return updated;
+    }
+    async unpin(postId) {
+        const updated = await this.postModel
+            .findByIdAndUpdate(postId, { $set: { isPinned: false }, $unset: { pinnedAt: 1 } }, { new: true })
+            .exec();
+        if (!updated)
+            throw new common_1.NotFoundException('Post not found');
+        return updated;
     }
     async requirePost(postId) {
         const post = await this.postModel.findById(postId).exec();
@@ -149,8 +238,37 @@ exports.PostsService = PostsService;
 exports.PostsService = PostsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __metadata("design:paramtypes", [Function, follows_service_1.FollowsService])
+    __param(1, (0, mongoose_1.InjectModel)(post_like_model_1.PostLikeModelName)),
+    __param(2, (0, mongoose_1.InjectModel)(post_save_model_1.PostSaveModelName)),
+    __metadata("design:paramtypes", [Function, Function, Function, follows_service_1.FollowsService])
 ], PostsService);
+async function attachLikeSaveFlags(postLikeModel, postSaveModel, viewer, items, page, limit) {
+    if (!viewer)
+        return { items, page, limit };
+    const ids = items.map((p) => String(p._id));
+    if (ids.length === 0)
+        return { items, page, limit };
+    const [likes, saves] = await Promise.all([
+        postLikeModel
+            .find({ userId: viewer.id, postId: { $in: ids } })
+            .select({ postId: 1 })
+            .lean()
+            .exec(),
+        postSaveModel
+            .find({ userId: viewer.id, postId: { $in: ids } })
+            .select({ postId: 1 })
+            .lean()
+            .exec(),
+    ]);
+    const liked = new Set(likes.map((r) => r.postId));
+    const saved = new Set(saves.map((r) => r.postId));
+    const out = items.map((p) => ({
+        ...(typeof p.toObject === 'function' ? p.toObject() : p),
+        likedByMe: liked.has(String(p._id)),
+        savedByMe: saved.has(String(p._id)),
+    }));
+    return { items: out, page, limit };
+}
 function applyVisibility(filter, viewer) {
     if (!viewer) {
         filter['status'] = 'published';

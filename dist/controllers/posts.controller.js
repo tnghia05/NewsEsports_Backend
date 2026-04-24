@@ -18,13 +18,21 @@ const posts_service_1 = require("../services/posts.service");
 const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 const optional_jwt_auth_guard_1 = require("../guards/optional-jwt-auth.guard");
 const user_decorator_1 = require("../decorators/user.decorator");
+const roles_decorator_1 = require("../decorators/roles.decorator");
+const roles_guard_1 = require("../guards/roles.guard");
 const create_post_dto_1 = require("../dto/posts/create-post.dto");
 const update_post_dto_1 = require("../dto/posts/update-post.dto");
 const query_posts_dto_1 = require("../dto/posts/query-posts.dto");
+const post_likes_service_1 = require("../services/post-likes.service");
+const post_saves_service_1 = require("../services/post-saves.service");
 let PostsController = class PostsController {
     postsService;
-    constructor(postsService) {
+    postLikesService;
+    postSavesService;
+    constructor(postsService, postLikesService, postSavesService) {
         this.postsService = postsService;
+        this.postLikesService = postLikesService;
+        this.postSavesService = postSavesService;
     }
     list(user, query) {
         return this.postsService.list(user, query);
@@ -40,6 +48,24 @@ let PostsController = class PostsController {
     }
     remove(user, id) {
         return this.postsService.remove(user, id);
+    }
+    toggleLike(user, id) {
+        return this.postLikesService.toggleLike(user, id);
+    }
+    toggleSave(user, id) {
+        return this.postSavesService.toggleSave(user, id);
+    }
+    getLikes(id, page, limit) {
+        return this.postsService.listLikes(id, {
+            page: page ? Number(page) : 1,
+            limit: limit ? Number(limit) : 20,
+        });
+    }
+    pin(id) {
+        return this.postsService.pin(id);
+    }
+    unpin(id) {
+        return this.postsService.unpin(id);
     }
 };
 exports.PostsController = PostsController;
@@ -89,8 +115,55 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], PostsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)(':id/like'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], PostsController.prototype, "toggleLike", null);
+__decorate([
+    (0, common_1.Post)(':id/save'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], PostsController.prototype, "toggleSave", null);
+__decorate([
+    (0, common_1.Get)(':id/likes'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", void 0)
+], PostsController.prototype, "getLikes", null);
+__decorate([
+    (0, common_1.Post)(':id/pin'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], PostsController.prototype, "pin", null);
+__decorate([
+    (0, common_1.Post)(':id/unpin'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], PostsController.prototype, "unpin", null);
 exports.PostsController = PostsController = __decorate([
     (0, common_1.Controller)('posts'),
-    __metadata("design:paramtypes", [posts_service_1.PostsService])
+    __metadata("design:paramtypes", [posts_service_1.PostsService,
+        post_likes_service_1.PostLikesService,
+        post_saves_service_1.PostSavesService])
 ], PostsController);
 //# sourceMappingURL=posts.controller.js.map

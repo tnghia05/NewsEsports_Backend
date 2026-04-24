@@ -19,6 +19,9 @@ export class Comment {
   @Prop({ type: String, required: true })
   content!: string;
 
+  @Prop({ type: Number, default: 0 })
+  likeCount!: number;
+
   @Prop({ type: Boolean, default: false, index: true })
   isDeleted!: boolean;
 
