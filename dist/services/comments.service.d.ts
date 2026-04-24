@@ -1,0 +1,66 @@
+import type { Model } from 'mongoose';
+import { type CommentDocument } from '../models/comment.model';
+import { type PostDocument } from '../models/post.model';
+import type { JwtUser } from '../types/auth';
+import type { QueryCommentsDto } from '../dto/comments/query-comments.dto';
+import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
+import type { UpdateCommentDto } from '../dto/comments/update-comment.dto';
+export declare class CommentsService {
+    private readonly commentModel;
+    private readonly postModel;
+    constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>);
+    listForPost(viewer: JwtUser | undefined, postId: string, query: QueryCommentsDto): Promise<{
+        items: (import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+            _id: import("mongoose").Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+            _id: import("mongoose").Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        } & Required<{
+            _id: import("mongoose").Types.ObjectId;
+        }>)[];
+        page: number;
+        limit: number;
+    }>;
+    createForPost(viewer: JwtUser, postId: string, dto: CreateCommentDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    } & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }>>;
+    update(viewer: JwtUser, commentId: string, dto: UpdateCommentDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    } & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }>>;
+    remove(viewer: JwtUser, commentId: string): Promise<{
+        ok: boolean;
+    }>;
+    private requireComment;
+    private requirePost;
+}
