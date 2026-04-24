@@ -15,6 +15,9 @@ const class_validator_1 = require("class-validator");
 class QueryCommentsDto {
     page = 1;
     limit = 20;
+    sort = 'oldest';
+    parentId;
+    topLevelOnly = false;
 }
 exports.QueryCommentsDto = QueryCommentsDto;
 __decorate([
@@ -32,4 +35,19 @@ __decorate([
     (0, class_validator_1.Max)(100),
     __metadata("design:type", Object)
 ], QueryCommentsDto.prototype, "limit", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(['oldest', 'newest']),
+    __metadata("design:type", String)
+], QueryCommentsDto.prototype, "sort", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryCommentsDto.prototype, "parentId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Boolean),
+    __metadata("design:type", Object)
+], QueryCommentsDto.prototype, "topLevelOnly", void 0);
 //# sourceMappingURL=query-comments.dto.js.map

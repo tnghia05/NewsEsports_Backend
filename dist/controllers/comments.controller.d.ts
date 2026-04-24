@@ -24,6 +24,8 @@ export declare class CommentsController {
         }>)[];
         page: number;
         limit: number;
+        total: number;
+        hasMore: boolean;
     }>;
     createForPost(user: JwtUser, postId: string, body: CreateCommentDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
         _id: import("mongoose").Types.ObjectId;

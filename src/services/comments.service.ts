@@ -36,24 +36,51 @@ export class CommentsService {
     const limit = query.limit;
     const skip = (page - 1) * limit;
 
+    const filter: QueryFilter<CommentDocument> = { postId };
+    if (query.parentId) {
+      filter.parentId = query.parentId;
+    } else if (query.topLevelOnly) {
+      filter.parentId = { $exists: false };
+    }
+
+    const sort =
+      query.sort === 'newest'
+        ? ({ createdAt: -1 as const } as const)
+        : ({ createdAt: 1 as const } as const);
+
     const items = await this.commentModel
-      .find({ postId } satisfies QueryFilter<CommentDocument>)
-      .sort({ createdAt: 1 })
+      .find(filter)
+      .sort(sort)
       .skip(skip)
       .limit(limit)
       .exec();
 
-    return { items, page, limit };
+    const total = await this.commentModel.countDocuments(filter).exec();
+    const hasMore = skip + items.length < total;
+
+    return { items, page, limit, total, hasMore };
   }
 
   async createForPost(viewer: JwtUser, postId: string, dto: CreateCommentDto) {
     const post = await this.requirePost(postId);
     assertCanReadPost(viewer, post);
 
+    if (dto.parentId) {
+      const parent = await this.requireComment(dto.parentId);
+      if (parent.postId !== postId) {
+        throw new ForbiddenException('Parent comment mismatch');
+      }
+      if (parent.isDeleted) {
+        throw new ForbiddenException('Cannot reply to deleted comment');
+      }
+    }
+
     const created = await this.commentModel.create({
       postId,
+      parentId: dto.parentId,
       authorId: viewer.id,
       content: dto.content,
+      isDeleted: false,
     });
 
     await this.postModel
@@ -66,6 +93,7 @@ export class CommentsService {
   async update(viewer: JwtUser, commentId: string, dto: UpdateCommentDto) {
     const comment = await this.requireComment(commentId);
     assertCanEditComment(viewer, comment);
+    if (comment.isDeleted) throw new ForbiddenException('Comment deleted');
 
     const patch: Partial<CommentDocument> = {};
     if (dto.content !== undefined) patch.content = dto.content;
@@ -81,9 +109,29 @@ export class CommentsService {
     const comment = await this.requireComment(commentId);
     assertCanEditComment(viewer, comment);
 
-    await comment.deleteOne();
+    if (comment.isDeleted) return { ok: true };
+
+    await this.commentModel
+      .updateOne(
+        { _id: comment._id },
+        { $set: { isDeleted: true, deletedAt: new Date(), content: '[deleted]' } },
+      )
+      .exec();
+
+    // Clamp commentCount to >= 0 even under concurrent deletes.
     await this.postModel
-      .updateOne({ _id: comment.postId }, { $inc: { commentCount: -1 } })
+      .updateOne(
+        { _id: comment.postId },
+        [
+          {
+            $set: {
+              commentCount: {
+                $max: [0, { $subtract: ['$commentCount', 1] }],
+              },
+            },
+          },
+        ],
+      )
       .exec();
     return { ok: true };
   }

@@ -13,6 +13,7 @@ exports.CreateCommentDto = void 0;
 const class_validator_1 = require("class-validator");
 class CreateCommentDto {
     content;
+    parentId;
 }
 exports.CreateCommentDto = CreateCommentDto;
 __decorate([
@@ -21,4 +22,9 @@ __decorate([
     (0, class_validator_1.MaxLength)(10_000),
     __metadata("design:type", String)
 ], CreateCommentDto.prototype, "content", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCommentDto.prototype, "parentId", void 0);
 //# sourceMappingURL=create-comment.dto.js.map
