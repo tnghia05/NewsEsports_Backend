@@ -53,6 +53,16 @@ let CommentsService = class CommentsService {
         const hasMore = skip + items.length < total;
         return { items, page, limit, total, hasMore };
     }
+    async listReplies(viewer, commentId, query) {
+        const parent = await this.requireComment(commentId);
+        const post = await this.requirePost(parent.postId);
+        assertCanReadPost(viewer, post);
+        return this.listForPost(viewer, parent.postId, {
+            ...query,
+            parentId: String(parent._id),
+            topLevelOnly: false,
+        });
+    }
     async createForPost(viewer, postId, dto) {
         const post = await this.requirePost(postId);
         assertCanReadPost(viewer, post);

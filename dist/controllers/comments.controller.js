@@ -32,6 +32,9 @@ let CommentsController = class CommentsController {
     listForPost(user, postId, query) {
         return this.commentsService.listForPost(user, postId, query);
     }
+    listReplies(user, id, query) {
+        return this.commentsService.listReplies(user, id, query);
+    }
     createForPost(user, postId, body) {
         return this.commentsService.createForPost(user, postId, body);
     }
@@ -56,6 +59,16 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, query_comments_dto_1.QueryCommentsDto]),
     __metadata("design:returntype", void 0)
 ], CommentsController.prototype, "listForPost", null);
+__decorate([
+    (0, common_1.Get)('comments/:id/replies'),
+    (0, common_1.UseGuards)(optional_jwt_auth_guard_1.OptionalJwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, query_comments_dto_1.QueryCommentsDto]),
+    __metadata("design:returntype", void 0)
+], CommentsController.prototype, "listReplies", null);
 __decorate([
     (0, common_1.Post)('posts/:postId/comments'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

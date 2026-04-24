@@ -32,6 +32,27 @@ export declare class CommentsService {
         total: number;
         hasMore: boolean;
     }>;
+    listReplies(viewer: JwtUser | undefined, commentId: string, query: QueryCommentsDto): Promise<{
+        items: (import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+            _id: import("mongoose").Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
+            _id: import("mongoose").Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        } & Required<{
+            _id: import("mongoose").Types.ObjectId;
+        }>)[];
+        page: number;
+        limit: number;
+        total: number;
+        hasMore: boolean;
+    }>;
     createForPost(viewer: JwtUser, postId: string, dto: CreateCommentDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
         _id: import("mongoose").Types.ObjectId;
     } & {

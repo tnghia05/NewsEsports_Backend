@@ -63,6 +63,23 @@ export class CommentsService {
     return { items, page, limit, total, hasMore };
   }
 
+  async listReplies(
+    viewer: JwtUser | undefined,
+    commentId: string,
+    query: QueryCommentsDto,
+  ) {
+    const parent = await this.requireComment(commentId);
+    const post = await this.requirePost(parent.postId);
+    assertCanReadPost(viewer, post);
+
+    // Force parentId filter, ignore any conflicting query.parentId/topLevelOnly
+    return this.listForPost(viewer, parent.postId, {
+      ...query,
+      parentId: String(parent._id),
+      topLevelOnly: false,
+    });
+  }
+
   async createForPost(viewer: JwtUser, postId: string, dto: CreateCommentDto) {
     const post = await this.requirePost(postId);
     assertCanReadPost(viewer, post);

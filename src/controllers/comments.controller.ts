@@ -36,6 +36,16 @@ export class CommentsController {
     return this.commentsService.listForPost(user, postId, query);
   }
 
+  @Get('comments/:id/replies')
+  @UseGuards(OptionalJwtAuthGuard)
+  listReplies(
+    @CurrentUser() user: JwtUser | undefined,
+    @Param('id') id: string,
+    @Query() query: QueryCommentsDto,
+  ) {
+    return this.commentsService.listReplies(user, id, query);
+  }
+
   @Post('posts/:postId/comments')
   @UseGuards(JwtAuthGuard)
   createForPost(
