@@ -15,6 +15,9 @@ const me_controller_1 = require("../controllers/me.controller");
 const users_controller_1 = require("../controllers/users.controller");
 const posts_controller_1 = require("../controllers/posts.controller");
 const comments_controller_1 = require("../controllers/comments.controller");
+const notifications_controller_1 = require("../controllers/notifications.controller");
+const search_controller_1 = require("../controllers/search.controller");
+const hashtags_controller_1 = require("../controllers/hashtags.controller");
 const health_service_1 = require("../services/health.service");
 const users_service_1 = require("../services/users.service");
 const auth_service_1 = require("../services/auth.service");
@@ -24,6 +27,9 @@ const comments_service_1 = require("../services/comments.service");
 const post_likes_service_1 = require("../services/post-likes.service");
 const post_saves_service_1 = require("../services/post-saves.service");
 const comment_likes_service_1 = require("../services/comment-likes.service");
+const notifications_service_1 = require("../services/notifications.service");
+const search_service_1 = require("../services/search.service");
+const hashtags_service_1 = require("../services/hashtags.service");
 const user_model_1 = require("../models/user.model");
 const refresh_token_model_1 = require("../models/refresh-token.model");
 const post_model_1 = require("../models/post.model");
@@ -32,6 +38,7 @@ const comment_model_1 = require("../models/comment.model");
 const post_like_model_1 = require("../models/post-like.model");
 const post_save_model_1 = require("../models/post-save.model");
 const comment_like_model_1 = require("../models/comment-like.model");
+const notification_model_1 = require("../models/notification.model");
 const jwt_strategy_1 = require("../infra/auth/jwt.strategy");
 let ApiV1Module = class ApiV1Module {
 };
@@ -48,6 +55,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: post_like_model_1.PostLikeModelName, schema: post_like_model_1.PostLikeSchema },
                 { name: post_save_model_1.PostSaveModelName, schema: post_save_model_1.PostSaveSchema },
                 { name: comment_like_model_1.CommentLikeModelName, schema: comment_like_model_1.CommentLikeSchema },
+                { name: notification_model_1.NotificationModelName, schema: notification_model_1.NotificationSchema },
             ]),
         ],
         controllers: [
@@ -57,6 +65,9 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             users_controller_1.UsersController,
             posts_controller_1.PostsController,
             comments_controller_1.CommentsController,
+            hashtags_controller_1.HashtagsController,
+            search_controller_1.SearchController,
+            notifications_controller_1.NotificationsController,
         ],
         providers: [
             health_service_1.HealthService,
@@ -68,6 +79,9 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             post_likes_service_1.PostLikesService,
             post_saves_service_1.PostSavesService,
             comment_likes_service_1.CommentLikesService,
+            hashtags_service_1.HashtagsService,
+            search_service_1.SearchService,
+            notifications_service_1.NotificationsService,
             jwt_strategy_1.JwtStrategy,
         ],
     })

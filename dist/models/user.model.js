@@ -64,4 +64,5 @@ exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);
 exports.UserSchema = mongoose_1.SchemaFactory.createForClass(User);
+exports.UserSchema.index({ displayName: 'text', email: 'text' });
 //# sourceMappingURL=user.model.js.map

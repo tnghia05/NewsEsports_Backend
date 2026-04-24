@@ -42,3 +42,6 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+// Search users (basic)
+UserSchema.index({ displayName: 'text', email: 'text' });

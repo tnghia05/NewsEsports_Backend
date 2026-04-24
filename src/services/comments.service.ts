@@ -14,6 +14,7 @@ import type { JwtUser } from '../types/auth';
 import type { QueryCommentsDto } from '../dto/comments/query-comments.dto';
 import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
 import type { UpdateCommentDto } from '../dto/comments/update-comment.dto';
+import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class CommentsService {
@@ -22,6 +23,7 @@ export class CommentsService {
     private readonly commentModel: Model<CommentDocument>,
     @InjectModel(PostModelName)
     private readonly postModel: Model<PostDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listForPost(
@@ -65,6 +67,7 @@ export class CommentsService {
     const post = await this.requirePost(postId);
     assertCanReadPost(viewer, post);
 
+    let parentAuthorId: string | undefined;
     if (dto.parentId) {
       const parent = await this.requireComment(dto.parentId);
       if (parent.postId !== postId) {
@@ -73,6 +76,7 @@ export class CommentsService {
       if (parent.isDeleted) {
         throw new ForbiddenException('Cannot reply to deleted comment');
       }
+      parentAuthorId = parent.authorId;
     }
 
     const created = await this.commentModel.create({
@@ -86,6 +90,26 @@ export class CommentsService {
     await this.postModel
       .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
       .exec();
+
+    // Notify post owner on comment
+    if (!dto.parentId) {
+      await this.notificationsService.create({
+        userId: post.authorId,
+        actorId: viewer.id,
+        type: 'comment',
+        postId: String(post._id),
+        commentId: String(created._id),
+      });
+    } else if (parentAuthorId) {
+      // Notify parent comment owner on reply
+      await this.notificationsService.create({
+        userId: parentAuthorId,
+        actorId: viewer.id,
+        type: 'reply',
+        postId: String(post._id),
+        commentId: String(created._id),
+      });
+    }
 
     return created;
   }

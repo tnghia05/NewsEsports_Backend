@@ -7,6 +7,7 @@ import {
 } from '../models/post-like.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import type { JwtUser } from '../types/auth';
+import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class PostLikesService {
@@ -15,6 +16,7 @@ export class PostLikesService {
     private readonly postLikeModel: Model<PostLikeDocument>,
     @InjectModel(PostModelName)
     private readonly postModel: Model<PostDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async toggleLike(viewer: JwtUser, postId: string): Promise<{ liked: boolean }> {
@@ -54,6 +56,13 @@ export class PostLikesService {
     await this.postModel
       .updateOne({ _id: post._id }, { $inc: { likeCount: 1 } })
       .exec();
+
+    await this.notificationsService.create({
+      userId: post.authorId,
+      actorId: viewer.id,
+      type: 'post_like',
+      postId: String(post._id),
+    });
     return { liked: true };
   }
 }

@@ -17,12 +17,15 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const follow_model_1 = require("../models/follow.model");
 const user_model_1 = require("../models/user.model");
+const notifications_service_1 = require("./notifications.service");
 let FollowsService = class FollowsService {
     followModel;
     userModel;
-    constructor(followModel, userModel) {
+    notificationsService;
+    constructor(followModel, userModel, notificationsService) {
         this.followModel = followModel;
         this.userModel = userModel;
+        this.notificationsService = notificationsService;
     }
     async listFolloweeIds(followerId) {
         const rows = await this.followModel
@@ -43,6 +46,11 @@ let FollowsService = class FollowsService {
             return { following: false };
         }
         await this.followModel.create({ followerId, followeeId });
+        await this.notificationsService.create({
+            userId: followeeId,
+            actorId: followerId,
+            type: 'follow',
+        });
         return { following: true };
     }
     async isFollowing(followerId, followeeId) {
@@ -127,6 +135,6 @@ exports.FollowsService = FollowsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(follow_model_1.FollowModelName)),
     __param(1, (0, mongoose_1.InjectModel)(user_model_1.UserModelName)),
-    __metadata("design:paramtypes", [Function, Function])
+    __metadata("design:paramtypes", [Function, Function, notifications_service_1.NotificationsService])
 ], FollowsService);
 //# sourceMappingURL=follows.service.js.map

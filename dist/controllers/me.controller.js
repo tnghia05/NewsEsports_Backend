@@ -16,9 +16,17 @@ exports.MeController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 const user_decorator_1 = require("../decorators/user.decorator");
+const posts_service_1 = require("../services/posts.service");
 let MeController = class MeController {
+    postsService;
+    constructor(postsService) {
+        this.postsService = postsService;
+    }
     me(user) {
         return user;
+    }
+    savedPosts(user) {
+        return this.postsService.list(user, { tab: 'saved', page: 1, limit: 20 });
     }
 };
 exports.MeController = MeController;
@@ -30,7 +38,16 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], MeController.prototype, "me", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('me/saved-posts'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], MeController.prototype, "savedPosts", null);
 exports.MeController = MeController = __decorate([
-    (0, common_1.Controller)()
+    (0, common_1.Controller)(),
+    __metadata("design:paramtypes", [posts_service_1.PostsService])
 ], MeController);
 //# sourceMappingURL=me.controller.js.map

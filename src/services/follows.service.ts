@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { FollowModelName, type FollowDocument } from '../models/follow.model';
 import { UserModelName, type UserDocument } from '../models/user.model';
+import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class FollowsService {
@@ -11,6 +12,7 @@ export class FollowsService {
     private readonly followModel: Model<FollowDocument>,
     @InjectModel(UserModelName)
     private readonly userModel: Model<UserDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listFolloweeIds(followerId: string): Promise<string[]> {
@@ -34,6 +36,11 @@ export class FollowsService {
     }
 
     await this.followModel.create({ followerId, followeeId });
+    await this.notificationsService.create({
+      userId: followeeId,
+      actorId: followerId,
+      type: 'follow',
+    });
     return { following: true };
   }
 

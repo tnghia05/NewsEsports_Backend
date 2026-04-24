@@ -5,10 +5,12 @@ import type { JwtUser } from '../types/auth';
 import type { QueryCommentsDto } from '../dto/comments/query-comments.dto';
 import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
 import type { UpdateCommentDto } from '../dto/comments/update-comment.dto';
+import { NotificationsService } from './notifications.service';
 export declare class CommentsService {
     private readonly commentModel;
     private readonly postModel;
-    constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>);
+    private readonly notificationsService;
+    constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, notificationsService: NotificationsService);
     listForPost(viewer: JwtUser | undefined, postId: string, query: QueryCommentsDto): Promise<{
         items: (import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
             _id: import("mongoose").Types.ObjectId;

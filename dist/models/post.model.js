@@ -90,6 +90,7 @@ exports.Post = Post = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Post);
 exports.PostSchema = mongoose_1.SchemaFactory.createForClass(Post);
+exports.PostSchema.index({ title: 'text', content: 'text', tags: 'text' });
 exports.PostSchema.index({ status: 1, createdAt: -1 });
 exports.PostSchema.index({ status: 1, game: 1, createdAt: -1 });
 exports.PostSchema.index({ status: 1, tags: 1, createdAt: -1 });

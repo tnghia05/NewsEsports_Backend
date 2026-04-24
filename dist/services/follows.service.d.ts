@@ -1,10 +1,12 @@
 import type { Model } from 'mongoose';
 import { type FollowDocument } from '../models/follow.model';
 import { type UserDocument } from '../models/user.model';
+import { NotificationsService } from './notifications.service';
 export declare class FollowsService {
     private readonly followModel;
     private readonly userModel;
-    constructor(followModel: Model<FollowDocument>, userModel: Model<UserDocument>);
+    private readonly notificationsService;
+    constructor(followModel: Model<FollowDocument>, userModel: Model<UserDocument>, notificationsService: NotificationsService);
     listFolloweeIds(followerId: string): Promise<string[]>;
     toggleFollow(followerId: string, followeeId: string): Promise<{
         following: boolean;

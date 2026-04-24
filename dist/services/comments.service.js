@@ -17,12 +17,15 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
+const notifications_service_1 = require("./notifications.service");
 let CommentsService = class CommentsService {
     commentModel;
     postModel;
-    constructor(commentModel, postModel) {
+    notificationsService;
+    constructor(commentModel, postModel, notificationsService) {
         this.commentModel = commentModel;
         this.postModel = postModel;
+        this.notificationsService = notificationsService;
     }
     async listForPost(viewer, postId, query) {
         const post = await this.requirePost(postId);
@@ -53,6 +56,7 @@ let CommentsService = class CommentsService {
     async createForPost(viewer, postId, dto) {
         const post = await this.requirePost(postId);
         assertCanReadPost(viewer, post);
+        let parentAuthorId;
         if (dto.parentId) {
             const parent = await this.requireComment(dto.parentId);
             if (parent.postId !== postId) {
@@ -61,6 +65,7 @@ let CommentsService = class CommentsService {
             if (parent.isDeleted) {
                 throw new common_1.ForbiddenException('Cannot reply to deleted comment');
             }
+            parentAuthorId = parent.authorId;
         }
         const created = await this.commentModel.create({
             postId,
@@ -72,6 +77,24 @@ let CommentsService = class CommentsService {
         await this.postModel
             .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
             .exec();
+        if (!dto.parentId) {
+            await this.notificationsService.create({
+                userId: post.authorId,
+                actorId: viewer.id,
+                type: 'comment',
+                postId: String(post._id),
+                commentId: String(created._id),
+            });
+        }
+        else if (parentAuthorId) {
+            await this.notificationsService.create({
+                userId: parentAuthorId,
+                actorId: viewer.id,
+                type: 'reply',
+                postId: String(post._id),
+                commentId: String(created._id),
+            });
+        }
         return created;
     }
     async update(viewer, commentId, dto) {
@@ -128,7 +151,7 @@ exports.CommentsService = CommentsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __metadata("design:paramtypes", [Function, Function])
+    __metadata("design:paramtypes", [Function, Function, notifications_service_1.NotificationsService])
 ], CommentsService);
 function assertCanReadPost(viewer, post) {
     if (post.status === 'published')

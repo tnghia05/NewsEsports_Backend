@@ -55,6 +55,9 @@ export class Post {
 
 export const PostSchema = SchemaFactory.createForClass(Post);
 
+// Search (basic)
+PostSchema.index({ title: 'text', content: 'text', tags: 'text' });
+
 PostSchema.index({ status: 1, createdAt: -1 });
 PostSchema.index({ status: 1, game: 1, createdAt: -1 });
 PostSchema.index({ status: 1, tags: 1, createdAt: -1 });
