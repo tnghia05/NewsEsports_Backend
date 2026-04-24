@@ -12,6 +12,7 @@ import type { JwtUser } from '../types/auth';
 import type { CreatePostDto } from '../dto/posts/create-post.dto';
 import type { UpdatePostDto } from '../dto/posts/update-post.dto';
 import type { QueryPostsDto } from '../dto/posts/query-posts.dto';
+import type { QueryUserPostsDto } from '../dto/users/query-user-posts.dto';
 import { FollowsService } from './follows.service';
 
 @Injectable()
@@ -199,6 +200,57 @@ export class PostsService {
       .exec();
 
     return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit);
+  }
+
+  async listByUser(
+    viewer: JwtUser | undefined,
+    userId: string,
+    query: QueryUserPostsDto,
+  ) {
+    const page = query.page;
+    const limit = query.limit;
+    const skip = (page - 1) * limit;
+
+    const filter: QueryFilter<PostDocument> = { authorId: userId };
+
+    // Visibility + status selection
+    if (!viewer) {
+      filter.status = 'published';
+    } else if (viewer.role === 'admin') {
+      if (query.status && query.status !== 'all') filter.status = query.status;
+    } else if (viewer.id === userId) {
+      if (query.status && query.status !== 'all') filter.status = query.status;
+    } else {
+      filter.status = 'published';
+    }
+
+    const game = query.game?.trim().toLowerCase();
+    const tag = query.tag?.trim().toLowerCase().replace(/^#/, '');
+    if (game) filter.game = game;
+    if (tag) filter.tags = { $in: [tag] };
+
+    const items = await this.postModel
+      .find(filter)
+      .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    const total = await this.postModel.countDocuments(filter).exec();
+    const withFlags = await attachLikeSaveFlags(
+      this.postLikeModel,
+      this.postSaveModel,
+      viewer,
+      items,
+      page,
+      limit,
+    );
+
+    return {
+      ...withFlags,
+      total,
+      hasMore: skip + (withFlags.items?.length ?? 0) < total,
+    };
   }
 
   async listLikes(postId: string, opts: { page: number; limit: number }) {

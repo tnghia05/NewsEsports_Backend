@@ -16,10 +16,13 @@ exports.FollowsService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const follow_model_1 = require("../models/follow.model");
+const user_model_1 = require("../models/user.model");
 let FollowsService = class FollowsService {
     followModel;
-    constructor(followModel) {
+    userModel;
+    constructor(followModel, userModel) {
         this.followModel = followModel;
+        this.userModel = userModel;
     }
     async listFolloweeIds(followerId) {
         const rows = await this.followModel
@@ -42,11 +45,88 @@ let FollowsService = class FollowsService {
         await this.followModel.create({ followerId, followeeId });
         return { following: true };
     }
+    async isFollowing(followerId, followeeId) {
+        if (followerId === followeeId)
+            return false;
+        const exists = await this.followModel.exists({ followerId, followeeId });
+        return Boolean(exists);
+    }
+    async listFollowers(followeeId, opts) {
+        const page = Math.max(1, Number(opts.page) || 1);
+        const limit = Math.min(100, Math.max(1, Number(opts.limit) || 20));
+        const skip = (page - 1) * limit;
+        const filter = { followeeId };
+        const total = await this.followModel.countDocuments(filter).exec();
+        const rows = await this.followModel
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean()
+            .exec();
+        const ids = rows.map((r) => r.followerId);
+        const users = await this.userModel
+            .find({ _id: { $in: ids } })
+            .select({ displayName: 1, avatarUrl: 1 })
+            .lean()
+            .exec();
+        const byId = new Map(users.map((u) => [String(u._id), u]));
+        return {
+            items: ids
+                .map((id) => {
+                const u = byId.get(String(id));
+                if (!u)
+                    return undefined;
+                return { id: String(id), displayName: u.displayName, avatarUrl: u.avatarUrl ?? undefined };
+            })
+                .filter(Boolean),
+            page,
+            limit,
+            total,
+            hasMore: skip + rows.length < total,
+        };
+    }
+    async listFollowing(followerId, opts) {
+        const page = Math.max(1, Number(opts.page) || 1);
+        const limit = Math.min(100, Math.max(1, Number(opts.limit) || 20));
+        const skip = (page - 1) * limit;
+        const filter = { followerId };
+        const total = await this.followModel.countDocuments(filter).exec();
+        const rows = await this.followModel
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean()
+            .exec();
+        const ids = rows.map((r) => r.followeeId);
+        const users = await this.userModel
+            .find({ _id: { $in: ids } })
+            .select({ displayName: 1, avatarUrl: 1 })
+            .lean()
+            .exec();
+        const byId = new Map(users.map((u) => [String(u._id), u]));
+        return {
+            items: ids
+                .map((id) => {
+                const u = byId.get(String(id));
+                if (!u)
+                    return undefined;
+                return { id: String(id), displayName: u.displayName, avatarUrl: u.avatarUrl ?? undefined };
+            })
+                .filter(Boolean),
+            page,
+            limit,
+            total,
+            hasMore: skip + rows.length < total,
+        };
+    }
 };
 exports.FollowsService = FollowsService;
 exports.FollowsService = FollowsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(follow_model_1.FollowModelName)),
-    __metadata("design:paramtypes", [Function])
+    __param(1, (0, mongoose_1.InjectModel)(user_model_1.UserModelName)),
+    __metadata("design:paramtypes", [Function, Function])
 ], FollowsService);
 //# sourceMappingURL=follows.service.js.map

@@ -6,6 +6,7 @@ import type { JwtUser } from '../types/auth';
 import type { CreatePostDto } from '../dto/posts/create-post.dto';
 import type { UpdatePostDto } from '../dto/posts/update-post.dto';
 import type { QueryPostsDto } from '../dto/posts/query-posts.dto';
+import type { QueryUserPostsDto } from '../dto/users/query-user-posts.dto';
 import { FollowsService } from './follows.service';
 export declare class PostsService {
     private readonly postModel;
@@ -100,6 +101,13 @@ export declare class PostsService {
         limit: number;
         total: number;
         hasMore: boolean;
+    }>;
+    listByUser(viewer: JwtUser | undefined, userId: string, query: QueryUserPostsDto): Promise<{
+        total: number;
+        hasMore: boolean;
+        items: any[];
+        page: number;
+        limit: number;
     }>;
     listLikes(postId: string, opts: {
         page: number;
