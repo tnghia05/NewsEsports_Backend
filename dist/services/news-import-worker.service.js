@@ -1,0 +1,162 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var NewsImportWorkerService_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NewsImportWorkerService = void 0;
+const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
+const mongoose_1 = require("@nestjs/mongoose");
+const news_model_1 = require("../models/news.model");
+const rss_service_1 = require("../infra/rss/rss.service");
+let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorkerService {
+    config;
+    newsModel;
+    rssService;
+    logger = new common_1.Logger(NewsImportWorkerService_1.name);
+    timer;
+    running = false;
+    intervalMs;
+    maxItemsPerFeed;
+    constructor(config, newsModel, rssService) {
+        this.config = config;
+        this.newsModel = newsModel;
+        this.rssService = rssService;
+        this.intervalMs = Number(this.config.get('RSS_IMPORT_INTERVAL_MS') ?? 10 * 60_000);
+        this.maxItemsPerFeed = Number(this.config.get('RSS_IMPORT_MAX_ITEMS') ?? 30);
+    }
+    onModuleInit() {
+        if (!this.getSources().length) {
+            this.logger.log('RSS import disabled (RSS_SOURCES empty)');
+            return;
+        }
+        this.timer = setInterval(() => void this.tick(), this.intervalMs);
+        void this.tick();
+    }
+    onModuleDestroy() {
+        if (this.timer)
+            clearInterval(this.timer);
+    }
+    async importNow() {
+        return this.runImport();
+    }
+    async tick() {
+        if (this.running)
+            return;
+        this.running = true;
+        try {
+            await this.runImport();
+        }
+        finally {
+            this.running = false;
+        }
+    }
+    getSources() {
+        const raw = String(this.config.get('RSS_SOURCES') ?? '').trim();
+        if (!raw)
+            return [];
+        return raw
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+    }
+    async runImport() {
+        const sources = this.getSources();
+        if (!sources.length)
+            return { ok: true, imported: 0, skipped: 0, sources: 0 };
+        const started = Date.now();
+        let imported = 0;
+        let skipped = 0;
+        for (const feedUrl of sources) {
+            try {
+                const items = (await this.rssService.fetchFeed(feedUrl)).slice(0, this.maxItemsPerFeed);
+                for (const item of items) {
+                    const externalId = (item.guid ?? item.link).trim();
+                    const created = await this.tryCreateFromRss(feedUrl, item, externalId);
+                    if (created)
+                        imported++;
+                    else
+                        skipped++;
+                }
+            }
+            catch (e) {
+                this.logger.warn(`RSS import failed feed=${feedUrl} err=${String(e?.message ?? e)}`);
+            }
+        }
+        const elapsed = Date.now() - started;
+        this.logger.log(`RSS import done in ${elapsed}ms sources=${sources.length} imported=${imported} skipped=${skipped}`);
+        return { ok: true, imported, skipped, sources: sources.length };
+    }
+    async tryCreateFromRss(feedUrl, item, externalId) {
+        const title = item.title.trim();
+        const content = (item.content ?? '').trim() || title;
+        const slug = makeRssSlug(title, externalId);
+        try {
+            await this.newsModel.create({
+                title,
+                slug,
+                excerpt: undefined,
+                content,
+                coverImageUrl: undefined,
+                tags: [],
+                status: 'published',
+                publishedAt: item.publishedAt ?? new Date(),
+                source: 'rss',
+                sourceUrl: feedUrl,
+                externalUrl: item.link,
+                externalId,
+            });
+            return true;
+        }
+        catch (e) {
+            const msg = String(e?.message ?? e).toLowerCase();
+            if (msg.includes('duplicate key'))
+                return false;
+            this.logger.warn(`RSS item create failed feed=${feedUrl} externalId=${externalId} err=${String(e?.message ?? e)}`);
+            return false;
+        }
+    }
+};
+exports.NewsImportWorkerService = NewsImportWorkerService;
+exports.NewsImportWorkerService = NewsImportWorkerService = NewsImportWorkerService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __param(1, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
+    __metadata("design:paramtypes", [config_1.ConfigService, Function, rss_service_1.RssService])
+], NewsImportWorkerService);
+function makeRssSlug(title, externalId) {
+    const base = slugify(title).slice(0, 80) || 'news';
+    const suffix = shortHash(externalId);
+    return `${base}-${suffix}`;
+}
+function slugify(input) {
+    return input
+        .trim()
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'd')
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9\-_.]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+}
+function shortHash(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(16).slice(0, 8);
+}
+//# sourceMappingURL=news-import-worker.service.js.map
