@@ -10,6 +10,7 @@ export type AiModerationResult = {
 };
 export declare class AiService {
     private readonly config;
+    private readonly logger;
     private readonly url?;
     private readonly timeoutMs;
     private readonly toxicThreshold;

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CommentSentiment } from '../../models/comment.model';
 
@@ -10,6 +10,7 @@ export type AiModerationResult = {
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   private readonly url?: string;
   private readonly timeoutMs: number;
   private readonly toxicThreshold: number;
@@ -41,6 +42,7 @@ export class AiService {
       };
     }
 
+    const startedAt = Date.now();
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -54,11 +56,48 @@ export class AiService {
         throw new Error(`AI service HTTP ${res.status}`);
       }
       const data: any = await res.json();
-      return normalizeAiResponse(data, this.toxicThreshold, this.version);
+      const normalized = normalizeAiResponse(data, this.toxicThreshold, this.version);
+      const elapsedMs = Date.now() - startedAt;
+
+      // High-signal logs only (no raw text, no raw payload).
+      const shape = summarizeAiResponseShape(data);
+      this.logger.log(
+        `analyzeComment ok in ${elapsedMs}ms sentiment=${normalized.sentiment} toxic=${normalized.toxicity.isToxic} score=${normalized.toxicity.score.toFixed(
+          3,
+        )} shape=${shape}`,
+      );
+
+      return normalized;
+    } catch (e: any) {
+      const elapsedMs = Date.now() - startedAt;
+      const isTimeout =
+        e?.name === 'AbortError' ||
+        String(e?.message ?? '').toLowerCase().includes('aborted');
+      const errMsg = String(e?.message ?? e);
+      this.logger.warn(
+        `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms: ${errMsg}`,
+      );
+      throw e;
     } finally {
       clearTimeout(t);
     }
   }
+}
+
+function summarizeAiResponseShape(data: any) {
+  if (data == null) return 'null';
+  if (Array.isArray(data)) return `array(len=${data.length})`;
+  if (typeof data !== 'object') return typeof data;
+
+  const keys = Object.keys(data).sort();
+  const hasSentiment = typeof (data as any).sentiment !== 'undefined';
+  const hasLabel = typeof (data as any).label !== 'undefined';
+  const hasToxicity = typeof (data as any).toxicity !== 'undefined';
+  const hasScore =
+    typeof (data as any).toxicity_score !== 'undefined' ||
+    typeof (data as any).toxicityScore !== 'undefined' ||
+    typeof (data as any).toxic_score !== 'undefined';
+  return `object(keys=${keys.slice(0, 8).join(',')}${keys.length > 8 ? ',…' : ''};sentiment=${hasSentiment};label=${hasLabel};toxicity=${hasToxicity};toxScore=${hasScore})`;
 }
 
 function normalizeAiResponse(

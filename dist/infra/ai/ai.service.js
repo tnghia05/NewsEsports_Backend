@@ -8,12 +8,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var AiService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-let AiService = class AiService {
+let AiService = AiService_1 = class AiService {
     config;
+    logger = new common_1.Logger(AiService_1.name);
     url;
     timeoutMs;
     toxicThreshold;
@@ -35,6 +37,7 @@ let AiService = class AiService {
                 aiVersion: this.version,
             };
         }
+        const startedAt = Date.now();
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), this.timeoutMs);
         try {
@@ -48,7 +51,19 @@ let AiService = class AiService {
                 throw new Error(`AI service HTTP ${res.status}`);
             }
             const data = await res.json();
-            return normalizeAiResponse(data, this.toxicThreshold, this.version);
+            const normalized = normalizeAiResponse(data, this.toxicThreshold, this.version);
+            const elapsedMs = Date.now() - startedAt;
+            const shape = summarizeAiResponseShape(data);
+            this.logger.log(`analyzeComment ok in ${elapsedMs}ms sentiment=${normalized.sentiment} toxic=${normalized.toxicity.isToxic} score=${normalized.toxicity.score.toFixed(3)} shape=${shape}`);
+            return normalized;
+        }
+        catch (e) {
+            const elapsedMs = Date.now() - startedAt;
+            const isTimeout = e?.name === 'AbortError' ||
+                String(e?.message ?? '').toLowerCase().includes('aborted');
+            const errMsg = String(e?.message ?? e);
+            this.logger.warn(`analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms: ${errMsg}`);
+            throw e;
         }
         finally {
             clearTimeout(t);
@@ -56,10 +71,26 @@ let AiService = class AiService {
     }
 };
 exports.AiService = AiService;
-exports.AiService = AiService = __decorate([
+exports.AiService = AiService = AiService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService])
 ], AiService);
+function summarizeAiResponseShape(data) {
+    if (data == null)
+        return 'null';
+    if (Array.isArray(data))
+        return `array(len=${data.length})`;
+    if (typeof data !== 'object')
+        return typeof data;
+    const keys = Object.keys(data).sort();
+    const hasSentiment = typeof data.sentiment !== 'undefined';
+    const hasLabel = typeof data.label !== 'undefined';
+    const hasToxicity = typeof data.toxicity !== 'undefined';
+    const hasScore = typeof data.toxicity_score !== 'undefined' ||
+        typeof data.toxicityScore !== 'undefined' ||
+        typeof data.toxic_score !== 'undefined';
+    return `object(keys=${keys.slice(0, 8).join(',')}${keys.length > 8 ? ',…' : ''};sentiment=${hasSentiment};label=${hasLabel};toxicity=${hasToxicity};toxScore=${hasScore})`;
+}
 function normalizeAiResponse(data, toxicThreshold, fallbackVersion) {
     let sentiment = 'neutral';
     const rawSent = data?.sentiment ?? data?.label ?? data?.sentiment_label;
