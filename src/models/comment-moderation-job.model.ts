@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
-
+//s
 export type CommentModerationJobDocument = HydratedDocument<CommentModerationJob>;
 
 export const CommentModerationJobModelName = 'CommentModerationJob';
