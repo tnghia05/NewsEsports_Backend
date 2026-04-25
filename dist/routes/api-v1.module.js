@@ -30,6 +30,7 @@ const comment_likes_service_1 = require("../services/comment-likes.service");
 const notifications_service_1 = require("../services/notifications.service");
 const search_service_1 = require("../services/search.service");
 const hashtags_service_1 = require("../services/hashtags.service");
+const comment_moderation_worker_service_1 = require("../services/comment-moderation-worker.service");
 const user_model_1 = require("../models/user.model");
 const refresh_token_model_1 = require("../models/refresh-token.model");
 const post_model_1 = require("../models/post.model");
@@ -39,7 +40,9 @@ const post_like_model_1 = require("../models/post-like.model");
 const post_save_model_1 = require("../models/post-save.model");
 const comment_like_model_1 = require("../models/comment-like.model");
 const notification_model_1 = require("../models/notification.model");
+const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const jwt_strategy_1 = require("../infra/auth/jwt.strategy");
+const ai_service_1 = require("../infra/ai/ai.service");
 let ApiV1Module = class ApiV1Module {
 };
 exports.ApiV1Module = ApiV1Module;
@@ -56,6 +59,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: post_save_model_1.PostSaveModelName, schema: post_save_model_1.PostSaveSchema },
                 { name: comment_like_model_1.CommentLikeModelName, schema: comment_like_model_1.CommentLikeSchema },
                 { name: notification_model_1.NotificationModelName, schema: notification_model_1.NotificationSchema },
+                { name: comment_moderation_job_model_1.CommentModerationJobModelName, schema: comment_moderation_job_model_1.CommentModerationJobSchema },
             ]),
         ],
         controllers: [
@@ -82,6 +86,8 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             hashtags_service_1.HashtagsService,
             search_service_1.SearchService,
             notifications_service_1.NotificationsService,
+            ai_service_1.AiService,
+            comment_moderation_worker_service_1.CommentModerationWorkerService,
             jwt_strategy_1.JwtStrategy,
         ],
     })

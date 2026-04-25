@@ -1,11 +1,21 @@
 import type { HydratedDocument } from 'mongoose';
 export type CommentDocument = HydratedDocument<Comment>;
 export declare const CommentModelName = "Comment";
+export type CommentModerationStatus = 'pending' | 'approved' | 'rejected';
+export type CommentSentiment = 'positive' | 'neutral' | 'negative';
 export declare class Comment {
     postId: string;
     parentId?: string;
     authorId: string;
     content: string;
+    moderationStatus: CommentModerationStatus;
+    sentiment?: CommentSentiment;
+    toxicity?: {
+        isToxic: boolean;
+        score: number;
+    };
+    aiVersion?: string;
+    aiError?: string;
     likeCount: number;
     isDeleted: boolean;
     deletedAt?: Date;
@@ -47,6 +57,54 @@ export declare const CommentSchema: import("mongoose").Schema<Comment, import("m
         id: string;
     }> | undefined;
     content?: import("mongoose").SchemaDefinitionProperty<string, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    moderationStatus?: import("mongoose").SchemaDefinitionProperty<CommentModerationStatus, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    sentiment?: import("mongoose").SchemaDefinitionProperty<CommentSentiment | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    toxicity?: import("mongoose").SchemaDefinitionProperty<{
+        isToxic: boolean;
+        score: number;
+    } | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    aiVersion?: import("mongoose").SchemaDefinitionProperty<string | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    aiError?: import("mongoose").SchemaDefinitionProperty<string | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
         _id: import("mongoose").Types.ObjectId;

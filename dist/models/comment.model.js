@@ -17,6 +17,11 @@ let Comment = class Comment {
     parentId;
     authorId;
     content;
+    moderationStatus;
+    sentiment;
+    toxicity;
+    aiVersion;
+    aiError;
     likeCount;
     isDeleted;
     deletedAt;
@@ -38,6 +43,37 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String, required: true }),
     __metadata("design:type", String)
 ], Comment.prototype, "content", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: String,
+        required: true,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending',
+        index: true,
+    }),
+    __metadata("design:type", String)
+], Comment.prototype, "moderationStatus", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, enum: ['positive', 'neutral', 'negative'], index: true }),
+    __metadata("design:type", String)
+], Comment.prototype, "sentiment", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: {
+            isToxic: { type: Boolean, required: true },
+            score: { type: Number, required: true },
+        },
+    }),
+    __metadata("design:type", Object)
+], Comment.prototype, "toxicity", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Comment.prototype, "aiVersion", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Comment.prototype, "aiError", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Number, default: 0 }),
     __metadata("design:type", Number)

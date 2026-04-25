@@ -21,6 +21,7 @@ import { CommentLikesService } from '../services/comment-likes.service';
 import { NotificationsService } from '../services/notifications.service';
 import { SearchService } from '../services/search.service';
 import { HashtagsService } from '../services/hashtags.service';
+import { CommentModerationWorkerService } from '../services/comment-moderation-worker.service';
 import { UserModelName, UserSchema } from '../models/user.model';
 import {
   RefreshTokenModelName,
@@ -33,7 +34,9 @@ import { PostLikeModelName, PostLikeSchema } from '../models/post-like.model';
 import { PostSaveModelName, PostSaveSchema } from '../models/post-save.model';
 import { CommentLikeModelName, CommentLikeSchema } from '../models/comment-like.model';
 import { NotificationModelName, NotificationSchema } from '../models/notification.model';
+import { CommentModerationJobModelName, CommentModerationJobSchema } from '../models/comment-moderation-job.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
+import { AiService } from '../infra/ai/ai.service';
 
 @Module({
   imports: [
@@ -47,6 +50,7 @@ import { JwtStrategy } from '../infra/auth/jwt.strategy';
       { name: PostSaveModelName, schema: PostSaveSchema },
       { name: CommentLikeModelName, schema: CommentLikeSchema },
       { name: NotificationModelName, schema: NotificationSchema },
+      { name: CommentModerationJobModelName, schema: CommentModerationJobSchema },
     ]),
   ],
   controllers: [
@@ -73,6 +77,8 @@ import { JwtStrategy } from '../infra/auth/jwt.strategy';
     HashtagsService,
     SearchService,
     NotificationsService,
+    AiService,
+    CommentModerationWorkerService,
     JwtStrategy,
   ],
 })

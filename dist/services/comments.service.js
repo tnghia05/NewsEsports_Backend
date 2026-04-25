@@ -18,14 +18,17 @@ const mongoose_1 = require("@nestjs/mongoose");
 const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
 const notifications_service_1 = require("./notifications.service");
+const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 let CommentsService = class CommentsService {
     commentModel;
     postModel;
     notificationsService;
-    constructor(commentModel, postModel, notificationsService) {
+    jobModel;
+    constructor(commentModel, postModel, notificationsService, jobModel) {
         this.commentModel = commentModel;
         this.postModel = postModel;
         this.notificationsService = notificationsService;
+        this.jobModel = jobModel;
     }
     async listForPost(viewer, postId, query) {
         const post = await this.requirePost(postId);
@@ -39,6 +42,17 @@ let CommentsService = class CommentsService {
         }
         else if (query.topLevelOnly) {
             filter.parentId = { $exists: false };
+        }
+        if (!viewer) {
+            filter.moderationStatus = 'approved';
+        }
+        else if (viewer.role === 'admin' || viewer.id === post.authorId) {
+        }
+        else {
+            filter['$or'] = [
+                { moderationStatus: 'approved' },
+                { authorId: viewer.id },
+            ];
         }
         const sort = query.sort === 'newest'
             ? { createdAt: -1 }
@@ -83,28 +97,15 @@ let CommentsService = class CommentsService {
             authorId: viewer.id,
             content: dto.content,
             isDeleted: false,
+            moderationStatus: 'pending',
         });
-        await this.postModel
-            .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
-            .exec();
-        if (!dto.parentId) {
-            await this.notificationsService.create({
-                userId: post.authorId,
-                actorId: viewer.id,
-                type: 'comment',
-                postId: String(post._id),
+        await this.jobModel.updateOne({ commentId: String(created._id) }, {
+            $setOnInsert: {
                 commentId: String(created._id),
-            });
-        }
-        else if (parentAuthorId) {
-            await this.notificationsService.create({
-                userId: parentAuthorId,
-                actorId: viewer.id,
-                type: 'reply',
-                postId: String(post._id),
-                commentId: String(created._id),
-            });
-        }
+                status: 'pending',
+                attempts: 0,
+            },
+        }, { upsert: true });
         return created;
     }
     async update(viewer, commentId, dto) {
@@ -130,17 +131,19 @@ let CommentsService = class CommentsService {
         await this.commentModel
             .updateOne({ _id: comment._id }, { $set: { isDeleted: true, deletedAt: new Date(), content: '[deleted]' } })
             .exec();
-        await this.postModel
-            .updateOne({ _id: comment.postId }, [
-            {
-                $set: {
-                    commentCount: {
-                        $max: [0, { $subtract: ['$commentCount', 1] }],
+        if (comment.moderationStatus === 'approved') {
+            await this.postModel
+                .updateOne({ _id: comment.postId }, [
+                {
+                    $set: {
+                        commentCount: {
+                            $max: [0, { $subtract: ['$commentCount', 1] }],
+                        },
                     },
                 },
-            },
-        ])
-            .exec();
+            ])
+                .exec();
+        }
         return { ok: true };
     }
     async requireComment(commentId) {
@@ -161,7 +164,8 @@ exports.CommentsService = CommentsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __metadata("design:paramtypes", [Function, Function, notifications_service_1.NotificationsService])
+    __param(3, (0, mongoose_1.InjectModel)(comment_moderation_job_model_1.CommentModerationJobModelName)),
+    __metadata("design:paramtypes", [Function, Function, notifications_service_1.NotificationsService, Function])
 ], CommentsService);
 function assertCanReadPost(viewer, post) {
     if (post.status === 'published')

@@ -26,17 +26,29 @@ jobs:
               git clone https://github.com/tnghia05/DACS1_backend.git .
             fi
 
-            # Tạo .env từ GitHub Secrets
-            cat > .env <<EOF
-            PORT=3000
-            MONGODB_URI=${{ secrets.MONGODB_URI }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            EOF
-
             git fetch --all
             git reset --hard origin/main
+
+            # Tạo .env từ GitHub Secrets (tạo SAU khi pull/reset để tránh bị mất file)
+            # Dùng <<'EOF' để tránh shell expansion trong heredoc.
+            cat > .env <<'EOF'
+            PORT=3000
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+
+            # Auth (Milestone 1)
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}
+            JWT_REFRESH_EXPIRES_IN=${{ secrets.JWT_REFRESH_EXPIRES_IN }}
+
+            # Google login (Milestone 1)
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+
+            # AI service (Milestone 3)
+            AI_SERVICE_URL=${{ secrets.AI_SERVICE_URL }}
+            AI_TIMEOUT_MS=${{ secrets.AI_TIMEOUT_MS }}
+
+            
+            EOF
 
             # Cài deps + build
             npm ci

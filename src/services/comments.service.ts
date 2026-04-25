@@ -15,6 +15,10 @@ import type { QueryCommentsDto } from '../dto/comments/query-comments.dto';
 import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
 import type { UpdateCommentDto } from '../dto/comments/update-comment.dto';
 import { NotificationsService } from './notifications.service';
+import {
+  CommentModerationJobModelName,
+  type CommentModerationJobDocument,
+} from '../models/comment-moderation-job.model';
 
 @Injectable()
 export class CommentsService {
@@ -24,6 +28,8 @@ export class CommentsService {
     @InjectModel(PostModelName)
     private readonly postModel: Model<PostDocument>,
     private readonly notificationsService: NotificationsService,
+    @InjectModel(CommentModerationJobModelName)
+    private readonly jobModel: Model<CommentModerationJobDocument>,
   ) {}
 
   async listForPost(
@@ -43,6 +49,22 @@ export class CommentsService {
       filter.parentId = query.parentId;
     } else if (query.topLevelOnly) {
       filter.parentId = { $exists: false };
+    }
+
+    // Moderation visibility:
+    // - Public viewers see only approved.
+    // - Admin sees all.
+    // - Post owner sees all (to moderate community).
+    // - Comment owner sees their own pending/rejected + all approved.
+    if (!viewer) {
+      filter.moderationStatus = 'approved';
+    } else if (viewer.role === 'admin' || viewer.id === post.authorId) {
+      // no extra filter
+    } else {
+      filter['$or'] = [
+        { moderationStatus: 'approved' },
+        { authorId: viewer.id },
+      ] as any;
     }
 
     const sort =
@@ -102,31 +124,21 @@ export class CommentsService {
       authorId: viewer.id,
       content: dto.content,
       isDeleted: false,
+      moderationStatus: 'pending',
     });
 
-    await this.postModel
-      .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
-      .exec();
-
-    // Notify post owner on comment
-    if (!dto.parentId) {
-      await this.notificationsService.create({
-        userId: post.authorId,
-        actorId: viewer.id,
-        type: 'comment',
-        postId: String(post._id),
-        commentId: String(created._id),
-      });
-    } else if (parentAuthorId) {
-      // Notify parent comment owner on reply
-      await this.notificationsService.create({
-        userId: parentAuthorId,
-        actorId: viewer.id,
-        type: 'reply',
-        postId: String(post._id),
-        commentId: String(created._id),
-      });
-    }
+    // Do NOT increment commentCount yet; only increment when approved by AI.
+    await this.jobModel.updateOne(
+      { commentId: String(created._id) },
+      {
+        $setOnInsert: {
+          commentId: String(created._id),
+          status: 'pending',
+          attempts: 0,
+        },
+      },
+      { upsert: true },
+    );
 
     return created;
   }
@@ -159,21 +171,23 @@ export class CommentsService {
       )
       .exec();
 
-    // Clamp commentCount to >= 0 even under concurrent deletes.
-    await this.postModel
-      .updateOne(
-        { _id: comment.postId },
-        [
-          {
-            $set: {
-              commentCount: {
-                $max: [0, { $subtract: ['$commentCount', 1] }],
+    // Only decrement commentCount if the comment was approved/visible.
+    if (comment.moderationStatus === 'approved') {
+      await this.postModel
+        .updateOne(
+          { _id: comment.postId },
+          [
+            {
+              $set: {
+                commentCount: {
+                  $max: [0, { $subtract: ['$commentCount', 1] }],
+                },
               },
             },
-          },
-        ],
-      )
-      .exec();
+          ],
+        )
+        .exec();
+    }
     return { ok: true };
   }
 

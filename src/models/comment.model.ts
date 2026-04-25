@@ -5,6 +5,9 @@ export type CommentDocument = HydratedDocument<Comment>;
 
 export const CommentModelName = 'Comment';
 
+export type CommentModerationStatus = 'pending' | 'approved' | 'rejected';
+export type CommentSentiment = 'positive' | 'neutral' | 'negative';
+
 @Schema({ timestamps: true })
 export class Comment {
   @Prop({ type: String, required: true, index: true })
@@ -18,6 +21,32 @@ export class Comment {
 
   @Prop({ type: String, required: true })
   content!: string;
+
+  @Prop({
+    type: String,
+    required: true,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+    index: true,
+  })
+  moderationStatus!: CommentModerationStatus;
+
+  @Prop({ type: String, enum: ['positive', 'neutral', 'negative'], index: true })
+  sentiment?: CommentSentiment;
+
+  @Prop({
+    type: {
+      isToxic: { type: Boolean, required: true },
+      score: { type: Number, required: true },
+    },
+  })
+  toxicity?: { isToxic: boolean; score: number };
+
+  @Prop({ type: String })
+  aiVersion?: string;
+
+  @Prop({ type: String })
+  aiError?: string;
 
   @Prop({ type: Number, default: 0 })
   likeCount!: number;
