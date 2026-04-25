@@ -5,12 +5,27 @@ import { PostModelName, type PostDocument } from '../models/post.model';
 import { UserModelName, type UserDocument } from '../models/user.model';
 import type { SearchPostsDto } from '../dto/search/search-posts.dto';
 import type { SearchUsersDto } from '../dto/search/search-users.dto';
+import type { JwtUser } from '../types/auth';
+import type { CreateSearchEventDto } from '../dto/search/create-search-event.dto';
+import {
+  SearchEventModelName,
+  type SearchEventDocument,
+} from '../models/search-event.model';
+import {
+  HotKeywordModelName,
+  type HotKeywordDocument,
+  type HotKeywordWindow,
+} from '../models/hot-keyword.model';
 
 @Injectable()
 export class SearchService {
   constructor(
     @InjectModel(PostModelName) private readonly postModel: Model<PostDocument>,
     @InjectModel(UserModelName) private readonly userModel: Model<UserDocument>,
+    @InjectModel(SearchEventModelName)
+    private readonly searchEventModel: Model<SearchEventDocument>,
+    @InjectModel(HotKeywordModelName)
+    private readonly hotKeywordModel: Model<HotKeywordDocument>,
   ) {}
 
   async searchPosts(query: SearchPostsDto) {
@@ -89,6 +104,85 @@ export class SearchService {
       limit,
     };
   }
+
+  async createEvent(user: JwtUser | undefined, dto: CreateSearchEventDto) {
+    const q = normalizeKeyword(dto.q);
+    if (!q) return { ok: true };
+    await this.searchEventModel.create({
+      userId: user?.id,
+      sessionId: dto.sessionId?.trim(),
+      q,
+      action: dto.action,
+      targetId: dto.targetId?.trim(),
+    });
+    return { ok: true };
+  }
+
+  async getHotKeywords(opts: { window: HotKeywordWindow; limit: number }) {
+    const window = normalizeWindow(opts.window);
+    const limit = Math.min(50, Math.max(1, Number(opts.limit) || 10));
+    const items = await this.hotKeywordModel
+      .find({ window })
+      .sort({ score: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+    return {
+      window,
+      items: items.map((r: any) => ({ keyword: r.keyword, score: r.score })),
+    };
+  }
+
+  async suggest(opts: { q: string; limit: number }) {
+    const limit = Math.min(20, Math.max(1, Number(opts.limit) || 10));
+    const q = normalizeKeyword(opts.q);
+    if (!q) {
+      const hot = await this.hotKeywordModel
+        .find({ window: '24h' })
+        .sort({ score: -1 })
+        .limit(limit)
+        .lean()
+        .exec();
+      return { items: hot.map((r: any) => r.keyword) };
+    }
+
+    const rx = new RegExp(`^${escapeRegex(q)}`, 'i');
+    const [hotMatches, recentMatches] = await Promise.all([
+      this.hotKeywordModel
+        .find({ window: '24h', keyword: { $regex: rx } })
+        .sort({ score: -1 })
+        .limit(limit)
+        .lean()
+        .exec(),
+      this.searchEventModel
+        .aggregate([
+          { $match: { q: { $regex: rx } } },
+          { $group: { _id: '$q', lastAt: { $max: '$createdAt' } } },
+          { $sort: { lastAt: -1 } },
+          { $limit: limit },
+        ])
+        .exec(),
+    ]);
+
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const r of hotMatches) {
+      const k = String((r as any).keyword);
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push(k);
+      }
+    }
+    for (const r of recentMatches as any[]) {
+      const k = String(r._id);
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push(k);
+      }
+    }
+
+    return { items: out.slice(0, limit) };
+  }
 }
 
 function recencyBoostExpr() {
@@ -122,5 +216,17 @@ function recencyBoostExpr() {
       },
     },
   };
+}
+
+function normalizeKeyword(input: string) {
+  return input.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 200);
+}
+
+function normalizeWindow(w: any): HotKeywordWindow {
+  return w === '7d' ? '7d' : '24h';
+}
+
+function escapeRegex(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

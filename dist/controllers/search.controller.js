@@ -17,6 +17,9 @@ const common_1 = require("@nestjs/common");
 const search_service_1 = require("../services/search.service");
 const search_posts_dto_1 = require("../dto/search/search-posts.dto");
 const search_users_dto_1 = require("../dto/search/search-users.dto");
+const create_search_event_dto_1 = require("../dto/search/create-search-event.dto");
+const optional_jwt_auth_guard_1 = require("../guards/optional-jwt-auth.guard");
+const user_decorator_1 = require("../decorators/user.decorator");
 let SearchController = class SearchController {
     searchService;
     constructor(searchService) {
@@ -27,6 +30,21 @@ let SearchController = class SearchController {
     }
     searchUsers(query) {
         return this.searchService.searchUsers(query);
+    }
+    createEvent(user, dto) {
+        return this.searchService.createEvent(user, dto);
+    }
+    hot(window, limit) {
+        return this.searchService.getHotKeywords({
+            window: window ?? '24h',
+            limit: limit ? Number(limit) : 10,
+        });
+    }
+    suggest(q, limit) {
+        return this.searchService.suggest({
+            q: q ?? '',
+            limit: limit ? Number(limit) : 10,
+        });
     }
 };
 exports.SearchController = SearchController;
@@ -44,6 +62,31 @@ __decorate([
     __metadata("design:paramtypes", [search_users_dto_1.SearchUsersDto]),
     __metadata("design:returntype", void 0)
 ], SearchController.prototype, "searchUsers", null);
+__decorate([
+    (0, common_1.Post)('events'),
+    (0, common_1.UseGuards)(optional_jwt_auth_guard_1.OptionalJwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, create_search_event_dto_1.CreateSearchEventDto]),
+    __metadata("design:returntype", void 0)
+], SearchController.prototype, "createEvent", null);
+__decorate([
+    (0, common_1.Get)('hot'),
+    __param(0, (0, common_1.Query)('window')),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], SearchController.prototype, "hot", null);
+__decorate([
+    (0, common_1.Get)('suggest'),
+    __param(0, (0, common_1.Query)('q')),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], SearchController.prototype, "suggest", null);
 exports.SearchController = SearchController = __decorate([
     (0, common_1.Controller)('search'),
     __metadata("design:paramtypes", [search_service_1.SearchService])

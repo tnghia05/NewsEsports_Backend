@@ -48,9 +48,12 @@ const notification_model_1 = require("../models/notification.model");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const news_model_1 = require("../models/news.model");
 const rss_source_model_1 = require("../models/rss-source.model");
+const search_event_model_1 = require("../models/search-event.model");
+const hot_keyword_model_1 = require("../models/hot-keyword.model");
 const jwt_strategy_1 = require("../infra/auth/jwt.strategy");
 const ai_service_1 = require("../infra/ai/ai.service");
 const rss_service_1 = require("../infra/rss/rss.service");
+const hot_keywords_worker_service_1 = require("../services/hot-keywords-worker.service");
 let ApiV1Module = class ApiV1Module {
 };
 exports.ApiV1Module = ApiV1Module;
@@ -70,6 +73,8 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: comment_moderation_job_model_1.CommentModerationJobModelName, schema: comment_moderation_job_model_1.CommentModerationJobSchema },
                 { name: news_model_1.NewsModelName, schema: news_model_1.NewsSchema },
                 { name: rss_source_model_1.RssSourceModelName, schema: rss_source_model_1.RssSourceSchema },
+                { name: search_event_model_1.SearchEventModelName, schema: search_event_model_1.SearchEventSchema },
+                { name: hot_keyword_model_1.HotKeywordModelName, schema: hot_keyword_model_1.HotKeywordSchema },
             ]),
         ],
         controllers: [
@@ -102,6 +107,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             rss_sources_service_1.RssSourcesService,
             rss_service_1.RssService,
             news_import_worker_service_1.NewsImportWorkerService,
+            hot_keywords_worker_service_1.HotKeywordsWorkerService,
             ai_service_1.AiService,
             comment_moderation_worker_service_1.CommentModerationWorkerService,
             jwt_strategy_1.JwtStrategy,

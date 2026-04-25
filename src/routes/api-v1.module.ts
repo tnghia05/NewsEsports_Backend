@@ -42,9 +42,12 @@ import { NotificationModelName, NotificationSchema } from '../models/notificatio
 import { CommentModerationJobModelName, CommentModerationJobSchema } from '../models/comment-moderation-job.model';
 import { NewsModelName, NewsSchema } from '../models/news.model';
 import { RssSourceModelName, RssSourceSchema } from '../models/rss-source.model';
+import { SearchEventModelName, SearchEventSchema } from '../models/search-event.model';
+import { HotKeywordModelName, HotKeywordSchema } from '../models/hot-keyword.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
 import { AiService } from '../infra/ai/ai.service';
 import { RssService } from '../infra/rss/rss.service';
+import { HotKeywordsWorkerService } from '../services/hot-keywords-worker.service';
 
 @Module({
   imports: [
@@ -61,6 +64,8 @@ import { RssService } from '../infra/rss/rss.service';
       { name: CommentModerationJobModelName, schema: CommentModerationJobSchema },
       { name: NewsModelName, schema: NewsSchema },
       { name: RssSourceModelName, schema: RssSourceSchema },
+      { name: SearchEventModelName, schema: SearchEventSchema },
+      { name: HotKeywordModelName, schema: HotKeywordSchema },
     ]),
   ],
   controllers: [
@@ -93,6 +98,7 @@ import { RssService } from '../infra/rss/rss.service';
     RssSourcesService,
     RssService,
     NewsImportWorkerService,
+    HotKeywordsWorkerService,
     AiService,
     CommentModerationWorkerService,
     JwtStrategy,
