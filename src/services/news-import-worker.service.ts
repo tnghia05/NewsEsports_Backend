@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { NewsModelName, type NewsDocument } from '../models/news.model';
 import { RssService } from '../infra/rss/rss.service';
+import { RssSourcesService } from './rss-sources.service';
 
 @Injectable()
 export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -18,19 +19,16 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
     @InjectModel(NewsModelName) private readonly newsModel: Model<NewsDocument>,
     private readonly rssService: RssService,
+    private readonly rssSourcesService: RssSourcesService,
   ) {
     this.intervalMs = Number(this.config.get('RSS_IMPORT_INTERVAL_MS') ?? 10 * 60_000);
     this.maxItemsPerFeed = Number(this.config.get('RSS_IMPORT_MAX_ITEMS') ?? 30);
   }
 
   onModuleInit() {
-    if (!this.getSources().length) {
-      this.logger.log('RSS import disabled (RSS_SOURCES empty)');
-      return;
-    }
+    // Always start; actual import is enabled when DB sources (preferred) or env RSS_SOURCES exist.
     this.timer = setInterval(() => void this.tick(), this.intervalMs);
-    // also kick once on startup
-    void this.tick();
+    void this.tick(); // kick once on startup
   }
 
   onModuleDestroy() {
@@ -51,7 +49,7 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private getSources() {
+  private getSourcesFromEnv() {
     const raw = String(this.config.get('RSS_SOURCES') ?? '').trim();
     if (!raw) return [];
     return raw
@@ -60,8 +58,14 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
       .filter(Boolean);
   }
 
+  private async getSources() {
+    const fromDb = await this.rssSourcesService.listEnabledUrls();
+    if (fromDb.length) return fromDb;
+    return this.getSourcesFromEnv();
+  }
+
   private async runImport() {
-    const sources = this.getSources();
+    const sources = await this.getSources();
     if (!sources.length) return { ok: true, imported: 0, skipped: 0, sources: 0 };
 
     const started = Date.now();
@@ -77,8 +81,11 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
           if (created) imported++;
           else skipped++;
         }
+        await this.rssSourcesService.markImportResult(feedUrl, { ok: true });
       } catch (e: any) {
-        this.logger.warn(`RSS import failed feed=${feedUrl} err=${String(e?.message ?? e)}`);
+        const err = String(e?.message ?? e);
+        this.logger.warn(`RSS import failed feed=${feedUrl} err=${err}`);
+        await this.rssSourcesService.markImportResult(feedUrl, { ok: false, error: err });
       }
     }
 

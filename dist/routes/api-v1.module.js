@@ -19,6 +19,7 @@ const notifications_controller_1 = require("../controllers/notifications.control
 const search_controller_1 = require("../controllers/search.controller");
 const hashtags_controller_1 = require("../controllers/hashtags.controller");
 const news_controller_1 = require("../controllers/news.controller");
+const rss_sources_controller_1 = require("../controllers/rss-sources.controller");
 const health_service_1 = require("../services/health.service");
 const users_service_1 = require("../services/users.service");
 const auth_service_1 = require("../services/auth.service");
@@ -34,6 +35,7 @@ const hashtags_service_1 = require("../services/hashtags.service");
 const comment_moderation_worker_service_1 = require("../services/comment-moderation-worker.service");
 const news_service_1 = require("../services/news.service");
 const news_import_worker_service_1 = require("../services/news-import-worker.service");
+const rss_sources_service_1 = require("../services/rss-sources.service");
 const user_model_1 = require("../models/user.model");
 const refresh_token_model_1 = require("../models/refresh-token.model");
 const post_model_1 = require("../models/post.model");
@@ -45,6 +47,7 @@ const comment_like_model_1 = require("../models/comment-like.model");
 const notification_model_1 = require("../models/notification.model");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const news_model_1 = require("../models/news.model");
+const rss_source_model_1 = require("../models/rss-source.model");
 const jwt_strategy_1 = require("../infra/auth/jwt.strategy");
 const ai_service_1 = require("../infra/ai/ai.service");
 const rss_service_1 = require("../infra/rss/rss.service");
@@ -66,6 +69,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: notification_model_1.NotificationModelName, schema: notification_model_1.NotificationSchema },
                 { name: comment_moderation_job_model_1.CommentModerationJobModelName, schema: comment_moderation_job_model_1.CommentModerationJobSchema },
                 { name: news_model_1.NewsModelName, schema: news_model_1.NewsSchema },
+                { name: rss_source_model_1.RssSourceModelName, schema: rss_source_model_1.RssSourceSchema },
             ]),
         ],
         controllers: [
@@ -76,6 +80,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             posts_controller_1.PostsController,
             comments_controller_1.CommentsController,
             news_controller_1.NewsController,
+            rss_sources_controller_1.RssSourcesController,
             hashtags_controller_1.HashtagsController,
             search_controller_1.SearchController,
             notifications_controller_1.NotificationsController,
@@ -94,6 +99,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             search_service_1.SearchService,
             notifications_service_1.NotificationsService,
             news_service_1.NewsService,
+            rss_sources_service_1.RssSourcesService,
             rss_service_1.RssService,
             news_import_worker_service_1.NewsImportWorkerService,
             ai_service_1.AiService,

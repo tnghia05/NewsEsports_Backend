@@ -10,6 +10,7 @@ import { NotificationsController } from '../controllers/notifications.controller
 import { SearchController } from '../controllers/search.controller';
 import { HashtagsController } from '../controllers/hashtags.controller';
 import { NewsController } from '../controllers/news.controller';
+import { RssSourcesController } from '../controllers/rss-sources.controller';
 import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
@@ -25,6 +26,7 @@ import { HashtagsService } from '../services/hashtags.service';
 import { CommentModerationWorkerService } from '../services/comment-moderation-worker.service';
 import { NewsService } from '../services/news.service';
 import { NewsImportWorkerService } from '../services/news-import-worker.service';
+import { RssSourcesService } from '../services/rss-sources.service';
 import { UserModelName, UserSchema } from '../models/user.model';
 import {
   RefreshTokenModelName,
@@ -39,6 +41,7 @@ import { CommentLikeModelName, CommentLikeSchema } from '../models/comment-like.
 import { NotificationModelName, NotificationSchema } from '../models/notification.model';
 import { CommentModerationJobModelName, CommentModerationJobSchema } from '../models/comment-moderation-job.model';
 import { NewsModelName, NewsSchema } from '../models/news.model';
+import { RssSourceModelName, RssSourceSchema } from '../models/rss-source.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
 import { AiService } from '../infra/ai/ai.service';
 import { RssService } from '../infra/rss/rss.service';
@@ -57,6 +60,7 @@ import { RssService } from '../infra/rss/rss.service';
       { name: NotificationModelName, schema: NotificationSchema },
       { name: CommentModerationJobModelName, schema: CommentModerationJobSchema },
       { name: NewsModelName, schema: NewsSchema },
+      { name: RssSourceModelName, schema: RssSourceSchema },
     ]),
   ],
   controllers: [
@@ -67,6 +71,7 @@ import { RssService } from '../infra/rss/rss.service';
     PostsController,
     CommentsController,
     NewsController,
+    RssSourcesController,
     HashtagsController,
     SearchController,
     NotificationsController,
@@ -85,6 +90,7 @@ import { RssService } from '../infra/rss/rss.service';
     SearchService,
     NotificationsService,
     NewsService,
+    RssSourcesService,
     RssService,
     NewsImportWorkerService,
     AiService,

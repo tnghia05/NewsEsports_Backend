@@ -19,27 +19,26 @@ const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const news_model_1 = require("../models/news.model");
 const rss_service_1 = require("../infra/rss/rss.service");
+const rss_sources_service_1 = require("./rss-sources.service");
 let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorkerService {
     config;
     newsModel;
     rssService;
+    rssSourcesService;
     logger = new common_1.Logger(NewsImportWorkerService_1.name);
     timer;
     running = false;
     intervalMs;
     maxItemsPerFeed;
-    constructor(config, newsModel, rssService) {
+    constructor(config, newsModel, rssService, rssSourcesService) {
         this.config = config;
         this.newsModel = newsModel;
         this.rssService = rssService;
+        this.rssSourcesService = rssSourcesService;
         this.intervalMs = Number(this.config.get('RSS_IMPORT_INTERVAL_MS') ?? 10 * 60_000);
         this.maxItemsPerFeed = Number(this.config.get('RSS_IMPORT_MAX_ITEMS') ?? 30);
     }
     onModuleInit() {
-        if (!this.getSources().length) {
-            this.logger.log('RSS import disabled (RSS_SOURCES empty)');
-            return;
-        }
         this.timer = setInterval(() => void this.tick(), this.intervalMs);
         void this.tick();
     }
@@ -61,7 +60,7 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
             this.running = false;
         }
     }
-    getSources() {
+    getSourcesFromEnv() {
         const raw = String(this.config.get('RSS_SOURCES') ?? '').trim();
         if (!raw)
             return [];
@@ -70,8 +69,14 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
             .map((s) => s.trim())
             .filter(Boolean);
     }
+    async getSources() {
+        const fromDb = await this.rssSourcesService.listEnabledUrls();
+        if (fromDb.length)
+            return fromDb;
+        return this.getSourcesFromEnv();
+    }
     async runImport() {
-        const sources = this.getSources();
+        const sources = await this.getSources();
         if (!sources.length)
             return { ok: true, imported: 0, skipped: 0, sources: 0 };
         const started = Date.now();
@@ -88,9 +93,12 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
                     else
                         skipped++;
                 }
+                await this.rssSourcesService.markImportResult(feedUrl, { ok: true });
             }
             catch (e) {
-                this.logger.warn(`RSS import failed feed=${feedUrl} err=${String(e?.message ?? e)}`);
+                const err = String(e?.message ?? e);
+                this.logger.warn(`RSS import failed feed=${feedUrl} err=${err}`);
+                await this.rssSourcesService.markImportResult(feedUrl, { ok: false, error: err });
             }
         }
         const elapsed = Date.now() - started;
@@ -131,7 +139,8 @@ exports.NewsImportWorkerService = NewsImportWorkerService;
 exports.NewsImportWorkerService = NewsImportWorkerService = NewsImportWorkerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
-    __metadata("design:paramtypes", [config_1.ConfigService, Function, rss_service_1.RssService])
+    __metadata("design:paramtypes", [config_1.ConfigService, Function, rss_service_1.RssService,
+        rss_sources_service_1.RssSourcesService])
 ], NewsImportWorkerService);
 function makeRssSlug(title, externalId) {
     const base = slugify(title).slice(0, 80) || 'news';
