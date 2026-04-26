@@ -32,26 +32,17 @@ export class AiService {
   private readonly timeoutMs: number;
   private readonly toxicThreshold: number;
   private readonly version?: string;
-  private loggedNoUrl = false;
 
   constructor(private readonly config: ConfigService) {
-    // Prefer current env names (AI_SERVICE_URL), fallback to older names.
-    this.url =
-      this.config.get<string>('AI_SERVICE_URL', { infer: true }) ??
-      this.config.get<string>('AI_MODERATION_URL', { infer: true });
+    this.url = this.config.get<string>('AI_MODERATION_URL', { infer: true });
     this.timeoutMs = Number(
-      this.config.get<string>('AI_TIMEOUT_MS', { infer: true }) ??
-        this.config.get<string>('AI_MODERATION_TIMEOUT_MS', { infer: true }) ??
+      this.config.get<string>('AI_MODERATION_TIMEOUT_MS', { infer: true }) ??
         4000,
     );
     this.toxicThreshold = Number(
       this.config.get<string>('AI_TOXIC_THRESHOLD', { infer: true }) ?? 0.7,
     );
     this.version = this.config.get<string>('AI_VERSION', { infer: true });
-
-    this.logger.log(
-      `AI config url=${safeUrl(this.url)} timeoutMs=${this.timeoutMs} toxicThreshold=${this.toxicThreshold} version=${this.version ?? 'n/a'}`,
-    );
   }
 
   /**
@@ -61,12 +52,6 @@ export class AiService {
   async analyzeComment(text: string): Promise<AiModerationResult> {
     const trimmed = text.trim();
     if (!this.url) {
-      if (!this.loggedNoUrl) {
-        this.loggedNoUrl = true;
-        this.logger.warn(
-          'AI service url is not configured; returning fallback (neutral, non-toxic). Set AI_SERVICE_URL to enable moderation.',
-        );
-      }
       return {
         sentiment: 'neutral',
         toxicity: { isToxic: false, score: 0 },
@@ -94,7 +79,7 @@ export class AiService {
       // High-signal logs only (no raw text, no raw payload).
       const shape = summarizeAiResponseShape(data);
       this.logger.log(
-        `analyzeComment ok in ${elapsedMs}ms url=${safeUrl(this.url)} sentiment=${normalized.sentiment} s4=${normalized.sentiment4 ?? 'n/a'} intent=${normalized.intent ?? 'n/a'} aspects=${(normalized.aspects ?? []).join('|') || 'n/a'} toxic=${normalized.toxicity.isToxic} score=${normalized.toxicity.score.toFixed(
+        `analyzeComment ok in ${elapsedMs}ms sentiment=${normalized.sentiment} toxic=${normalized.toxicity.isToxic} score=${normalized.toxicity.score.toFixed(
           3,
         )} shape=${shape}`,
       );
@@ -107,23 +92,12 @@ export class AiService {
         String(e?.message ?? '').toLowerCase().includes('aborted');
       const errMsg = String(e?.message ?? e);
       this.logger.warn(
-        `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms url=${safeUrl(this.url)}: ${errMsg}`,
+        `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms: ${errMsg}`,
       );
       throw e;
     } finally {
       clearTimeout(t);
     }
-  }
-}
-
-function safeUrl(url?: string) {
-  if (!url) return 'n/a';
-  try {
-    const u = new URL(url);
-    // Don't leak path/query; host is enough for debugging.
-    return `${u.protocol}//${u.host}`;
-  } catch {
-    return 'invalid';
   }
 }
 

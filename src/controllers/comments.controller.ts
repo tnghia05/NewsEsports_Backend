@@ -3,15 +3,12 @@ import {
   Controller,
   Delete,
   Get,
-  Logger,
   Param,
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../decorators/user.decorator';
@@ -24,8 +21,6 @@ import { UpdateCommentDto } from '../dto/comments/update-comment.dto';
 
 @Controller()
 export class CommentsController {
-  private readonly logger = new Logger(CommentsController.name);
-
   constructor(
     private readonly commentsService: CommentsService,
     private readonly commentLikesService: CommentLikesService,
@@ -57,17 +52,7 @@ export class CommentsController {
     @CurrentUser() user: JwtUser,
     @Param('postId') postId: string,
     @Body() body: CreateCommentDto,
-    @Req() req: Request,
   ) {
-    const ip =
-      (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
-      req.socket?.remoteAddress ||
-      'unknown';
-    const ua = (req.headers['user-agent'] as string | undefined) ?? 'n/a';
-    const referer = (req.headers['referer'] as string | undefined) ?? 'n/a';
-    this.logger.log(
-      `createForPost user=${user.id} postId=${postId} ip=${ip} ua=${ua.slice(0, 80)} referer=${referer} contentLen=${(body?.content ?? '').length} contentPreview=${JSON.stringify((body?.content ?? '').slice(0, 60))}`,
-    );
     return this.commentsService.createForPost(user, postId, body);
   }
 
