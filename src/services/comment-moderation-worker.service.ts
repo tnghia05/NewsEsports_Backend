@@ -68,6 +68,7 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
   }
 
   private async processJob(job: CommentModerationJobDocument) {
+    this.logger.log(`processJob start jobId=${String(job._id)} commentId=${job.commentId}`);
     const comment = await this.commentModel.findById(job.commentId).exec();
     if (!comment) {
       await this.jobModel
@@ -93,8 +94,15 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
     }
 
     try {
+      const started = Date.now();
       const ai = await this.aiService.analyzeComment(comment.content);
       const rejected = ai.toxicity.isToxic;
+      const elapsed = Date.now() - started;
+      this.logger.log(
+        `processJob aiOk jobId=${String(job._id)} commentId=${String(comment._id)} in ${elapsed}ms sentiment=${ai.sentiment} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score.toFixed(
+          3,
+        )} aiVersion=${ai.aiVersion ?? 'n/a'}`,
+      );
 
       await this.commentModel
         .updateOne(
@@ -146,6 +154,11 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
     } catch (e: any) {
       const attempts = (job.attempts ?? 0) + 1;
       const backoffMs = Math.min(60_000, 2000 * attempts);
+      this.logger.warn(
+        `processJob aiFail jobId=${String(job._id)} commentId=${String(job.commentId)} attempts=${attempts}: ${String(
+          e?.message ?? e,
+        )}`,
+      );
       await this.commentModel
         .updateOne(
           { _id: comment._id },

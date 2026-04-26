@@ -44,10 +44,13 @@ import { NewsModelName, NewsSchema } from '../models/news.model';
 import { RssSourceModelName, RssSourceSchema } from '../models/rss-source.model';
 import { SearchEventModelName, SearchEventSchema } from '../models/search-event.model';
 import { HotKeywordModelName, HotKeywordSchema } from '../models/hot-keyword.model';
+import { HashtagEventModelName, HashtagEventSchema } from '../models/hashtag-event.model';
+import { HotTopicModelName, HotTopicSchema } from '../models/hot-topic.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
 import { AiService } from '../infra/ai/ai.service';
 import { RssService } from '../infra/rss/rss.service';
 import { HotKeywordsWorkerService } from '../services/hot-keywords-worker.service';
+import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
 
 @Module({
   imports: [
@@ -66,6 +69,8 @@ import { HotKeywordsWorkerService } from '../services/hot-keywords-worker.servic
       { name: RssSourceModelName, schema: RssSourceSchema },
       { name: SearchEventModelName, schema: SearchEventSchema },
       { name: HotKeywordModelName, schema: HotKeywordSchema },
+      { name: HashtagEventModelName, schema: HashtagEventSchema },
+      { name: HotTopicModelName, schema: HotTopicSchema },
     ]),
   ],
   controllers: [
@@ -99,6 +104,7 @@ import { HotKeywordsWorkerService } from '../services/hot-keywords-worker.servic
     RssService,
     NewsImportWorkerService,
     HotKeywordsWorkerService,
+    HotTopicsWorkerService,
     AiService,
     CommentModerationWorkerService,
     JwtStrategy,

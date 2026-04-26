@@ -6,6 +6,7 @@ export type SearchEventDocument = HydratedDocument<SearchEvent>;
 export const SearchEventModelName = 'SearchEvent';
 
 export type SearchEventAction = 'search' | 'click';
+export type SearchEventTargetType = 'post' | 'comment' | 'news' | 'user' | 'other';
 
 @Schema({ timestamps: true })
 export class SearchEvent {
@@ -25,6 +26,12 @@ export class SearchEvent {
     index: true,
   })
   action!: SearchEventAction;
+
+  @Prop({
+    type: String,
+    enum: ['post', 'comment', 'news', 'user', 'other'],
+  })
+  targetType?: SearchEventTargetType;
 
   @Prop({ type: String })
   targetId?: string;

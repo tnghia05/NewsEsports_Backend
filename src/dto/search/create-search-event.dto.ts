@@ -14,6 +14,10 @@ export class CreateSearchEventDto {
   sessionId?: string;
 
   @IsOptional()
+  @IsIn(['post', 'comment', 'news', 'user', 'other'])
+  targetType?: 'post' | 'comment' | 'news' | 'user' | 'other';
+
+  @IsOptional()
   @IsString()
   @MaxLength(200)
   targetId?: string;

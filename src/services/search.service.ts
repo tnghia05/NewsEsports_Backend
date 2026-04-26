@@ -113,6 +113,7 @@ export class SearchService {
       sessionId: dto.sessionId?.trim(),
       q,
       action: dto.action,
+      targetType: dto.targetType,
       targetId: dto.targetId?.trim(),
     });
     return { ok: true };
@@ -127,9 +128,46 @@ export class SearchService {
       .limit(limit)
       .lean()
       .exec();
+
+    const updatedAt =
+      items.length > 0
+        ? new Date(
+            Math.max(
+              ...items.map((r: any) =>
+                r?.updatedAt instanceof Date
+                  ? r.updatedAt.getTime()
+                  : new Date(r?.updatedAt ?? 0).getTime(),
+              ),
+            ),
+          ).toISOString()
+        : undefined;
     return {
       window,
-      items: items.map((r: any) => ({ keyword: r.keyword, score: r.score })),
+      updatedAt,
+      items: items.map((r: any, idx: number) => ({
+        rank: idx + 1,
+        keyword: r.keyword,
+        score: r.score,
+      })),
+    };
+  }
+
+  async getTrends(opts: { window: HotKeywordWindow; limit: number }) {
+    const window = normalizeWindow(opts.window);
+    const limit = Math.min(50, Math.max(1, Number(opts.limit) || 10));
+    const items = await this.hotKeywordModel
+      .find({ window })
+      .sort({ score: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+    return {
+      window,
+      items: items.map((r: any) => ({
+        keyword: r.keyword,
+        score: r.score,
+        trend: r.trend ?? undefined,
+      })),
     };
   }
 

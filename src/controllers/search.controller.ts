@@ -35,6 +35,14 @@ export class SearchController {
     });
   }
 
+  @Get('trends')
+  trends(@Query('window') window?: string, @Query('limit') limit?: string) {
+    return this.searchService.getTrends({
+      window: (window as any) ?? '24h',
+      limit: limit ? Number(limit) : 10,
+    });
+  }
+
   @Get('suggest')
   suggest(@Query('q') q?: string, @Query('limit') limit?: string) {
     return this.searchService.suggest({

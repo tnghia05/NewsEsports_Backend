@@ -15,6 +15,8 @@ const EnvSchema = z.object({
   // AI service (Milestone 3)
   AI_SERVICE_URL: z.string().url().optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
+  AI_TOXIC_THRESHOLD: z.coerce.number().min(0).max(1).optional(),
+  AI_VERSION: z.string().min(1).optional(),
 
   // Google login (Milestone 1)
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),

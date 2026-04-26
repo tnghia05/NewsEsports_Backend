@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
+import { AiService } from '../infra/ai/ai.service';
 import {
   SearchEventModelName,
   type SearchEventDocument,
@@ -10,7 +11,11 @@ import {
   HotKeywordModelName,
   type HotKeywordDocument,
   type HotKeywordWindow,
+  type HotKeywordTrend,
 } from '../models/hot-keyword.model';
+import { PostModelName, type PostDocument } from '../models/post.model';
+import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import { NewsModelName, type NewsDocument } from '../models/news.model';
 
 @Injectable()
 export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -19,15 +24,26 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
   private running = false;
 
   private readonly intervalMs: number;
+  private readonly trendTopN: number;
+  private readonly trendSampleN: number;
 
   constructor(
     private readonly config: ConfigService,
+    private readonly aiService: AiService,
     @InjectModel(SearchEventModelName)
     private readonly searchEventModel: Model<SearchEventDocument>,
     @InjectModel(HotKeywordModelName)
     private readonly hotKeywordModel: Model<HotKeywordDocument>,
+    @InjectModel(PostModelName)
+    private readonly postModel: Model<PostDocument>,
+    @InjectModel(CommentModelName)
+    private readonly commentModel: Model<CommentDocument>,
+    @InjectModel(NewsModelName)
+    private readonly newsModel: Model<NewsDocument>,
   ) {
     this.intervalMs = Number(this.config.get('HOT_KEYWORDS_INTERVAL_MS') ?? 60_000);
+    this.trendTopN = Number(this.config.get('HOT_KEYWORDS_TREND_TOP_N') ?? 20);
+    this.trendSampleN = Number(this.config.get('HOT_KEYWORDS_TREND_SAMPLE_N') ?? 20);
   }
 
   onModuleInit() {
@@ -85,10 +101,14 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
 
     const bulk = this.hotKeywordModel.collection.initializeUnorderedBulkOp();
     const now = new Date();
+    const topN = Math.min(Math.max(0, this.trendTopN), 50);
+    const topKeywords: string[] = [];
+
     for (const r of rows as any[]) {
       const keyword = String(r._id);
       const score = Number(r.score) || 0;
       if (!keyword || score <= 0) continue;
+      if (topKeywords.length < topN) topKeywords.push(keyword);
       bulk
         .find({ window, keyword })
         .upsert()
@@ -96,6 +116,22 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (bulk.length > 0) await bulk.execute();
+
+    // Trend breakdown (AI-enriched) for top keywords only.
+    // We intentionally keep this cheap and bounded: sample click events and label them.
+    if (topKeywords.length) {
+      const trendStarted = Date.now();
+      for (const keyword of topKeywords) {
+        const trend = await this.computeTrendForKeyword(keyword, sinceDate);
+        if (!trend) continue;
+        await this.hotKeywordModel
+          .updateOne({ window, keyword }, { $set: { trend, updatedAt: now } })
+          .exec();
+      }
+      this.logger.log(
+        `trend window=${window} top=${topKeywords.length} sampleN=${this.trendSampleN} in ${Date.now() - trendStarted}ms`,
+      );
+    }
 
     // prune old keywords not updated recently (optional hygiene)
     await this.hotKeywordModel
@@ -105,5 +141,103 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
     const elapsed = Date.now() - started;
     this.logger.log(`recompute window=${window} rows=${rows.length} in ${elapsed}ms`);
   }
+
+  private async computeTrendForKeyword(keyword: string, sinceDate: Date): Promise<HotKeywordTrend | null> {
+    const sampleN = Math.min(50, Math.max(1, Number(this.trendSampleN) || 20));
+
+    const clickEvents = await this.searchEventModel
+      .find({
+        q: keyword,
+        action: 'click',
+        createdAt: { $gte: sinceDate },
+        targetId: { $exists: true, $ne: null },
+      })
+      .sort({ createdAt: -1 })
+      .limit(sampleN * 2) // allow some misses (deleted targets, unsupported types)
+      .lean()
+      .exec();
+
+    if (!clickEvents.length) {
+      return {
+        sampleCount: 0,
+        labeledCount: 0,
+        toxicCount: 0,
+        sentiment4: {},
+        intent: {},
+        aspect: {},
+      };
+    }
+
+    const texts: string[] = [];
+    for (const ev of clickEvents as any[]) {
+      if (texts.length >= sampleN) break;
+      const text = await this.getTextForEvent(ev);
+      if (text) texts.push(text);
+    }
+
+    const trend: HotKeywordTrend = {
+      sampleCount: texts.length,
+      labeledCount: 0,
+      toxicCount: 0,
+      sentiment4: {},
+      intent: {},
+      aspect: {},
+    };
+
+    for (const text of texts) {
+      try {
+        const r = await this.aiService.analyzeComment(text);
+        trend.labeledCount += 1;
+
+        if (r.sentiment4) {
+          trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
+        }
+        if (r.intent) {
+          trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
+        }
+        for (const a of r.aspects ?? []) {
+          trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
+        }
+        if (r.sentiment4 === 'toxic' || r.toxicity.isToxic) trend.toxicCount += 1;
+      } catch {
+        // ignore single-sample failures; keep job robust
+      }
+    }
+
+    return trend;
+  }
+
+  private async getTextForEvent(ev: any): Promise<string | null> {
+    const targetId = typeof ev?.targetId === 'string' ? ev.targetId : null;
+    if (!targetId) return null;
+
+    const t = String(ev?.targetType ?? '').toLowerCase();
+
+    if (t === 'post') {
+      const doc = await this.postModel.findById(targetId).select({ title: 1, content: 1 }).lean().exec();
+      if (!doc) return null;
+      return makeText(`${doc.title ?? ''}\n${doc.content ?? ''}`);
+    }
+
+    if (t === 'comment') {
+      const doc = await this.commentModel.findById(targetId).select({ content: 1 }).lean().exec();
+      if (!doc) return null;
+      return makeText(doc.content ?? '');
+    }
+
+    if (t === 'news') {
+      const doc = await this.newsModel.findById(targetId).select({ title: 1, content: 1 }).lean().exec();
+      if (!doc) return null;
+      return makeText(`${doc.title ?? ''}\n${doc.content ?? ''}`);
+    }
+
+    // If unknown targetType, we can't fetch the content reliably.
+    return null;
+  }
+}
+
+function makeText(input: string) {
+  // Keep payload small; AI service only needs enough context.
+  return String(input).trim().replace(/\s+/g, ' ').slice(0, 800);
 }
 

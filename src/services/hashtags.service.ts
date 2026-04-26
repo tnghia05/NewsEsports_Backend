@@ -2,12 +2,24 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model, PipelineStage } from 'mongoose';
 import { PostModelName, type PostDocument } from '../models/post.model';
+import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import { HashtagEventModelName, type HashtagEventDocument } from '../models/hashtag-event.model';
+import { HotTopicModelName, type HotTopicDocument, type HotTopicWindow } from '../models/hot-topic.model';
+import type { JwtUser } from '../types/auth';
+import type { CreateHashtagEventDto } from '../dto/hashtags/create-hashtag-event.dto';
+import type { HotTopicsDto } from '../dto/hashtags/hot-topics.dto';
 
 @Injectable()
 export class HashtagsService {
   constructor(
     @InjectModel(PostModelName)
     private readonly postModel: Model<PostDocument>,
+    @InjectModel(CommentModelName)
+    private readonly commentModel: Model<CommentDocument>,
+    @InjectModel(HashtagEventModelName)
+    private readonly hashtagEventModel: Model<HashtagEventDocument>,
+    @InjectModel(HotTopicModelName)
+    private readonly hotTopicModel: Model<HotTopicDocument>,
   ) {}
 
   async listPostsByTag(tag: string, opts: { tab: 'latest' | 'hot'; page: number; limit: number }) {
@@ -97,10 +109,64 @@ export class HashtagsService {
     const items = await this.postModel.aggregate(pipeline).exec();
     return { window, items };
   }
+
+  async createEvent(user: JwtUser | undefined, dto: CreateHashtagEventDto) {
+    const tag = normalizeTag(dto.tag);
+    if (!tag) return { ok: true };
+    await this.hashtagEventModel.create({
+      userId: user?.id,
+      sessionId: dto.sessionId?.trim(),
+      tag,
+      action: 'view',
+    });
+    return { ok: true };
+  }
+
+  async hotTopics(query: HotTopicsDto) {
+    const window = normalizeHotTopicWindow(query.window);
+    const limit = Math.min(50, Math.max(1, Number(query.limit) || 10));
+    const items = await this.hotTopicModel
+      .find({ window })
+      .sort({ hotness: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+
+    const updatedAt =
+      items.length > 0
+        ? new Date(
+            Math.max(
+              ...items.map((r: any) =>
+                r?.updatedAt instanceof Date
+                  ? r.updatedAt.getTime()
+                  : new Date(r?.updatedAt ?? 0).getTime(),
+              ),
+            ),
+          ).toISOString()
+        : undefined;
+
+    return {
+      window,
+      updatedAt,
+      items: items.map((r: any, idx: number) => ({
+        rank: idx + 1,
+        tag: r.tag,
+        hotness: r.hotness,
+        components: r.components,
+        trend: r.trend ?? undefined,
+      })),
+    };
+  }
 }
 
 function normalizeTag(tag: string) {
   return tag.trim().toLowerCase().replace(/^#/, '');
+}
+
+function normalizeHotTopicWindow(w: any): HotTopicWindow {
+  if (w === '7d') return '7d';
+  if (w === '24h') return '24h';
+  return '3h';
 }
 
 function recencyBoostExpr() {

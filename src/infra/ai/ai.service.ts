@@ -2,9 +2,26 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CommentSentiment } from '../../models/comment.model';
 
+export type Sentiment4Label = 'positive' | 'negative' | 'neutral' | 'toxic';
+export type IntentLabel = 'praise' | 'complain' | 'question' | 'other';
+export type AspectLabel =
+  | 'caster'
+  | 'meta'
+  | 'player_team'
+  | 'tournament'
+  | 'result'
+  | 'general';
+
 export type AiModerationResult = {
+  // legacy fields used by comment moderation
   sentiment: CommentSentiment;
   toxicity: { isToxic: boolean; score: number };
+
+  // optional richer labels (PhoBERT multitask)
+  sentiment4?: Sentiment4Label;
+  intent?: IntentLabel;
+  aspects?: AspectLabel[];
+
   aiVersion?: string;
 };
 
@@ -15,17 +32,26 @@ export class AiService {
   private readonly timeoutMs: number;
   private readonly toxicThreshold: number;
   private readonly version?: string;
+  private loggedNoUrl = false;
 
   constructor(private readonly config: ConfigService) {
-    this.url = this.config.get<string>('AI_MODERATION_URL', { infer: true });
+    // Prefer current env names (AI_SERVICE_URL), fallback to older names.
+    this.url =
+      this.config.get<string>('AI_SERVICE_URL', { infer: true }) ??
+      this.config.get<string>('AI_MODERATION_URL', { infer: true });
     this.timeoutMs = Number(
-      this.config.get<string>('AI_MODERATION_TIMEOUT_MS', { infer: true }) ??
+      this.config.get<string>('AI_TIMEOUT_MS', { infer: true }) ??
+        this.config.get<string>('AI_MODERATION_TIMEOUT_MS', { infer: true }) ??
         4000,
     );
     this.toxicThreshold = Number(
       this.config.get<string>('AI_TOXIC_THRESHOLD', { infer: true }) ?? 0.7,
     );
     this.version = this.config.get<string>('AI_VERSION', { infer: true });
+
+    this.logger.log(
+      `AI config url=${safeUrl(this.url)} timeoutMs=${this.timeoutMs} toxicThreshold=${this.toxicThreshold} version=${this.version ?? 'n/a'}`,
+    );
   }
 
   /**
@@ -35,6 +61,12 @@ export class AiService {
   async analyzeComment(text: string): Promise<AiModerationResult> {
     const trimmed = text.trim();
     if (!this.url) {
+      if (!this.loggedNoUrl) {
+        this.loggedNoUrl = true;
+        this.logger.warn(
+          'AI service url is not configured; returning fallback (neutral, non-toxic). Set AI_SERVICE_URL to enable moderation.',
+        );
+      }
       return {
         sentiment: 'neutral',
         toxicity: { isToxic: false, score: 0 },
@@ -62,7 +94,7 @@ export class AiService {
       // High-signal logs only (no raw text, no raw payload).
       const shape = summarizeAiResponseShape(data);
       this.logger.log(
-        `analyzeComment ok in ${elapsedMs}ms sentiment=${normalized.sentiment} toxic=${normalized.toxicity.isToxic} score=${normalized.toxicity.score.toFixed(
+        `analyzeComment ok in ${elapsedMs}ms url=${safeUrl(this.url)} sentiment=${normalized.sentiment} s4=${normalized.sentiment4 ?? 'n/a'} intent=${normalized.intent ?? 'n/a'} aspects=${(normalized.aspects ?? []).join('|') || 'n/a'} toxic=${normalized.toxicity.isToxic} score=${normalized.toxicity.score.toFixed(
           3,
         )} shape=${shape}`,
       );
@@ -75,12 +107,23 @@ export class AiService {
         String(e?.message ?? '').toLowerCase().includes('aborted');
       const errMsg = String(e?.message ?? e);
       this.logger.warn(
-        `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms: ${errMsg}`,
+        `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms url=${safeUrl(this.url)}: ${errMsg}`,
       );
       throw e;
     } finally {
       clearTimeout(t);
     }
+  }
+}
+
+function safeUrl(url?: string) {
+  if (!url) return 'n/a';
+  try {
+    const u = new URL(url);
+    // Don't leak path/query; host is enough for debugging.
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return 'invalid';
   }
 }
 
@@ -110,19 +153,8 @@ function normalizeAiResponse(
   // - { sentiment: { label, score }, toxicity_score }
   // - { label: 'Positive'|'Negative'|'Neutral'|'Toxic', score }
 
-  let sentiment: CommentSentiment = 'neutral';
-  const rawSent = data?.sentiment ?? data?.label ?? data?.sentiment_label;
-  if (typeof rawSent === 'string') {
-    const s = rawSent.toLowerCase();
-    if (s.includes('pos')) sentiment = 'positive';
-    else if (s.includes('neg')) sentiment = 'negative';
-    else sentiment = 'neutral';
-  } else if (typeof rawSent?.label === 'string') {
-    const s = rawSent.label.toLowerCase();
-    if (s.includes('pos')) sentiment = 'positive';
-    else if (s.includes('neg')) sentiment = 'negative';
-    else sentiment = 'neutral';
-  }
+  const sentiment4 = parseSentiment4(data);
+  const sentiment: CommentSentiment = mapSentiment4ToCommentSentiment(sentiment4);
 
   const toxScoreRaw =
     data?.toxicity?.score ??
@@ -134,18 +166,131 @@ function normalizeAiResponse(
   const isToxic =
     typeof data?.toxicity?.isToxic === 'boolean'
       ? Boolean(data.toxicity.isToxic)
-      : score >= toxicThreshold || String(data?.label ?? '').toLowerCase().includes('toxic');
+      : score >= toxicThreshold ||
+        sentiment4 === 'toxic' ||
+        String(data?.label ?? '').toLowerCase().includes('toxic');
+
+  const intent = parseIntent(data);
+  const aspects = parseAspects(data);
 
   const aiVersion =
     (typeof data?.aiVersion === 'string' ? data.aiVersion : undefined) ??
     (typeof data?.version === 'string' ? data.version : undefined) ??
     fallbackVersion;
 
-  return { sentiment, toxicity: { isToxic, score }, aiVersion };
+  return {
+    sentiment,
+    toxicity: { isToxic, score },
+    sentiment4: sentiment4 ?? undefined,
+    intent: intent ?? undefined,
+    aspects: aspects.length ? aspects : undefined,
+    aiVersion,
+  };
 }
 
 function clamp01(x: number) {
   if (Number.isNaN(x)) return 0;
   return Math.max(0, Math.min(1, x));
+}
+
+function mapSentiment4ToCommentSentiment(s: Sentiment4Label | null): CommentSentiment {
+  // Comment model currently stores only positive/neutral/negative.
+  // "toxic" is represented separately in `toxicity`.
+  if (s === 'positive') return 'positive';
+  if (s === 'negative') return 'negative';
+  return 'neutral';
+}
+
+function parseSentiment4(data: any): Sentiment4Label | null {
+  // Accept several shapes:
+  // - { sentiment4: 'toxic' } or { sentiment: 'toxic' }
+  // - { label: 'Toxic' }
+  // - { debug: { top_sentiment4: 'toxic' } }
+  // - { sentiment: { label: 'Toxic' } }
+  const raw =
+    data?.sentiment4 ??
+    data?.sentiment4_label ??
+    data?.sentiment_label ??
+    data?.sentiment ??
+    data?.label ??
+    data?.debug?.top_sentiment4 ??
+    data?.debug?.sentiment4 ??
+    data?.debug?.sentiment_label;
+
+  const s =
+    typeof raw === 'string'
+      ? raw
+      : typeof raw?.label === 'string'
+        ? raw.label
+        : null;
+  if (!s) return null;
+
+  const v = String(s).toLowerCase();
+  if (v.includes('toxic')) return 'toxic';
+  if (v.includes('pos')) return 'positive';
+  if (v.includes('neg')) return 'negative';
+  if (v.includes('neu')) return 'neutral';
+  return null;
+}
+
+function parseIntent(data: any): IntentLabel | null {
+  const raw =
+    data?.intent ??
+    data?.intent_label ??
+    data?.debug?.top_intent ??
+    data?.debug?.intent ??
+    data?.debug?.intent_label;
+
+  const s =
+    typeof raw === 'string'
+      ? raw
+      : typeof raw?.label === 'string'
+        ? raw.label
+        : null;
+  if (!s) return null;
+
+  const v = String(s).toLowerCase();
+  if (v.includes('praise')) return 'praise';
+  if (v.includes('complain') || v.includes('complaint')) return 'complain';
+  if (v.includes('question')) return 'question';
+  if (v.includes('other')) return 'other';
+  return null;
+}
+
+function parseAspects(data: any): AspectLabel[] {
+  // Expected shapes could be:
+  // - { aspects: ['meta','player_team'] }
+  // - { aspect: { caster: 1, meta: 0, ... } } (or 0/1 booleans)
+  // - { debug: { aspects: [...] } }
+  // - { debug: { aspect: { ... } } }
+  const raw = data?.aspects ?? data?.aspect ?? data?.debug?.aspects ?? data?.debug?.aspect;
+
+  const out: AspectLabel[] = [];
+  const push = (x: any) => {
+    const v = String(x ?? '').toLowerCase();
+    if (v === 'caster') out.push('caster');
+    else if (v === 'meta') out.push('meta');
+    else if (v === 'player/team' || v === 'player_team' || v === 'player' || v === 'team')
+      out.push('player_team');
+    else if (v === 'giải đấu' || v === 'tournament') out.push('tournament');
+    else if (v === 'result') out.push('result');
+    else if (v === 'general') out.push('general');
+  };
+
+  if (Array.isArray(raw)) {
+    for (const x of raw) push(x);
+  } else if (raw && typeof raw === 'object') {
+    for (const [k, v] of Object.entries(raw)) {
+      const enabled =
+        v === true ||
+        v === 1 ||
+        (typeof v === 'number' && v >= 0.5) ||
+        (typeof v === 'string' && (v === '1' || v.toLowerCase() === 'true'));
+      if (enabled) push(k);
+    }
+  }
+
+  // unique
+  return Array.from(new Set(out));
 }
 
