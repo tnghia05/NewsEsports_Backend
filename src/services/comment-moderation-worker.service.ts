@@ -62,7 +62,8 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
           $or: [{ nextRunAt: { $exists: false } }, { nextRunAt: { $lte: now } }],
         },
         { $set: { status: 'processing', lockedAt: now } },
-        { new: true },
+        // Mongoose forwards options to Mongo driver; `new` is deprecated in driver.
+        { returnDocument: 'after' },
       )
       .exec();
   }
