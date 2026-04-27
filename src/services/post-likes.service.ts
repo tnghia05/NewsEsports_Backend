@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import {
@@ -8,6 +8,7 @@ import {
 import { PostModelName, type PostDocument } from '../models/post.model';
 import type { JwtUser } from '../types/auth';
 import { NotificationsService } from './notifications.service';
+import { assertCanReadPost } from '../utils/assert-can-read-post';
 
 @Injectable()
 export class PostLikesService {
@@ -57,20 +58,15 @@ export class PostLikesService {
       .updateOne({ _id: post._id }, { $inc: { likeCount: 1 } })
       .exec();
 
-    await this.notificationsService.create({
-      userId: post.authorId,
-      actorId: viewer.id,
-      type: 'post_like',
-      postId: String(post._id),
-    });
+    if (viewer.id !== post.authorId) {
+      await this.notificationsService.create({
+        userId: post.authorId,
+        actorId: viewer.id,
+        type: 'post_like',
+        postId: String(post._id),
+      });
+    }
     return { liked: true };
   }
-}
-
-function assertCanReadPost(viewer: JwtUser, post: PostDocument) {
-  if (post.status === 'published') return;
-  if (viewer.role === 'admin') return;
-  if (post.authorId === viewer.id) return;
-  throw new ForbiddenException('Forbidden');
 }
 

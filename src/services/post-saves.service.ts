@@ -1,9 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { PostSaveModelName, type PostSaveDocument } from '../models/post-save.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import type { JwtUser } from '../types/auth';
+import { assertCanReadPost } from '../utils/assert-can-read-post';
 
 @Injectable()
 export class PostSavesService {
@@ -37,12 +38,5 @@ export class PostSavesService {
 
     return { saved: true };
   }
-}
-
-function assertCanReadPost(viewer: JwtUser, post: PostDocument) {
-  if (post.status === 'published') return;
-  if (viewer.role === 'admin') return;
-  if (post.authorId === viewer.id) return;
-  throw new ForbiddenException('Forbidden');
 }
 

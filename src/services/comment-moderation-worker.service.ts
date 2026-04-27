@@ -55,11 +55,17 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
 
   private async claimJob() {
     const now = new Date();
+    const stuckBefore = new Date(Date.now() - 2 * 60_000); // 2 min timeout
     return this.jobModel
       .findOneAndUpdate(
         {
-          status: 'pending',
-          $or: [{ nextRunAt: { $exists: false } }, { nextRunAt: { $lte: now } }],
+          $or: [
+            {
+              status: 'pending',
+              $or: [{ nextRunAt: { $exists: false } }, { nextRunAt: { $lte: now } }],
+            },
+            { status: 'processing', lockedAt: { $lt: stuckBefore } },
+          ],
         },
         { $set: { status: 'processing', lockedAt: now } },
         { new: true },
@@ -123,10 +129,10 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
           .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
           .exec();
 
-        // Notifications only on approved comments
+        // Notifications only on approved comments (skip self-notifications).
         if (comment.parentId) {
           const parent = await this.commentModel.findById(comment.parentId).exec();
-          if (parent) {
+          if (parent && parent.authorId !== comment.authorId) {
             await this.notificationsService.create({
               userId: parent.authorId,
               actorId: comment.authorId,
@@ -135,7 +141,7 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
               commentId: String(comment._id),
             });
           }
-        } else {
+        } else if (post.authorId !== comment.authorId) {
           await this.notificationsService.create({
             userId: post.authorId,
             actorId: comment.authorId,

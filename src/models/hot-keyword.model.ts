@@ -1,21 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
+export type { Sentiment4Label, IntentLabel, AspectLabel } from '../types/ai-labels';
+import type { Sentiment4Label, IntentLabel, AspectLabel } from '../types/ai-labels';
 
 export type HotKeywordDocument = HydratedDocument<HotKeyword>;
 
 export const HotKeywordModelName = 'HotKeyword';
 
 export type HotKeywordWindow = '24h' | '7d';
-
-export type Sentiment4Label = 'positive' | 'negative' | 'neutral' | 'toxic';
-export type IntentLabel = 'praise' | 'complain' | 'question' | 'other';
-export type AspectLabel =
-  | 'caster'
-  | 'meta'
-  | 'player_team'
-  | 'tournament'
-  | 'result'
-  | 'general';
 
 export type HotKeywordTrend = {
   sampleCount: number; // number of items included in breakdown

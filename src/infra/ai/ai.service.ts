@@ -1,16 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CommentSentiment } from '../../models/comment.model';
-
-export type Sentiment4Label = 'positive' | 'negative' | 'neutral' | 'toxic';
-export type IntentLabel = 'praise' | 'complain' | 'question' | 'other';
-export type AspectLabel =
-  | 'caster'
-  | 'meta'
-  | 'player_team'
-  | 'tournament'
-  | 'result'
-  | 'general';
+export type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
+import type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
 
 export type AiModerationResult = {
   // legacy fields used by comment moderation

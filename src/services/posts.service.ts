@@ -8,12 +8,14 @@ import type { Model, PipelineStage, QueryFilter } from 'mongoose';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import { PostLikeModelName, type PostLikeDocument } from '../models/post-like.model';
 import { PostSaveModelName, type PostSaveDocument } from '../models/post-save.model';
+import { CommentModelName, type CommentDocument } from '../models/comment.model';
 import type { JwtUser } from '../types/auth';
 import type { CreatePostDto } from '../dto/posts/create-post.dto';
 import type { UpdatePostDto } from '../dto/posts/update-post.dto';
 import type { QueryPostsDto } from '../dto/posts/query-posts.dto';
 import type { QueryUserPostsDto } from '../dto/users/query-user-posts.dto';
 import { FollowsService } from './follows.service';
+import { assertCanReadPost } from '../utils/assert-can-read-post';
 
 @Injectable()
 export class PostsService {
@@ -21,6 +23,7 @@ export class PostsService {
     @InjectModel(PostModelName) private readonly postModel: Model<PostDocument>,
     @InjectModel(PostLikeModelName) private readonly postLikeModel: Model<PostLikeDocument>,
     @InjectModel(PostSaveModelName) private readonly postSaveModel: Model<PostSaveDocument>,
+    @InjectModel(CommentModelName) private readonly commentModel: Model<CommentDocument>,
     private readonly followsService: FollowsService,
   ) {}
 
@@ -67,6 +70,16 @@ export class PostsService {
   async remove(author: JwtUser, postId: string) {
     const post = await this.requirePost(postId);
     assertCanEditPost(author, post);
+
+    const pid = String(post._id);
+
+    // Cascade cleanup: remove related data so nothing is orphaned.
+    await Promise.all([
+      this.commentModel.deleteMany({ postId: pid }).exec(),
+      this.postLikeModel.deleteMany({ postId: pid }).exec(),
+      this.postSaveModel.deleteMany({ postId: pid }).exec(),
+    ]);
+
     await post.deleteOne();
     return { ok: true };
   }
@@ -75,16 +88,23 @@ export class PostsService {
     const post = await this.requirePost(postId);
     assertCanReadPost(author, post);
 
-    await this.postModel.updateOne({ _id: post._id }, { $inc: { viewCount: 1 } }).exec();
-    const refreshed = await this.postModel.findById(post._id).exec();
-    if (!refreshed) throw new NotFoundException('Post not found');
+    // Skip viewCount increment for the post author (avoid self-inflate).
+    const isAuthor = author && post.authorId === author.id;
+    const refreshed = isAuthor
+      ? post
+      : (await this.postModel
+          .findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } }, { new: true })
+          .exec()) ?? post;
+
     if (!author) return refreshed;
 
+    const pid = String(refreshed._id);
     const [liked, saved] = await Promise.all([
-      this.postLikeModel.exists({ postId: String(refreshed._id), userId: author.id }),
-      this.postSaveModel.exists({ postId: String(refreshed._id), userId: author.id }),
+      this.postLikeModel.exists({ postId: pid, userId: author.id }),
+      this.postSaveModel.exists({ postId: pid, userId: author.id }),
     ]);
-    return Object.assign(refreshed.toObject(), {
+    const obj = typeof refreshed.toObject === 'function' ? refreshed.toObject() : refreshed;
+    return Object.assign(obj, {
       likedByMe: Boolean(liked),
       savedByMe: Boolean(saved),
     });
@@ -144,7 +164,7 @@ export class PostsService {
       if (!author) throw new ForbiddenException('Login required for following feed');
       const followeeIds = await this.followsService.listFolloweeIds(author.id);
       if (followeeIds.length === 0) {
-        return { items: [], page, limit };
+        return { items: [], page, limit, total: 0, hasMore: false };
       }
 
       const filter: QueryFilter<PostDocument> = {
@@ -153,14 +173,17 @@ export class PostsService {
       };
       applyGameTagFilters(filter, query);
 
-      const items = await this.postModel
-        .find(filter)
-        .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .exec();
+      const [items, total] = await Promise.all([
+        this.postModel
+          .find(filter)
+          .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .exec(),
+        this.postModel.countDocuments(filter).exec(),
+      ]);
 
-      return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit);
+      return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
     }
 
     const baseFilter: QueryFilter<PostDocument> = {};
@@ -187,19 +210,25 @@ export class PostsService {
         { $limit: limit },
       ];
 
-      const rawItems = await this.postModel.aggregate(pipeline).exec();
-      return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, rawItems, page, limit);
+      const [rawItems, total] = await Promise.all([
+        this.postModel.aggregate(pipeline).exec(),
+        this.postModel.countDocuments(baseFilter).exec(),
+      ]);
+      return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, rawItems, page, limit, total, skip);
     }
 
     // latest
-    const items = await this.postModel
-      .find(baseFilter)
-      .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
+    const [items, total] = await Promise.all([
+      this.postModel
+        .find(baseFilter)
+        .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.postModel.countDocuments(baseFilter).exec(),
+    ]);
 
-    return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit);
+    return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
   }
 
   async listByUser(
@@ -229,28 +258,26 @@ export class PostsService {
     if (game) filter.game = game;
     if (tag) filter.tags = { $in: [tag] };
 
-    const items = await this.postModel
-      .find(filter)
-      .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
+    const [items, total] = await Promise.all([
+      this.postModel
+        .find(filter)
+        .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.postModel.countDocuments(filter).exec(),
+    ]);
 
-    const total = await this.postModel.countDocuments(filter).exec();
-    const withFlags = await attachLikeSaveFlags(
+    return attachLikeSaveFlags(
       this.postLikeModel,
       this.postSaveModel,
       viewer,
       items,
       page,
       limit,
-    );
-
-    return {
-      ...withFlags,
       total,
-      hasMore: skip + (withFlags.items?.length ?? 0) < total,
-    };
+      skip,
+    );
   }
 
   async listLikes(postId: string, opts: { page: number; limit: number }) {
@@ -322,10 +349,13 @@ async function attachLikeSaveFlags(
   items: any[],
   page: number,
   limit: number,
+  total?: number,
+  skip?: number,
 ) {
-  if (!viewer) return { items, page, limit };
+  const hasMore = total != null && skip != null ? skip + items.length < total : undefined;
+  if (!viewer) return { items, page, limit, ...(total != null ? { total, hasMore } : {}) };
   const ids = items.map((p) => String(p._id));
-  if (ids.length === 0) return { items, page, limit };
+  if (ids.length === 0) return { items, page, limit, ...(total != null ? { total, hasMore } : {}) };
 
   const [likes, saves] = await Promise.all([
     postLikeModel
@@ -349,7 +379,7 @@ async function attachLikeSaveFlags(
     savedByMe: saved.has(String(p._id)),
   }));
 
-  return { items: out, page, limit };
+  return { items: out, page, limit, ...(total != null ? { total, hasMore } : {}) };
 }
 
 function applyVisibility(
@@ -366,14 +396,6 @@ function applyVisibility(
     { status: 'draft', authorId: viewer.id },
     ...(viewer.role === 'admin' ? [{ status: 'draft' }] : []),
   ];
-}
-
-function assertCanReadPost(viewer: JwtUser | undefined, post: PostDocument) {
-  if (post.status === 'published') return;
-  if (!viewer) throw new ForbiddenException('Forbidden');
-  if (viewer.role === 'admin') return;
-  if (post.authorId === viewer.id) return;
-  throw new ForbiddenException('Forbidden');
 }
 
 function assertCanEditPost(viewer: JwtUser, post: PostDocument) {

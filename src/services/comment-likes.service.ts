@@ -5,6 +5,7 @@ import { CommentLikeModelName, type CommentLikeDocument } from '../models/commen
 import { CommentModelName, type CommentDocument } from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import type { JwtUser } from '../types/auth';
+import { assertCanReadPost } from '../utils/assert-can-read-post';
 
 @Injectable()
 export class CommentLikesService {
@@ -58,12 +59,5 @@ export class CommentLikesService {
       .exec();
     return { liked: true };
   }
-}
-
-function assertCanReadPost(viewer: JwtUser, post: PostDocument) {
-  if (post.status === 'published') return;
-  if (viewer.role === 'admin') return;
-  if (post.authorId === viewer.id) return;
-  throw new ForbiddenException('Forbidden');
 }
 

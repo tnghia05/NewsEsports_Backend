@@ -19,6 +19,7 @@ import {
   CommentModerationJobModelName,
   type CommentModerationJobDocument,
 } from '../models/comment-moderation-job.model';
+import { assertCanReadPost } from '../utils/assert-can-read-post';
 
 @Injectable()
 export class CommentsService {
@@ -44,7 +45,7 @@ export class CommentsService {
     const limit = query.limit;
     const skip = (page - 1) * limit;
 
-    const filter: QueryFilter<CommentDocument> = { postId };
+    const filter: QueryFilter<CommentDocument> = { postId, isDeleted: { $ne: true } };
     if (query.parentId) {
       filter.parentId = query.parentId;
     } else if (query.topLevelOnly) {
@@ -151,10 +152,56 @@ export class CommentsService {
     const patch: Partial<CommentDocument> = {};
     if (dto.content !== undefined) patch.content = dto.content;
 
+    const contentChanged =
+      dto.content !== undefined && dto.content !== comment.content;
+
+    if (contentChanged) {
+      // Re-trigger AI moderation: reset status + clear stale AI data.
+      (patch as any).moderationStatus = 'pending';
+      (patch as any).sentiment = undefined;
+      (patch as any).toxicity = undefined;
+      (patch as any).sentiment4 = undefined;
+      (patch as any).intent = undefined;
+      (patch as any).aspects = undefined;
+      (patch as any).sentiment4Scores = undefined;
+      (patch as any).intentScores = undefined;
+      (patch as any).aspectScores = undefined;
+      (patch as any).aiVersion = undefined;
+      (patch as any).aiError = undefined;
+
+      // If comment was previously approved, decrement post commentCount.
+      if (comment.moderationStatus === 'approved') {
+        await this.postModel
+          .updateOne(
+            { _id: comment.postId },
+            [{ $set: { commentCount: { $max: [0, { $subtract: ['$commentCount', 1] }] } } }],
+          )
+          .exec();
+      }
+    }
+
     const updated = await this.commentModel
       .findByIdAndUpdate(comment._id, { $set: patch }, { new: true })
       .exec();
     if (!updated) throw new NotFoundException('Comment not found');
+
+    if (contentChanged) {
+      // Create a new moderation job for the edited content.
+      await this.jobModel.updateOne(
+        { commentId: String(comment._id) },
+        {
+          $set: {
+            status: 'pending',
+            attempts: 0,
+            lastError: undefined,
+            nextRunAt: undefined,
+            lockedAt: undefined,
+          },
+        },
+        { upsert: true },
+      );
+    }
+
     return updated;
   }
 
@@ -202,14 +249,6 @@ export class CommentsService {
     if (!post) throw new NotFoundException('Post not found');
     return post;
   }
-}
-
-function assertCanReadPost(viewer: JwtUser | undefined, post: PostDocument) {
-  if (post.status === 'published') return;
-  if (!viewer) throw new ForbiddenException('Forbidden');
-  if (viewer.role === 'admin') return;
-  if (post.authorId === viewer.id) return;
-  throw new ForbiddenException('Forbidden');
 }
 
 function assertCanEditComment(viewer: JwtUser, comment: CommentDocument) {

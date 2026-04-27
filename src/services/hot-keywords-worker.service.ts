@@ -168,11 +168,60 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
       };
     }
 
+    // Batch fetch: group event targetIds by type, then $in query per type.
+    const byType: Record<string, string[]> = {};
+    for (const ev of clickEvents as any[]) {
+      const t = String(ev?.targetType ?? '').toLowerCase();
+      const id = typeof ev?.targetId === 'string' ? ev.targetId : null;
+      if (!id || !['post', 'comment', 'news'].includes(t)) continue;
+      (byType[t] ??= []).push(id);
+    }
+
+    const textById = new Map<string, string>();
+
+    const [postDocs, commentDocs, newsDocs] = await Promise.all([
+      byType['post']?.length
+        ? this.postModel
+            .find({ _id: { $in: byType['post'] } })
+            .select({ title: 1, content: 1 })
+            .lean()
+            .exec()
+        : [],
+      byType['comment']?.length
+        ? this.commentModel
+            .find({ _id: { $in: byType['comment'] } })
+            .select({ content: 1 })
+            .lean()
+            .exec()
+        : [],
+      byType['news']?.length
+        ? this.newsModel
+            .find({ _id: { $in: byType['news'] } })
+            .select({ title: 1, content: 1 })
+            .lean()
+            .exec()
+        : [],
+    ]);
+
+    for (const doc of postDocs as any[]) {
+      const t = makeText(`${doc.title ?? ''}\n${doc.content ?? ''}`);
+      if (t) textById.set(String(doc._id), t);
+    }
+    for (const doc of commentDocs as any[]) {
+      const t = makeText(doc.content ?? '');
+      if (t) textById.set(String(doc._id), t);
+    }
+    for (const doc of newsDocs as any[]) {
+      const t = makeText(`${doc.title ?? ''}\n${doc.content ?? ''}`);
+      if (t) textById.set(String(doc._id), t);
+    }
+
+    // Collect texts in original event order, respecting sampleN.
     const texts: string[] = [];
     for (const ev of clickEvents as any[]) {
       if (texts.length >= sampleN) break;
-      const text = await this.getTextForEvent(ev);
-      if (text) texts.push(text);
+      const id = typeof ev?.targetId === 'string' ? ev.targetId : null;
+      if (id && textById.has(id)) texts.push(textById.get(id)!);
     }
 
     // Parallel AI calls with concurrency limit
@@ -243,33 +292,6 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
     return trend;
   }
 
-  private async getTextForEvent(ev: any): Promise<string | null> {
-    const targetId = typeof ev?.targetId === 'string' ? ev.targetId : null;
-    if (!targetId) return null;
-
-    const t = String(ev?.targetType ?? '').toLowerCase();
-
-    if (t === 'post') {
-      const doc = await this.postModel.findById(targetId).select({ title: 1, content: 1 }).lean().exec();
-      if (!doc) return null;
-      return makeText(`${doc.title ?? ''}\n${doc.content ?? ''}`);
-    }
-
-    if (t === 'comment') {
-      const doc = await this.commentModel.findById(targetId).select({ content: 1 }).lean().exec();
-      if (!doc) return null;
-      return makeText(doc.content ?? '');
-    }
-
-    if (t === 'news') {
-      const doc = await this.newsModel.findById(targetId).select({ title: 1, content: 1 }).lean().exec();
-      if (!doc) return null;
-      return makeText(`${doc.title ?? ''}\n${doc.content ?? ''}`);
-    }
-
-    // If unknown targetType, we can't fetch the content reliably.
-    return null;
-  }
 }
 
 function makeText(input: string) {
