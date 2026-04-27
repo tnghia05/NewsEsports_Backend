@@ -68,7 +68,7 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
           ],
         },
         { $set: { status: 'processing', lockedAt: now } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
   }

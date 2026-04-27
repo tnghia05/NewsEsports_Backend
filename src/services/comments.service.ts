@@ -203,7 +203,7 @@ export class CommentsService {
     }
 
     const updated = await this.commentModel
-      .findByIdAndUpdate(comment._id, { $set: patch }, { new: true })
+      .findByIdAndUpdate(comment._id, { $set: patch }, { returnDocument: 'after' })
       .exec();
     if (!updated) throw new NotFoundException('Comment not found');
 

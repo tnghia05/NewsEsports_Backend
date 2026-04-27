@@ -42,7 +42,7 @@ export class RssSourcesService {
     if (dto.enabled !== undefined) patch.enabled = dto.enabled;
     if (dto.name !== undefined) patch.name = dto.name?.trim();
     const updated = await this.rssSourceModel
-      .findByIdAndUpdate(source._id, { $set: patch }, { new: true })
+      .findByIdAndUpdate(source._id, { $set: patch }, { returnDocument: 'after' })
       .exec();
     if (!updated) throw new NotFoundException('RSS source not found');
     return updated;

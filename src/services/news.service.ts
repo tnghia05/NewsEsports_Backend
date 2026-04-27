@@ -73,7 +73,7 @@ export class NewsService {
 
     try {
       const updated = await this.newsModel
-        .findByIdAndUpdate(news._id, { $set: patch }, { new: true })
+        .findByIdAndUpdate(news._id, { $set: patch }, { returnDocument: 'after' })
         .exec();
       if (!updated) throw new NotFoundException('News not found');
       return updated;

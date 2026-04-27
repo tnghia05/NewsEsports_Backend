@@ -47,7 +47,7 @@ export class UsersService {
       .findByIdAndUpdate(
         userId,
         { $set: { googleSub, ...(avatarUrl ? { avatarUrl } : {}) } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
   }

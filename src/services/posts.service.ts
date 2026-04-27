@@ -61,7 +61,7 @@ export class PostsService {
     if (dto.status !== undefined) patch.status = dto.status;
 
     const updated = await this.postModel
-      .findByIdAndUpdate(post._id, { $set: patch }, { new: true })
+      .findByIdAndUpdate(post._id, { $set: patch }, { returnDocument: 'after' })
       .exec();
     if (!updated) throw new NotFoundException('Post not found');
     return updated;
@@ -93,7 +93,7 @@ export class PostsService {
     const refreshed = isAuthor
       ? post
       : (await this.postModel
-          .findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } }, { new: true })
+          .findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } }, { returnDocument: 'after' })
           .exec()) ?? post;
 
     if (!author) return refreshed;
@@ -316,7 +316,7 @@ export class PostsService {
       .findByIdAndUpdate(
         postId,
         { $set: { isPinned: true, pinnedAt: new Date() } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (!updated) throw new NotFoundException('Post not found');
@@ -328,7 +328,7 @@ export class PostsService {
       .findByIdAndUpdate(
         postId,
         { $set: { isPinned: false }, $unset: { pinnedAt: 1 } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (!updated) throw new NotFoundException('Post not found');
