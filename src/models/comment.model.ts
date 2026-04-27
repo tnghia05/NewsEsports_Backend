@@ -42,6 +42,28 @@ export class Comment {
   })
   toxicity?: { isToxic: boolean; score: number };
 
+  @Prop({
+    type: String,
+    enum: ['positive', 'negative', 'neutral', 'toxic'],
+    index: true,
+  })
+  sentiment4?: string;
+
+  @Prop({ type: String, enum: ['praise', 'complain', 'question', 'other'] })
+  intent?: string;
+
+  @Prop({ type: [String] })
+  aspects?: string[];
+
+  @Prop({ type: Object })
+  sentiment4Scores?: Record<string, number>;
+
+  @Prop({ type: Object })
+  intentScores?: Record<string, number>;
+
+  @Prop({ type: Object })
+  aspectScores?: Record<string, number>;
+
   @Prop({ type: String })
   aiVersion?: string;
 

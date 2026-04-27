@@ -103,6 +103,12 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
             $set: {
               sentiment: ai.sentiment,
               toxicity: ai.toxicity,
+              sentiment4: ai.sentiment4,
+              intent: ai.intent,
+              aspects: ai.aspects,
+              sentiment4Scores: ai.sentiment4Scores,
+              intentScores: ai.intentScores,
+              aspectScores: ai.aspectScores,
               aiVersion: ai.aiVersion,
               aiError: undefined,
               moderationStatus: rejected ? 'rejected' : 'approved',

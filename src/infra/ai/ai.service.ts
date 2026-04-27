@@ -22,6 +22,11 @@ export type AiModerationResult = {
   intent?: IntentLabel;
   aspects?: AspectLabel[];
 
+  // raw probability distributions from model debug output
+  sentiment4Scores?: Partial<Record<Sentiment4Label, number>>;
+  intentScores?: Partial<Record<IntentLabel, number>>;
+  aspectScores?: Partial<Record<AspectLabel, number>>;
+
   aiVersion?: string;
 };
 
@@ -147,6 +152,16 @@ function normalizeAiResponse(
   const intent = parseIntent(data);
   const aspects = parseAspects(data);
 
+  const sentiment4Scores = parseScoreMap<Sentiment4Label>(
+    data?.debug?.sentiment4,
+    ['positive', 'negative', 'neutral', 'toxic'],
+  );
+  const intentScores = parseScoreMap<IntentLabel>(
+    data?.debug?.intent,
+    ['praise', 'complain', 'question', 'other'],
+  );
+  const aspectScores = parseAspectScores(data?.debug?.aspect);
+
   const aiVersion =
     (typeof data?.aiVersion === 'string' ? data.aiVersion : undefined) ??
     (typeof data?.version === 'string' ? data.version : undefined) ??
@@ -158,6 +173,9 @@ function normalizeAiResponse(
     sentiment4: sentiment4 ?? undefined,
     intent: intent ?? undefined,
     aspects: aspects.length ? aspects : undefined,
+    sentiment4Scores,
+    intentScores,
+    aspectScores,
     aiVersion,
   };
 }
@@ -229,6 +247,56 @@ function parseIntent(data: any): IntentLabel | null {
   if (v.includes('question')) return 'question';
   if (v.includes('other')) return 'other';
   return null;
+}
+
+function parseScoreMap<T extends string>(
+  raw: any,
+  keys: T[],
+): Partial<Record<T, number>> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: Partial<Record<T, number>> = {};
+  let count = 0;
+  for (const k of keys) {
+    const v = Number(raw[k]);
+    if (!Number.isNaN(v)) {
+      (out as any)[k] = v;
+      count++;
+    }
+  }
+  return count > 0 ? out : undefined;
+}
+
+const ASPECT_KEY_MAP: Record<string, AspectLabel> = {
+  caster: 'caster',
+  Caster: 'caster',
+  meta: 'meta',
+  Meta: 'meta',
+  'player/team': 'player_team',
+  'Player/Team': 'player_team',
+  player_team: 'player_team',
+  'giải đấu/tournament': 'tournament',
+  'Giải đấu/Tournament': 'tournament',
+  tournament: 'tournament',
+  result: 'result',
+  Result: 'result',
+  general: 'general',
+  General: 'general',
+};
+
+function parseAspectScores(
+  raw: any,
+): Partial<Record<AspectLabel, number>> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: Partial<Record<AspectLabel, number>> = {};
+  let count = 0;
+  for (const [k, v] of Object.entries(raw)) {
+    const label = ASPECT_KEY_MAP[k];
+    if (label && typeof v === 'number') {
+      out[label] = v;
+      count++;
+    }
+  }
+  return count > 0 ? out : undefined;
 }
 
 function parseAspects(data: any): AspectLabel[] {

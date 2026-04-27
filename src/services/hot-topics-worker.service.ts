@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { AiService } from '../infra/ai/ai.service';
+import { AiService, type AiModerationResult } from '../infra/ai/ai.service';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import { CommentModelName, type CommentDocument } from '../models/comment.model';
 import { HashtagEventModelName, type HashtagEventDocument } from '../models/hashtag-event.model';
@@ -99,29 +99,45 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Comment counts for posts with tag, within window.
-    const commentCounts = await this.commentModel
+    // Comment counts per tag (no $lookup: query posts first, then count comments by postId).
+    const postIdsPerTag = await this.postModel
       .aggregate([
-        { $match: { createdAt: { $gte: sinceDate } } },
-        {
-          $lookup: {
-            from: this.postModel.collection.name,
-            localField: 'postId',
-            foreignField: '_id',
-            as: 'post',
-          },
-        },
-        { $unwind: '$post' },
-        { $match: { 'post.status': 'published', 'post.tags': { $in: tagList } } },
-        { $unwind: '$post.tags' },
-        { $match: { 'post.tags': { $in: tagList } } },
-        { $group: { _id: '$post.tags', commentCount: { $sum: 1 } } },
+        { $match: { status: 'published', createdAt: { $gte: sinceDate }, tags: { $in: tagList } } },
+        { $unwind: '$tags' },
+        { $match: { tags: { $in: tagList } } },
+        { $group: { _id: '$tags', postIds: { $addToSet: '$_id' } } },
       ])
       .exec();
 
+    const tagToPostIds = new Map<string, string[]>();
+    const allPostIds: string[] = [];
+    for (const r of postIdsPerTag as any[]) {
+      const ids = (r.postIds as any[]).map(String);
+      tagToPostIds.set(String(r._id), ids);
+      allPostIds.push(...ids);
+    }
+    const uniquePostIds = [...new Set(allPostIds)];
+
+    const commentsByPost =
+      uniquePostIds.length > 0
+        ? await this.commentModel
+            .aggregate([
+              { $match: { createdAt: { $gte: sinceDate }, postId: { $in: uniquePostIds } } },
+              { $group: { _id: '$postId', count: { $sum: 1 } } },
+            ])
+            .exec()
+        : [];
+
+    const postCommentCount = new Map<string, number>();
+    for (const r of commentsByPost as any[]) {
+      postCommentCount.set(String(r._id), Number(r.count) || 0);
+    }
+
     const commentMap = new Map<string, number>();
-    for (const r of commentCounts as any[]) {
-      commentMap.set(String(r._id), Number(r.commentCount) || 0);
+    for (const [tag, pids] of tagToPostIds) {
+      let total = 0;
+      for (const pid of pids) total += postCommentCount.get(pid) ?? 0;
+      commentMap.set(tag, total);
     }
 
     // Read counts (unique viewers) from hashtag events.
@@ -224,38 +240,87 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
   private async computeTrendForTag(tag: string, sinceDate: Date): Promise<HotTopicTrend | null> {
     const sampleN = Math.min(50, Math.max(1, Number(this.sampleN) || 20));
 
+    // Step 1: get postIds for this tag
     const posts = await this.postModel
       .find({ status: 'published', tags: { $in: [tag] }, createdAt: { $gte: sinceDate } })
       .sort({ createdAt: -1 })
-      .limit(sampleN)
-      .select({ title: 1, content: 1 })
+      .limit(200)
+      .select({ _id: 1, title: 1, content: 1 })
       .lean()
       .exec();
 
     const postIds = posts.map((p: any) => String(p._id));
+
+    // Step 2: fetch comments with AI fields already stored by moderation worker
     const comments =
       postIds.length > 0
         ? await this.commentModel
             .find({ postId: { $in: postIds }, createdAt: { $gte: sinceDate } })
             .sort({ createdAt: -1 })
             .limit(sampleN)
-            .select({ content: 1 })
+            .select({
+              content: 1,
+              sentiment4: 1,
+              intent: 1,
+              aspects: 1,
+              sentiment4Scores: 1,
+              intentScores: 1,
+              aspectScores: 1,
+              toxicity: 1,
+            })
             .lean()
             .exec()
         : [];
 
-    const texts: string[] = [];
-    for (const p of posts as any[]) {
-      if (texts.length >= sampleN) break;
-      texts.push(makeText(`${p.title ?? ''}\n${p.content ?? ''}`));
-    }
+    if (comments.length === 0 && posts.length === 0) return null;
+
+    // Step 3: split comments into labeled (reuse) vs unlabeled (need AI call)
+    const labeledComments: any[] = [];
+    const unlabeledTexts: string[] = [];
+
     for (const c of comments as any[]) {
-      if (texts.length >= sampleN) break;
-      texts.push(makeText(c.content ?? ''));
+      if (c.sentiment4) {
+        // Already has AI data from moderation → reuse directly
+        labeledComments.push(c);
+      } else {
+        const t = makeText(c.content ?? '');
+        if (t.length > 0) unlabeledTexts.push(t);
+      }
     }
 
+    // Fallback to posts only if total samples < sampleN
+    const totalFromComments = labeledComments.length + unlabeledTexts.length;
+    const postTexts: string[] = [];
+    if (totalFromComments < sampleN) {
+      for (const p of posts as any[]) {
+        if (totalFromComments + postTexts.length >= sampleN) break;
+        const t = makeText(`${p.title ?? ''}\n${p.content ?? ''}`);
+        if (t.length > 0) postTexts.push(t);
+      }
+    }
+
+    // Step 4: call AI only for unlabeled comments + fallback posts
+    const textsToAnalyze = [...unlabeledTexts, ...postTexts];
+    const aiResults: AiModerationResult[] = [];
+    if (textsToAnalyze.length > 0) {
+      const AI_CONCURRENCY = 5;
+      for (let i = 0; i < textsToAnalyze.length; i += AI_CONCURRENCY) {
+        const batch = textsToAnalyze.slice(i, i + AI_CONCURRENCY);
+        const settled = await Promise.allSettled(
+          batch.map((t) => this.aiService.analyzeComment(t)),
+        );
+        for (const s of settled) {
+          if (s.status === 'fulfilled') aiResults.push(s.value);
+        }
+      }
+    }
+
+    // Step 5: accumulate from both sources
+    const totalSamples = labeledComments.length + textsToAnalyze.length;
+    if (totalSamples === 0) return null;
+
     const trend: HotTopicTrend = {
-      sampleCount: texts.length,
+      sampleCount: totalSamples,
       labeledCount: 0,
       toxicCount: 0,
       sentiment4: {},
@@ -263,17 +328,82 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       aspect: {},
     };
 
-    for (const text of texts) {
-      try {
-        const r = await this.aiService.analyzeComment(text);
-        trend.labeledCount += 1;
-        if (r.sentiment4) trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
-        if (r.intent) trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
-        for (const a of r.aspects ?? []) trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
-        if (r.sentiment4 === 'toxic' || r.toxicity.isToxic) trend.toxicCount += 1;
-      } catch {
-        // ignore
+    const sentiment4Sum: Record<string, number> = {};
+    const intentSum: Record<string, number> = {};
+    const aspectSum: Record<string, number> = {};
+    let scoredCount = 0;
+
+    // (A) From pre-labeled comments (no AI call needed)
+    for (const c of labeledComments) {
+      trend.labeledCount += 1;
+
+      if (c.sentiment4)
+        trend.sentiment4[c.sentiment4] = (trend.sentiment4[c.sentiment4] ?? 0) + 1;
+      if (c.intent)
+        trend.intent[c.intent] = (trend.intent[c.intent] ?? 0) + 1;
+      for (const a of c.aspects ?? [])
+        trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
+      if (c.sentiment4 === 'toxic' || c.toxicity?.isToxic)
+        trend.toxicCount += 1;
+
+      const hasScores = c.sentiment4Scores || c.intentScores || c.aspectScores;
+      if (hasScores) scoredCount += 1;
+
+      if (c.sentiment4Scores) {
+        for (const [k, v] of Object.entries(c.sentiment4Scores as Record<string, number>)) {
+          sentiment4Sum[k] = (sentiment4Sum[k] ?? 0) + (v ?? 0);
+        }
       }
+      if (c.intentScores) {
+        for (const [k, v] of Object.entries(c.intentScores as Record<string, number>)) {
+          intentSum[k] = (intentSum[k] ?? 0) + (v ?? 0);
+        }
+      }
+      if (c.aspectScores) {
+        for (const [k, v] of Object.entries(c.aspectScores as Record<string, number>)) {
+          aspectSum[k] = (aspectSum[k] ?? 0) + (v ?? 0);
+        }
+      }
+    }
+
+    // (B) From fresh AI calls (unlabeled comments + fallback posts)
+    for (const r of aiResults) {
+      trend.labeledCount += 1;
+
+      if (r.sentiment4)
+        trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
+      if (r.intent)
+        trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
+      for (const a of r.aspects ?? [])
+        trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
+      if (r.sentiment4 === 'toxic' || r.toxicity.isToxic)
+        trend.toxicCount += 1;
+
+      const hasScores = r.sentiment4Scores || r.intentScores || r.aspectScores;
+      if (hasScores) scoredCount += 1;
+
+      if (r.sentiment4Scores) {
+        for (const [k, v] of Object.entries(r.sentiment4Scores)) {
+          sentiment4Sum[k] = (sentiment4Sum[k] ?? 0) + (v ?? 0);
+        }
+      }
+      if (r.intentScores) {
+        for (const [k, v] of Object.entries(r.intentScores)) {
+          intentSum[k] = (intentSum[k] ?? 0) + (v ?? 0);
+        }
+      }
+      if (r.aspectScores) {
+        for (const [k, v] of Object.entries(r.aspectScores)) {
+          aspectSum[k] = (aspectSum[k] ?? 0) + (v ?? 0);
+        }
+      }
+    }
+
+    // Step 6: compute averages
+    if (scoredCount > 0) {
+      trend.sentiment4Avg = divideMap(sentiment4Sum, scoredCount);
+      trend.intentAvg = divideMap(intentSum, scoredCount);
+      trend.aspectAvg = divideMap(aspectSum, scoredCount);
     }
 
     return trend;
@@ -297,5 +427,20 @@ function clamp01(x: number) {
 
 function round2(x: number) {
   return Math.round(x * 100) / 100;
+}
+
+function round4(x: number) {
+  return Math.round(x * 10000) / 10000;
+}
+
+function divideMap(
+  sum: Record<string, number>,
+  n: number,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(sum)) {
+    out[k] = round4(v / n);
+  }
+  return out;
 }
 

@@ -21,6 +21,9 @@ export type HotTopicTrend = {
   sentiment4: Partial<Record<Sentiment4Label, number>>;
   intent: Partial<Record<IntentLabel, number>>;
   aspect: Partial<Record<AspectLabel, number>>;
+  sentiment4Avg?: Partial<Record<Sentiment4Label, number>>;
+  intentAvg?: Partial<Record<IntentLabel, number>>;
+  aspectAvg?: Partial<Record<AspectLabel, number>>;
 };
 
 @Schema({ timestamps: true })
@@ -58,6 +61,9 @@ export class HotTopic {
       sentiment4: { type: Object, required: true },
       intent: { type: Object, required: true },
       aspect: { type: Object, required: true },
+      sentiment4Avg: { type: Object },
+      intentAvg: { type: Object },
+      aspectAvg: { type: Object },
     },
     default: undefined,
   })

@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { AiService } from '../infra/ai/ai.service';
+import { AiService, type AiModerationResult } from '../infra/ai/ai.service';
 import {
   SearchEventModelName,
   type SearchEventDocument,
@@ -175,6 +175,19 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
       if (text) texts.push(text);
     }
 
+    // Parallel AI calls with concurrency limit
+    const AI_CONCURRENCY = 5;
+    const results: AiModerationResult[] = [];
+    for (let i = 0; i < texts.length; i += AI_CONCURRENCY) {
+      const batch = texts.slice(i, i + AI_CONCURRENCY);
+      const settled = await Promise.allSettled(
+        batch.map((t) => this.aiService.analyzeComment(t)),
+      );
+      for (const s of settled) {
+        if (s.status === 'fulfilled') results.push(s.value);
+      }
+    }
+
     const trend: HotKeywordTrend = {
       sampleCount: texts.length,
       labeledCount: 0,
@@ -184,24 +197,47 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
       aspect: {},
     };
 
-    for (const text of texts) {
-      try {
-        const r = await this.aiService.analyzeComment(text);
-        trend.labeledCount += 1;
+    const sentiment4Sum: Record<string, number> = {};
+    const intentSum: Record<string, number> = {};
+    const aspectSum: Record<string, number> = {};
+    let scoredCount = 0;
 
-        if (r.sentiment4) {
-          trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
+    for (const r of results) {
+      trend.labeledCount += 1;
+
+      if (r.sentiment4)
+        trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
+      if (r.intent)
+        trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
+      for (const a of r.aspects ?? [])
+        trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
+      if (r.sentiment4 === 'toxic' || r.toxicity.isToxic)
+        trend.toxicCount += 1;
+
+      const hasScores = r.sentiment4Scores || r.intentScores || r.aspectScores;
+      if (hasScores) scoredCount += 1;
+
+      if (r.sentiment4Scores) {
+        for (const [k, v] of Object.entries(r.sentiment4Scores)) {
+          sentiment4Sum[k] = (sentiment4Sum[k] ?? 0) + (v ?? 0);
         }
-        if (r.intent) {
-          trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
-        }
-        for (const a of r.aspects ?? []) {
-          trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
-        }
-        if (r.sentiment4 === 'toxic' || r.toxicity.isToxic) trend.toxicCount += 1;
-      } catch {
-        // ignore single-sample failures; keep job robust
       }
+      if (r.intentScores) {
+        for (const [k, v] of Object.entries(r.intentScores)) {
+          intentSum[k] = (intentSum[k] ?? 0) + (v ?? 0);
+        }
+      }
+      if (r.aspectScores) {
+        for (const [k, v] of Object.entries(r.aspectScores)) {
+          aspectSum[k] = (aspectSum[k] ?? 0) + (v ?? 0);
+        }
+      }
+    }
+
+    if (scoredCount > 0) {
+      trend.sentiment4Avg = divideMap(sentiment4Sum, scoredCount);
+      trend.intentAvg = divideMap(intentSum, scoredCount);
+      trend.aspectAvg = divideMap(aspectSum, scoredCount);
     }
 
     return trend;
@@ -239,5 +275,20 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
 function makeText(input: string) {
   // Keep payload small; AI service only needs enough context.
   return String(input).trim().replace(/\s+/g, ' ').slice(0, 800);
+}
+
+function round4(x: number) {
+  return Math.round(x * 10000) / 10000;
+}
+
+function divideMap(
+  sum: Record<string, number>,
+  n: number,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(sum)) {
+    out[k] = round4(v / n);
+  }
+  return out;
 }
 
