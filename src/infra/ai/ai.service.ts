@@ -40,6 +40,11 @@ export class AiService {
       this.config.get<string>('AI_TOXIC_THRESHOLD', { infer: true }) ?? 0.7,
     );
     this.version = this.config.get<string>('AI_VERSION', { infer: true });
+
+    const safeUrl = this.url ? redactUrl(this.url) : undefined;
+    this.logger.log(
+      `config url=${safeUrl ?? 'disabled'} timeoutMs=${this.timeoutMs} toxicThreshold=${this.toxicThreshold} version=${this.version ?? 'n/a'}`,
+    );
   }
 
   /**
@@ -49,6 +54,7 @@ export class AiService {
   async analyzeComment(text: string): Promise<AiModerationResult> {
     const trimmed = text.trim();
     if (!this.url) {
+      this.logger.warn('analyzeComment skipped: AI_MODERATION_URL not set');
       return {
         sentiment: 'neutral',
         toxicity: { isToxic: false, score: 0 },
@@ -57,6 +63,9 @@ export class AiService {
     }
 
     const startedAt = Date.now();
+    this.logger.log(
+      `analyzeComment start url=${redactUrl(this.url)} len=${trimmed.length}`,
+    );
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -89,12 +98,22 @@ export class AiService {
         String(e?.message ?? '').toLowerCase().includes('aborted');
       const errMsg = String(e?.message ?? e);
       this.logger.warn(
-        `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms: ${errMsg}`,
+        `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms url=${redactUrl(this.url)}: ${errMsg}`,
       );
       throw e;
     } finally {
       clearTimeout(t);
     }
+  }
+}
+
+function redactUrl(raw: string) {
+  try {
+    const u = new URL(raw);
+    // don't leak query params (tokens, etc.)
+    return `${u.protocol}//${u.host}${u.pathname}`;
+  } catch {
+    return '[invalid-url]';
   }
 }
 

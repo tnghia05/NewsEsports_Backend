@@ -44,6 +44,9 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
       for (let i = 0; i < 5; i++) {
         const job = await this.claimJob();
         if (!job) break;
+        this.logger.log(
+          `claimJob ok jobId=${String(job._id)} commentId=${job.commentId} status=${job.status}`,
+        );
         await this.processJob(job).catch((e) => {
           this.logger.warn(`Job ${job._id} failed: ${String(e?.message ?? e)}`);
         });
@@ -99,6 +102,13 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
     }
 
     try {
+      const preview = String(comment.content ?? '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .slice(0, 80);
+      this.logger.log(
+        `processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId} len=${String(comment.content ?? '').length} preview="${preview}"`,
+      );
       const ai = await this.aiService.analyzeComment(comment.content);
       const rejected = ai.toxicity.isToxic;
 
@@ -122,6 +132,10 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
           },
         )
         .exec();
+
+      this.logger.log(
+        `processJob updated commentId=${String(comment._id)} status=${rejected ? 'rejected' : 'approved'} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score}`,
+      );
 
       if (!rejected) {
         // Increase commentCount only when approved
