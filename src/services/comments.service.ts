@@ -62,7 +62,7 @@ export class CommentsService {
     // - Public viewers see only approved.
     // - Admin sees all.
     // - Post owner sees all (to moderate community).
-    // - Comment owner sees their own pending/rejected + all approved.
+    // - Comment owner sees their own pending/rejected + all approved..
     if (!viewer) {
       filter.moderationStatus = 'approved';
     } else if (viewer.role === 'admin' || viewer.id === post.authorId) {
