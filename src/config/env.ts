@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+function emptyStringToUndefined(v: unknown) {
+  if (typeof v === 'string' && v.trim() === '') return undefined;
+  return v;
+}
+
 const EnvSchema = z.object({
   NODE_ENV: z.string().optional(),
   PORT: z.coerce.number().int().positive().optional(),
@@ -25,16 +30,16 @@ const EnvSchema = z.object({
   // VNPay (Milestone 7)
   VNPAY_TMN_CODE: z.string().min(1).optional(),
   VNPAY_SECURE_SECRET: z.string().min(1).optional(),
-  VNPAY_TEST_MODE: z
-    .enum(['true', 'false'])
-    .optional()
-    .default('true'),
+  VNPAY_TEST_MODE: z.preprocess(
+    emptyStringToUndefined,
+    z.enum(['true', 'false']).optional().default('true'),
+  ),
   VNPAY_HOST: z.string().url().optional(),
   VNPAY_RETURN_URL: z.string().url().optional(),
-  VNPAY_ENABLE_LOG: z
-    .enum(['true', 'false'])
-    .optional()
-    .default('false'),
+  VNPAY_ENABLE_LOG: z.preprocess(
+    emptyStringToUndefined,
+    z.enum(['true', 'false']).optional().default('false'),
+  ),
 
   // Cloudinary (optional, when doing uploads)
   CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
