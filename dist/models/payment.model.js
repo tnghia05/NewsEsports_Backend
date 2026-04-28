@@ -26,7 +26,12 @@ let Payment = class Payment {
 };
 exports.Payment = Payment;
 __decorate([
-    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: order_model_1.OrderModelName, required: true, index: true }),
+    (0, mongoose_1.Prop)({
+        type: mongoose_2.Types.ObjectId,
+        ref: order_model_1.OrderModelName,
+        required: true,
+        index: true,
+    }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], Payment.prototype, "orderId", void 0);
 __decorate([

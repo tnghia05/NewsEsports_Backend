@@ -186,7 +186,11 @@ let AuthService = class AuthService {
         if (!isRefreshJwtPayload(decoded))
             return;
         await this.refreshTokenModel
-            .updateOne({ userId: decoded.sub, jti: decoded.jti, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } })
+            .updateOne({
+            userId: decoded.sub,
+            jti: decoded.jti,
+            revokedAt: { $exists: false },
+        }, { $set: { revokedAt: new Date() } })
             .exec();
     }
     verifyJwt(token) {

@@ -11,14 +11,18 @@ const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
 let OptionalJwtAuthGuard = class OptionalJwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
     async canActivate(context) {
-        const req = context.switchToHttp().getRequest();
+        const req = context
+            .switchToHttp()
+            .getRequest();
         const auth = req.headers?.['authorization'];
         if (!auth)
             return true;
         return (await super.canActivate(context));
     }
     handleRequest(err, user, info, context, status) {
-        const req = context.switchToHttp().getRequest();
+        const req = context
+            .switchToHttp()
+            .getRequest();
         const auth = req.headers?.['authorization'];
         if (!auth)
             return undefined;

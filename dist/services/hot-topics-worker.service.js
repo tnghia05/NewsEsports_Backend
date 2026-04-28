@@ -126,13 +126,20 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
         const commentsByPost = uniquePostIds.length > 0
             ? await this.commentModel
                 .aggregate([
-                { $match: { createdAt: { $gte: sinceDate }, postId: { $in: uniquePostIds } } },
+                {
+                    $match: {
+                        createdAt: { $gte: sinceDate },
+                        postId: { $in: uniquePostIds },
+                    },
+                },
                 {
                     $group: {
                         _id: '$postId',
                         count: { $sum: 1 },
                         recentCount: {
-                            $sum: { $cond: [{ $gte: ['$createdAt', recentCutoff] }, 1, 0] },
+                            $sum: {
+                                $cond: [{ $gte: ['$createdAt', recentCutoff] }, 1, 0],
+                            },
                         },
                         authors: { $addToSet: '$authorId' },
                     },
@@ -170,12 +177,21 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
         }
         const readRows = await this.hashtagEventModel
             .aggregate([
-            { $match: { createdAt: { $gte: sinceDate }, action: 'view', tag: { $in: tagList } } },
+            {
+                $match: {
+                    createdAt: { $gte: sinceDate },
+                    action: 'view',
+                    tag: { $in: tagList },
+                },
+            },
             {
                 $project: {
                     tag: 1,
                     viewer: {
-                        $ifNull: ['$userId', { $concat: ['sess:', { $ifNull: ['$sessionId', ''] }] }],
+                        $ifNull: [
+                            '$userId',
+                            { $concat: ['sess:', { $ifNull: ['$sessionId', ''] }] },
+                        ],
                     },
                 },
             },
@@ -201,9 +217,7 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
             const readScore = Math.log1p(read);
             const discussScore = Math.log1p(discuss);
             const originalScore = Math.log1p(originalUsers);
-            const raw = 0.3 * readScore +
-                0.3 * discussScore +
-                0.4 * originalScore;
+            const raw = 0.3 * readScore + 0.3 * discussScore + 0.4 * originalScore;
             const recentPosts = tagRecentPosts.get(tag) ?? 0;
             const recentComments = recentCommentMap.get(tag) ?? 0;
             const totalActivity = postCount + commentCount;
@@ -258,7 +272,11 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
     async computeTrendForTag(tag, sinceDate) {
         const sampleN = Math.min(50, Math.max(1, Number(this.sampleN) || 20));
         const posts = await this.postModel
-            .find({ status: 'published', tags: { $in: [tag] }, createdAt: { $gte: sinceDate } })
+            .find({
+            status: 'published',
+            tags: { $in: [tag] },
+            createdAt: { $gte: sinceDate },
+        })
             .sort({ createdAt: -1 })
             .limit(200)
             .select({ _id: 1, title: 1, content: 1 })
@@ -332,7 +350,12 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
             intent: {},
             aspect: {},
         };
-        const acc = { sentiment4Sum: {}, intentSum: {}, aspectSum: {}, scoredCount: 0 };
+        const acc = {
+            sentiment4Sum: {},
+            intentSum: {},
+            aspectSum: {},
+            scoredCount: 0,
+        };
         for (const r of [...labeledComments, ...aiResults]) {
             accumulateResult(trend, acc, r);
         }

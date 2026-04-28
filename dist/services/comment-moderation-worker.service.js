@@ -71,7 +71,10 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
             $or: [
                 {
                     status: 'pending',
-                    $or: [{ nextRunAt: { $exists: false } }, { nextRunAt: { $lte: now } }],
+                    $or: [
+                        { nextRunAt: { $exists: false } },
+                        { nextRunAt: { $lte: now } },
+                    ],
                 },
                 { status: 'processing', lockedAt: { $lt: stuckBefore } },
             ],
@@ -130,7 +133,9 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                     .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
                     .exec();
                 if (comment.parentId) {
-                    const parent = await this.commentModel.findById(comment.parentId).exec();
+                    const parent = await this.commentModel
+                        .findById(comment.parentId)
+                        .exec();
                     if (parent && parent.authorId !== comment.authorId) {
                         await this.notificationsService.create({
                             userId: parent.authorId,

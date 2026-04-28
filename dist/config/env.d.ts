@@ -10,6 +10,18 @@ declare const EnvSchema: z.ZodObject<{
     AI_TIMEOUT_MS: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
     GOOGLE_CLIENT_ID: z.ZodString;
     RSS_SOURCES: z.ZodOptional<z.ZodString>;
+    VNPAY_TMN_CODE: z.ZodOptional<z.ZodString>;
+    VNPAY_SECURE_SECRET: z.ZodOptional<z.ZodString>;
+    VNPAY_TEST_MODE: z.ZodDefault<z.ZodOptional<z.ZodEnum<{
+        true: "true";
+        false: "false";
+    }>>>;
+    VNPAY_HOST: z.ZodOptional<z.ZodString>;
+    VNPAY_RETURN_URL: z.ZodOptional<z.ZodString>;
+    VNPAY_ENABLE_LOG: z.ZodDefault<z.ZodOptional<z.ZodEnum<{
+        true: "true";
+        false: "false";
+    }>>>;
     CLOUDINARY_CLOUD_NAME: z.ZodOptional<z.ZodString>;
     CLOUDINARY_API_KEY: z.ZodOptional<z.ZodString>;
     CLOUDINARY_API_SECRET: z.ZodOptional<z.ZodString>;

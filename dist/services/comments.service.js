@@ -39,7 +39,10 @@ let CommentsService = CommentsService_1 = class CommentsService {
         const page = query.page;
         const limit = query.limit;
         const skip = (page - 1) * limit;
-        const filter = { postId, isDeleted: { $ne: true } };
+        const filter = {
+            postId,
+            isDeleted: { $ne: true },
+        };
         if (query.parentId) {
             filter.parentId = query.parentId;
         }
@@ -142,7 +145,15 @@ let CommentsService = CommentsService_1 = class CommentsService {
             patch.aiError = undefined;
             if (comment.moderationStatus === 'approved') {
                 await this.postModel
-                    .updateOne({ _id: comment.postId }, [{ $set: { commentCount: { $max: [0, { $subtract: ['$commentCount', 1] }] } } }])
+                    .updateOne({ _id: comment.postId }, [
+                    {
+                        $set: {
+                            commentCount: {
+                                $max: [0, { $subtract: ['$commentCount', 1] }],
+                            },
+                        },
+                    },
+                ])
                     .exec();
             }
         }
@@ -171,7 +182,13 @@ let CommentsService = CommentsService_1 = class CommentsService {
         if (comment.isDeleted)
             return { ok: true };
         await this.commentModel
-            .updateOne({ _id: comment._id }, { $set: { isDeleted: true, deletedAt: new Date(), content: '[deleted]' } })
+            .updateOne({ _id: comment._id }, {
+            $set: {
+                isDeleted: true,
+                deletedAt: new Date(),
+                content: '[deleted]',
+            },
+        })
             .exec();
         if (comment.moderationStatus === 'approved') {
             await this.postModel

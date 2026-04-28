@@ -26,7 +26,11 @@ let MeController = class MeController {
         return user;
     }
     savedPosts(user) {
-        return this.postsService.list(user, { tab: 'saved', page: 1, limit: 20 });
+        return this.postsService.list(user, {
+            tab: 'saved',
+            page: 1,
+            limit: 20,
+        });
     }
 };
 exports.MeController = MeController;

@@ -94,9 +94,9 @@ let PostsService = class PostsService {
         const isAuthor = author && post.authorId === author.id;
         const refreshed = isAuthor
             ? post
-            : (await this.postModel
+            : ((await this.postModel
                 .findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } }, { returnDocument: 'after' })
-                .exec()) ?? post;
+                .exec()) ?? post);
         if (!author)
             return refreshed;
         const pid = String(refreshed._id);
@@ -104,7 +104,9 @@ let PostsService = class PostsService {
             this.postLikeModel.exists({ postId: pid, userId: author.id }),
             this.postSaveModel.exists({ postId: pid, userId: author.id }),
         ]);
-        const obj = typeof refreshed.toObject === 'function' ? refreshed.toObject() : refreshed;
+        const obj = typeof refreshed.toObject === 'function'
+            ? refreshed.toObject()
+            : refreshed;
         return Object.assign(obj, {
             likedByMe: Boolean(liked),
             savedByMe: Boolean(saved),
@@ -124,7 +126,9 @@ let PostsService = class PostsService {
                 .limit(limit)
                 .lean()
                 .exec();
-            const total = await this.postSaveModel.countDocuments({ userId: author.id }).exec();
+            const total = await this.postSaveModel
+                .countDocuments({ userId: author.id })
+                .exec();
             const postIds = saves.map((s) => s.postId);
             if (postIds.length === 0) {
                 return { items: [], page, limit, total, hasMore: false };
@@ -134,7 +138,9 @@ let PostsService = class PostsService {
             applyGameTagFilters(baseFilter, query);
             const posts = await this.postModel.find(baseFilter).exec();
             const byId = new Map(posts.map((p) => [String(p._id), p]));
-            const items = postIds.map((id) => byId.get(String(id))).filter(Boolean);
+            const items = postIds
+                .map((id) => byId.get(String(id)))
+                .filter(Boolean);
             const likedIds = new Set((await this.postLikeModel
                 .find({ userId: author.id, postId: { $in: postIds } })
                 .select({ postId: 1 })
@@ -145,7 +151,13 @@ let PostsService = class PostsService {
                 likedByMe: likedIds.has(String(p._id)),
                 savedByMe: true,
             }));
-            return { items: out, page, limit, total, hasMore: skip + out.length < total };
+            return {
+                items: out,
+                page,
+                limit,
+                total,
+                hasMore: skip + out.length < total,
+            };
         }
         if (query.tab === 'following') {
             if (!author)
@@ -263,7 +275,10 @@ let PostsService = class PostsService {
             .lean()
             .exec();
         return {
-            items: rows.map((r) => ({ userId: r.userId, createdAt: r.createdAt })),
+            items: rows.map((r) => ({
+                userId: r.userId,
+                createdAt: r.createdAt,
+            })),
             page,
             limit,
             total,
@@ -328,7 +343,12 @@ async function attachLikeSaveFlags(postLikeModel, postSaveModel, viewer, items, 
         likedByMe: liked.has(String(p._id)),
         savedByMe: saved.has(String(p._id)),
     }));
-    return { items: out, page, limit, ...(total != null ? { total, hasMore } : {}) };
+    return {
+        items: out,
+        page,
+        limit,
+        ...(total != null ? { total, hasMore } : {}),
+    };
 }
 function applyVisibility(filter, viewer) {
     if (!viewer) {
@@ -388,10 +408,7 @@ function recencyBoostExpr() {
         $let: {
             vars: {
                 ageMs: {
-                    $subtract: [
-                        now,
-                        { $toLong: { $toDate: '$createdAt' } },
-                    ],
+                    $subtract: [now, { $toLong: { $toDate: '$createdAt' } }],
                 },
             },
             in: {
@@ -404,10 +421,7 @@ function recencyBoostExpr() {
                                 $max: [
                                     0,
                                     {
-                                        $subtract: [
-                                            1,
-                                            { $divide: ['$$ageMs', windowMs] },
-                                        ],
+                                        $subtract: [1, { $divide: ['$$ageMs', windowMs] }],
                                     },
                                 ],
                             },

@@ -64,7 +64,9 @@ let AiService = AiService_1 = class AiService {
         catch (e) {
             const elapsedMs = Date.now() - startedAt;
             const isTimeout = e?.name === 'AbortError' ||
-                String(e?.message ?? '').toLowerCase().includes('aborted');
+                String(e?.message ?? '')
+                    .toLowerCase()
+                    .includes('aborted');
             const errMsg = String(e?.message ?? e);
             this.logger.warn(`analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms url=${redactUrl(this.url)}: ${errMsg}`);
             throw e;
@@ -117,11 +119,18 @@ function normalizeAiResponse(data, toxicThreshold, fallbackVersion) {
         ? Boolean(data.toxicity.isToxic)
         : score >= toxicThreshold ||
             sentiment4 === 'toxic' ||
-            String(data?.label ?? '').toLowerCase().includes('toxic');
+            String(data?.label ?? '')
+                .toLowerCase()
+                .includes('toxic');
     const intent = parseIntent(data);
     const aspects = parseAspects(data);
     const sentiment4Scores = parseScoreMap(data?.debug?.sentiment4, ['positive', 'negative', 'neutral', 'toxic']);
-    const intentScores = parseScoreMap(data?.debug?.intent, ['praise', 'complain', 'question', 'other']);
+    const intentScores = parseScoreMap(data?.debug?.intent, [
+        'praise',
+        'complain',
+        'question',
+        'other',
+    ]);
     const aspectScores = parseAspectScores(data?.debug?.aspect);
     const aiVersion = (typeof data?.aiVersion === 'string' ? data.aiVersion : undefined) ??
         (typeof data?.version === 'string' ? data.version : undefined) ??
@@ -246,7 +255,10 @@ function parseAspectScores(raw) {
     return count > 0 ? out : undefined;
 }
 function parseAspects(data) {
-    const raw = data?.aspects ?? data?.aspect ?? data?.debug?.aspects ?? data?.debug?.aspect;
+    const raw = data?.aspects ??
+        data?.aspect ??
+        data?.debug?.aspects ??
+        data?.debug?.aspect;
     const out = [];
     const push = (x) => {
         const v = String(x ?? '').toLowerCase();
@@ -254,7 +266,10 @@ function parseAspects(data) {
             out.push('caster');
         else if (v === 'meta')
             out.push('meta');
-        else if (v === 'player/team' || v === 'player_team' || v === 'player' || v === 'team')
+        else if (v === 'player/team' ||
+            v === 'player_team' ||
+            v === 'player' ||
+            v === 'team')
             out.push('player_team');
         else if (v === 'giải đấu' || v === 'tournament')
             out.push('tournament');

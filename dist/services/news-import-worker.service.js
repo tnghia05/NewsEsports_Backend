@@ -98,7 +98,10 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
             catch (e) {
                 const err = String(e?.message ?? e);
                 this.logger.warn(`RSS import failed feed=${feedUrl} err=${err}`);
-                await this.rssSourcesService.markImportResult(feedUrl, { ok: false, error: err });
+                await this.rssSourcesService.markImportResult(feedUrl, {
+                    ok: false,
+                    error: err,
+                });
             }
         }
         const elapsed = Date.now() - started;

@@ -83,7 +83,10 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: post_save_model_1.PostSaveModelName, schema: post_save_model_1.PostSaveSchema },
                 { name: comment_like_model_1.CommentLikeModelName, schema: comment_like_model_1.CommentLikeSchema },
                 { name: notification_model_1.NotificationModelName, schema: notification_model_1.NotificationSchema },
-                { name: comment_moderation_job_model_1.CommentModerationJobModelName, schema: comment_moderation_job_model_1.CommentModerationJobSchema },
+                {
+                    name: comment_moderation_job_model_1.CommentModerationJobModelName,
+                    schema: comment_moderation_job_model_1.CommentModerationJobSchema,
+                },
                 { name: news_model_1.NewsModelName, schema: news_model_1.NewsSchema },
                 { name: rss_source_model_1.RssSourceModelName, schema: rss_source_model_1.RssSourceSchema },
                 { name: search_event_model_1.SearchEventModelName, schema: search_event_model_1.SearchEventSchema },

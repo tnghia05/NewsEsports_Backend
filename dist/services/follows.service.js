@@ -85,7 +85,11 @@ let FollowsService = class FollowsService {
                 const u = byId.get(String(id));
                 if (!u)
                     return undefined;
-                return { id: String(id), displayName: u.displayName, avatarUrl: u.avatarUrl ?? undefined };
+                return {
+                    id: String(id),
+                    displayName: u.displayName,
+                    avatarUrl: u.avatarUrl ?? undefined,
+                };
             })
                 .filter(Boolean),
             page,
@@ -120,7 +124,11 @@ let FollowsService = class FollowsService {
                 const u = byId.get(String(id));
                 if (!u)
                     return undefined;
-                return { id: String(id), displayName: u.displayName, avatarUrl: u.avatarUrl ?? undefined };
+                return {
+                    id: String(id),
+                    displayName: u.displayName,
+                    avatarUrl: u.avatarUrl ?? undefined,
+                };
             })
                 .filter(Boolean),
             page,

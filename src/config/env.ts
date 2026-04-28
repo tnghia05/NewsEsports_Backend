@@ -22,6 +22,20 @@ const EnvSchema = z.object({
   // RSS import (Milestone 4)
   RSS_SOURCES: z.string().min(1).optional(),
 
+  // VNPay (Milestone 7)
+  VNPAY_TMN_CODE: z.string().min(1).optional(),
+  VNPAY_SECURE_SECRET: z.string().min(1).optional(),
+  VNPAY_TEST_MODE: z
+    .enum(['true', 'false'])
+    .optional()
+    .default('true'),
+  VNPAY_HOST: z.string().url().optional(),
+  VNPAY_RETURN_URL: z.string().url().optional(),
+  VNPAY_ENABLE_LOG: z
+    .enum(['true', 'false'])
+    .optional()
+    .default('false'),
+
   // Cloudinary (optional, when doing uploads)
   CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
   CLOUDINARY_API_KEY: z.string().min(1).optional(),

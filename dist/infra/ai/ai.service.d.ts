@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import type { CommentSentiment } from '../../models/comment.model';
-export type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
+export type { Sentiment4Label, IntentLabel, AspectLabel, } from '../../types/ai-labels';
 import type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
 export type AiModerationResult = {
     sentiment: CommentSentiment;

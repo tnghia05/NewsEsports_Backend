@@ -110,7 +110,12 @@ let OrdersService = class OrdersService {
         const pipeline = [
             { $match: match },
             { $sort: { createdAt: -1 } },
-            { $facet: { items: [{ $skip: skip }, { $limit: limit }], total: [{ $count: 'count' }] } },
+            {
+                $facet: {
+                    items: [{ $skip: skip }, { $limit: limit }],
+                    total: [{ $count: 'count' }],
+                },
+            },
         ];
         const res = await this.orderModel.aggregate(pipeline).exec();
         const items = (res?.[0]?.items ?? []);

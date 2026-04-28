@@ -53,7 +53,12 @@ __decorate([
     __metadata("design:type", Array)
 ], News.prototype, "tags", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, enum: ['draft', 'published'], default: 'draft', index: true }),
+    (0, mongoose_1.Prop)({
+        type: String,
+        enum: ['draft', 'published'],
+        default: 'draft',
+        index: true,
+    }),
     __metadata("design:type", String)
 ], News.prototype, "status", void 0);
 __decorate([

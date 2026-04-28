@@ -34,7 +34,9 @@ let ProductsService = class ProductsService {
                 price: dto.price,
                 stock: dto.stock,
                 status,
-                tags: (dto.tags ?? []).map((x) => x.trim().toLowerCase()).filter(Boolean),
+                tags: (dto.tags ?? [])
+                    .map((x) => x.trim().toLowerCase())
+                    .filter(Boolean),
             });
         }
         catch (e) {
@@ -105,7 +107,12 @@ let ProductsService = class ProductsService {
         if (query.tag)
             filter.tags = query.tag.trim().toLowerCase();
         const [items, total] = await Promise.all([
-            this.productModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+            this.productModel
+                .find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .exec(),
             this.productModel.countDocuments(filter).exec(),
         ]);
         return {
@@ -127,7 +134,12 @@ let ProductsService = class ProductsService {
         if (query.tag)
             filter.tags = query.tag.trim().toLowerCase();
         const [items, total] = await Promise.all([
-            this.productModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+            this.productModel
+                .find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .exec(),
             this.productModel.countDocuments(filter).exec(),
         ]);
         return {

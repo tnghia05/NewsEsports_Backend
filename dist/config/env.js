@@ -16,6 +16,18 @@ const EnvSchema = zod_1.z.object({
     AI_TIMEOUT_MS: zod_1.z.coerce.number().int().positive().optional(),
     GOOGLE_CLIENT_ID: zod_1.z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
     RSS_SOURCES: zod_1.z.string().min(1).optional(),
+    VNPAY_TMN_CODE: zod_1.z.string().min(1).optional(),
+    VNPAY_SECURE_SECRET: zod_1.z.string().min(1).optional(),
+    VNPAY_TEST_MODE: zod_1.z
+        .enum(['true', 'false'])
+        .optional()
+        .default('true'),
+    VNPAY_HOST: zod_1.z.string().url().optional(),
+    VNPAY_RETURN_URL: zod_1.z.string().url().optional(),
+    VNPAY_ENABLE_LOG: zod_1.z
+        .enum(['true', 'false'])
+        .optional()
+        .default('false'),
     CLOUDINARY_CLOUD_NAME: zod_1.z.string().min(1).optional(),
     CLOUDINARY_API_KEY: zod_1.z.string().min(1).optional(),
     CLOUDINARY_API_SECRET: zod_1.z.string().min(1).optional(),

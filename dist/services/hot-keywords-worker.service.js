@@ -73,7 +73,9 @@ let HotKeywordsWorkerService = HotKeywordsWorkerService_1 = class HotKeywordsWor
         }
     }
     async recompute(window) {
-        const since = window === '7d' ? Date.now() - 7 * 24 * 60 * 60_000 : Date.now() - 24 * 60 * 60_000;
+        const since = window === '7d'
+            ? Date.now() - 7 * 24 * 60 * 60_000
+            : Date.now() - 24 * 60 * 60_000;
         const sinceDate = new Date(since);
         const started = Date.now();
         const rows = await this.searchEventModel
@@ -93,7 +95,9 @@ let HotKeywordsWorkerService = HotKeywordsWorkerService_1 = class HotKeywordsWor
             },
             {
                 $addFields: {
-                    score: { $add: ['$searchCount', { $multiply: ['$clickCount', 3] }] },
+                    score: {
+                        $add: ['$searchCount', { $multiply: ['$clickCount', 3] }],
+                    },
                 },
             },
             { $sort: { score: -1, lastAt: -1 } },
@@ -131,7 +135,10 @@ let HotKeywordsWorkerService = HotKeywordsWorkerService_1 = class HotKeywordsWor
             this.logger.log(`trend window=${window} top=${topKeywords.length} sampleN=${this.trendSampleN} in ${Date.now() - trendStarted}ms`);
         }
         await this.hotKeywordModel
-            .deleteMany({ window, updatedAt: { $lt: new Date(Date.now() - 30 * 24 * 60 * 60_000) } })
+            .deleteMany({
+            window,
+            updatedAt: { $lt: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
+        })
             .exec();
         const elapsed = Date.now() - started;
         this.logger.log(`recompute window=${window} rows=${rows.length} in ${elapsed}ms`);
@@ -239,7 +246,8 @@ let HotKeywordsWorkerService = HotKeywordsWorkerService_1 = class HotKeywordsWor
         for (const r of results) {
             trend.labeledCount += 1;
             if (r.sentiment4)
-                trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
+                trend.sentiment4[r.sentiment4] =
+                    (trend.sentiment4[r.sentiment4] ?? 0) + 1;
             if (r.intent)
                 trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
             for (const a of r.aspects ?? [])

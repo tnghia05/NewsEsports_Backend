@@ -25,7 +25,12 @@ class OrderItemSnapshot {
 }
 exports.OrderItemSnapshot = OrderItemSnapshot;
 __decorate([
-    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: product_model_1.ProductModelName, required: true, index: true }),
+    (0, mongoose_1.Prop)({
+        type: mongoose_2.Types.ObjectId,
+        ref: product_model_1.ProductModelName,
+        required: true,
+        index: true,
+    }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], OrderItemSnapshot.prototype, "productId", void 0);
 __decorate([
@@ -108,7 +113,12 @@ let Order = class Order {
 };
 exports.Order = Order;
 __decorate([
-    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: user_model_1.UserModelName, required: true, index: true }),
+    (0, mongoose_1.Prop)({
+        type: mongoose_2.Types.ObjectId,
+        ref: user_model_1.UserModelName,
+        required: true,
+        index: true,
+    }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], Order.prototype, "userId", void 0);
 __decorate([

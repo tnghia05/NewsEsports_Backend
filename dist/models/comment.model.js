@@ -60,7 +60,11 @@ __decorate([
     __metadata("design:type", String)
 ], Comment.prototype, "moderationStatus", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, enum: ['positive', 'neutral', 'negative'], index: true }),
+    (0, mongoose_1.Prop)({
+        type: String,
+        enum: ['positive', 'neutral', 'negative'],
+        index: true,
+    }),
     __metadata("design:type", String)
 ], Comment.prototype, "sentiment", void 0);
 __decorate([

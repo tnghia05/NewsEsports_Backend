@@ -25,7 +25,9 @@ let PaymentsController = class PaymentsController {
     }
     async createVNPayUrl(user, orderId, dto, req) {
         void user;
-        const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        const ip = req.headers['x-forwarded-for']
+            ?.split(',')[0]
+            ?.trim() ||
             req.ip ||
             req.socket.remoteAddress ||
             '127.0.0.1';

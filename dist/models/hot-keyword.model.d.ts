@@ -1,5 +1,5 @@
 import type { HydratedDocument } from 'mongoose';
-export type { Sentiment4Label, IntentLabel, AspectLabel } from '../types/ai-labels';
+export type { Sentiment4Label, IntentLabel, AspectLabel, } from '../types/ai-labels';
 import type { Sentiment4Label, IntentLabel, AspectLabel } from '../types/ai-labels';
 export type HotKeywordDocument = HydratedDocument<HotKeyword>;
 export declare const HotKeywordModelName = "HotKeyword";

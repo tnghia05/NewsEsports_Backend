@@ -32,11 +32,16 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
         this.orderModel = orderModel;
         this.paymentModel = paymentModel;
         const tmnCode = this.config.get('VNPAY_TMN_CODE', { infer: true });
-        const secureSecret = this.config.get('VNPAY_SECURE_SECRET', { infer: true });
-        const testMode = (this.config.get('VNPAY_TEST_MODE', { infer: true }) ?? 'true') === 'true';
+        const secureSecret = this.config.get('VNPAY_SECURE_SECRET', {
+            infer: true,
+        });
+        const testMode = (this.config.get('VNPAY_TEST_MODE', { infer: true }) ??
+            'true') === 'true';
         const vnpayHost = this.config.get('VNPAY_HOST', { infer: true }) ?? undefined;
-        const enableLog = (this.config.get('VNPAY_ENABLE_LOG', { infer: true }) ?? 'false') === 'true';
-        this.defaultReturnUrl = this.config.get('VNPAY_RETURN_URL', { infer: true }) ?? undefined;
+        const enableLog = (this.config.get('VNPAY_ENABLE_LOG', { infer: true }) ??
+            'false') === 'true';
+        this.defaultReturnUrl =
+            this.config.get('VNPAY_RETURN_URL', { infer: true }) ?? undefined;
         if (!tmnCode || !secureSecret) {
             this.logger.warn('VNPay disabled: VNPAY_TMN_CODE/VNPAY_SECURE_SECRET missing');
             return;
@@ -82,9 +87,19 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             status: 'redirected',
         });
         await this.orderModel
-            .updateOne({ _id: order._id }, { $set: { 'payment.provider': 'vnpay', 'payment.providerTxnRef': order.orderCode } })
+            .updateOne({ _id: order._id }, {
+            $set: {
+                'payment.provider': 'vnpay',
+                'payment.providerTxnRef': order.orderCode,
+            },
+        })
             .exec();
-        return { orderId: String(order._id), orderCode: order.orderCode, paymentUrl, paymentId: String(payment._id) };
+        return {
+            orderId: String(order._id),
+            orderCode: order.orderCode,
+            paymentUrl,
+            paymentId: String(payment._id),
+        };
     }
     async verifyVNPayReturn(query) {
         if (!this.vnpay)
@@ -119,7 +134,9 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             await this.markPaymentResult(verify.vnp_TxnRef, 'failed', verify);
             return { RspCode: '00', Message: 'Confirm Success' };
         }
-        const order = await this.orderModel.findOne({ orderCode: verify.vnp_TxnRef }).exec();
+        const order = await this.orderModel
+            .findOne({ orderCode: verify.vnp_TxnRef })
+            .exec();
         if (!order)
             return { RspCode: '01', Message: 'Order not found' };
         if (Number(verify.vnp_Amount) !== Number(order.total)) {
@@ -138,7 +155,8 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
                 'payment.vnp_TransactionNo': verify.vnp_TransactionNo,
                 'payment.vnp_BankCode': verify.vnp_BankCode,
                 'payment.vnp_ResponseCode': verify.vnp_ResponseCode,
-                'payment.vnp_TransactionStatus': verify.vnp_TransactionStatus,
+                'payment.vnp_TransactionStatus': verify
+                    .vnp_TransactionStatus,
                 'payment.vnp_PayDate': verify.vnp_PayDate,
                 'payment.paidAt': new Date().toISOString(),
             },
@@ -150,8 +168,16 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
     async upsertPayment(input) {
         const updated = await this.paymentModel
             .findOneAndUpdate({ provider: input.provider, txnRef: input.txnRef }, {
-            $setOnInsert: { orderId: input.orderId, provider: input.provider, txnRef: input.txnRef },
-            $set: { amount: input.amount, paymentUrl: input.paymentUrl, status: input.status },
+            $setOnInsert: {
+                orderId: input.orderId,
+                provider: input.provider,
+                txnRef: input.txnRef,
+            },
+            $set: {
+                amount: input.amount,
+                paymentUrl: input.paymentUrl,
+                status: input.status,
+            },
         }, { upsert: true, returnDocument: 'after' })
             .exec();
         if (!updated)

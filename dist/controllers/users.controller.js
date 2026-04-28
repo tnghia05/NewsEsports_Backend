@@ -33,7 +33,9 @@ let UsersController = class UsersController {
     }
     async listUserPosts(viewer, userId, query) {
         const data = await this.postsService.listByUser(viewer, userId, query);
-        const following = viewer ? await this.followsService.isFollowing(viewer.id, userId) : false;
+        const following = viewer
+            ? await this.followsService.isFollowing(viewer.id, userId)
+            : false;
         return { ...data, following };
     }
     async followers(userId, query) {
