@@ -55,7 +55,7 @@ let RssSourcesService = class RssSourcesService {
         if (dto.name !== undefined)
             patch.name = dto.name?.trim();
         const updated = await this.rssSourceModel
-            .findByIdAndUpdate(source._id, { $set: patch }, { new: true })
+            .findByIdAndUpdate(source._id, { $set: patch }, { returnDocument: 'after' })
             .exec();
         if (!updated)
             throw new common_1.NotFoundException('RSS source not found');

@@ -28,7 +28,12 @@ export class News {
   @Prop({ type: [String], default: [], index: true })
   tags!: string[];
 
-  @Prop({ type: String, enum: ['draft', 'published'], default: 'draft', index: true })
+  @Prop({
+    type: String,
+    enum: ['draft', 'published'],
+    default: 'draft',
+    index: true,
+  })
   status!: NewsStatus;
 
   @Prop({ type: Date, index: true })
@@ -58,4 +63,3 @@ export const NewsSchema = SchemaFactory.createForClass(News);
 NewsSchema.index({ status: 1, publishedAt: -1, createdAt: -1 });
 NewsSchema.index({ source: 1, externalId: 1 }, { unique: true, sparse: true });
 NewsSchema.index({ source: 1, externalUrl: 1 }, { unique: true, sparse: true });
-

@@ -10,4 +10,3 @@ export class CreateCommentDto {
   @IsString()
   parentId?: string;
 }
-

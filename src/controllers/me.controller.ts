@@ -18,6 +18,10 @@ export class MeController {
   @Get('me/saved-posts')
   savedPosts(@CurrentUser() user: JwtUser) {
     // Alias for UI convenience
-    return this.postsService.list(user, { tab: 'saved', page: 1, limit: 20 } as any);
+    return this.postsService.list(user, {
+      tab: 'saved',
+      page: 1,
+      limit: 20,
+    } as any);
   }
 }

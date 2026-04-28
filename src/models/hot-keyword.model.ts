@@ -1,7 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
-export type { Sentiment4Label, IntentLabel, AspectLabel } from '../types/ai-labels';
-import type { Sentiment4Label, IntentLabel, AspectLabel } from '../types/ai-labels';
+export type {
+  Sentiment4Label,
+  IntentLabel,
+  AspectLabel,
+} from '../types/ai-labels';
+import type {
+  Sentiment4Label,
+  IntentLabel,
+  AspectLabel,
+} from '../types/ai-labels';
 
 export type HotKeywordDocument = HydratedDocument<HotKeyword>;
 
@@ -61,4 +69,3 @@ export const HotKeywordSchema = SchemaFactory.createForClass(HotKeyword);
 
 HotKeywordSchema.index({ window: 1, score: -1 });
 HotKeywordSchema.index({ window: 1, keyword: 1 }, { unique: true });
-

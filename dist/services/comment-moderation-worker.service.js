@@ -53,6 +53,7 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                 const job = await this.claimJob();
                 if (!job)
                     break;
+                this.logger.log(`claimJob ok jobId=${String(job._id)} commentId=${job.commentId} status=${job.status}`);
                 await this.processJob(job).catch((e) => {
                     this.logger.warn(`Job ${job._id} failed: ${String(e?.message ?? e)}`);
                 });
@@ -64,11 +65,17 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
     }
     async claimJob() {
         const now = new Date();
+        const stuckBefore = new Date(Date.now() - 2 * 60_000);
         return this.jobModel
             .findOneAndUpdate({
-            status: 'pending',
-            $or: [{ nextRunAt: { $exists: false } }, { nextRunAt: { $lte: now } }],
-        }, { $set: { status: 'processing', lockedAt: now } }, { new: true })
+            $or: [
+                {
+                    status: 'pending',
+                    $or: [{ nextRunAt: { $exists: false } }, { nextRunAt: { $lte: now } }],
+                },
+                { status: 'processing', lockedAt: { $lt: stuckBefore } },
+            ],
+        }, { $set: { status: 'processing', lockedAt: now } }, { returnDocument: 'after' })
             .exec();
     }
     async processJob(job) {
@@ -93,6 +100,11 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
             return;
         }
         try {
+            const preview = String(comment.content ?? '')
+                .trim()
+                .replace(/\s+/g, ' ')
+                .slice(0, 80);
+            this.logger.log(`processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId} len=${String(comment.content ?? '').length} preview="${preview}"`);
             const ai = await this.aiService.analyzeComment(comment.content);
             const rejected = ai.toxicity.isToxic;
             await this.commentModel
@@ -100,19 +112,26 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                 $set: {
                     sentiment: ai.sentiment,
                     toxicity: ai.toxicity,
+                    sentiment4: ai.sentiment4,
+                    intent: ai.intent,
+                    aspects: ai.aspects,
+                    sentiment4Scores: ai.sentiment4Scores,
+                    intentScores: ai.intentScores,
+                    aspectScores: ai.aspectScores,
                     aiVersion: ai.aiVersion,
                     aiError: undefined,
                     moderationStatus: rejected ? 'rejected' : 'approved',
                 },
             })
                 .exec();
+            this.logger.log(`processJob updated commentId=${String(comment._id)} status=${rejected ? 'rejected' : 'approved'} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score}`);
             if (!rejected) {
                 await this.postModel
                     .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
                     .exec();
                 if (comment.parentId) {
                     const parent = await this.commentModel.findById(comment.parentId).exec();
-                    if (parent) {
+                    if (parent && parent.authorId !== comment.authorId) {
                         await this.notificationsService.create({
                             userId: parent.authorId,
                             actorId: comment.authorId,
@@ -122,7 +141,7 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                         });
                     }
                 }
-                else {
+                else if (post.authorId !== comment.authorId) {
                     await this.notificationsService.create({
                         userId: post.authorId,
                         actorId: comment.authorId,

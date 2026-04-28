@@ -35,9 +35,22 @@ export declare class SearchService {
         limit: number;
     }): Promise<{
         window: HotKeywordWindow;
+        updatedAt: string | undefined;
+        items: {
+            rank: number;
+            keyword: any;
+            score: any;
+        }[];
+    }>;
+    getTrends(opts: {
+        window: HotKeywordWindow;
+        limit: number;
+    }): Promise<{
+        window: HotKeywordWindow;
         items: {
             keyword: any;
             score: any;
+            trend: any;
         }[];
     }>;
     suggest(opts: {

@@ -11,6 +11,9 @@ import { SearchController } from '../controllers/search.controller';
 import { HashtagsController } from '../controllers/hashtags.controller';
 import { NewsController } from '../controllers/news.controller';
 import { RssSourcesController } from '../controllers/rss-sources.controller';
+import { ProductsController } from '../controllers/products.controller';
+import { OrdersController } from '../controllers/orders.controller';
+import { PaymentsController } from '../controllers/payments.controller';
 import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
@@ -27,6 +30,9 @@ import { CommentModerationWorkerService } from '../services/comment-moderation-w
 import { NewsService } from '../services/news.service';
 import { NewsImportWorkerService } from '../services/news-import-worker.service';
 import { RssSourcesService } from '../services/rss-sources.service';
+import { ProductsService } from '../services/products.service';
+import { OrdersService } from '../services/orders.service';
+import { PaymentsService } from '../services/payments.service';
 import { UserModelName, UserSchema } from '../models/user.model';
 import {
   RefreshTokenModelName,
@@ -37,15 +43,43 @@ import { FollowModelName, FollowSchema } from '../models/follow.model';
 import { CommentModelName, CommentSchema } from '../models/comment.model';
 import { PostLikeModelName, PostLikeSchema } from '../models/post-like.model';
 import { PostSaveModelName, PostSaveSchema } from '../models/post-save.model';
-import { CommentLikeModelName, CommentLikeSchema } from '../models/comment-like.model';
-import { NotificationModelName, NotificationSchema } from '../models/notification.model';
-import { CommentModerationJobModelName, CommentModerationJobSchema } from '../models/comment-moderation-job.model';
+import {
+  CommentLikeModelName,
+  CommentLikeSchema,
+} from '../models/comment-like.model';
+import {
+  NotificationModelName,
+  NotificationSchema,
+} from '../models/notification.model';
+import {
+  CommentModerationJobModelName,
+  CommentModerationJobSchema,
+} from '../models/comment-moderation-job.model';
 import { NewsModelName, NewsSchema } from '../models/news.model';
-import { RssSourceModelName, RssSourceSchema } from '../models/rss-source.model';
-import { SearchEventModelName, SearchEventSchema } from '../models/search-event.model';
-import { HotKeywordModelName, HotKeywordSchema } from '../models/hot-keyword.model';
-import { HashtagEventModelName, HashtagEventSchema } from '../models/hashtag-event.model';
+import {
+  RssSourceModelName,
+  RssSourceSchema,
+} from '../models/rss-source.model';
+import {
+  SearchEventModelName,
+  SearchEventSchema,
+} from '../models/search-event.model';
+import {
+  HotKeywordModelName,
+  HotKeywordSchema,
+} from '../models/hot-keyword.model';
+import {
+  HashtagEventModelName,
+  HashtagEventSchema,
+} from '../models/hashtag-event.model';
 import { HotTopicModelName, HotTopicSchema } from '../models/hot-topic.model';
+import { ProductModelName, ProductSchema } from '../models/product.model';
+import { OrderModelName, OrderSchema } from '../models/order.model';
+import { PaymentModelName, PaymentSchema } from '../models/payment.model';
+import {
+  OrderCounterModelName,
+  OrderCounterSchema,
+} from '../models/order-counter.model';
 import { JwtStrategy } from '../infra/auth/jwt.strategy';
 import { AiService } from '../infra/ai/ai.service';
 import { RssService } from '../infra/rss/rss.service';
@@ -64,13 +98,20 @@ import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
       { name: PostSaveModelName, schema: PostSaveSchema },
       { name: CommentLikeModelName, schema: CommentLikeSchema },
       { name: NotificationModelName, schema: NotificationSchema },
-      { name: CommentModerationJobModelName, schema: CommentModerationJobSchema },
+      {
+        name: CommentModerationJobModelName,
+        schema: CommentModerationJobSchema,
+      },
       { name: NewsModelName, schema: NewsSchema },
       { name: RssSourceModelName, schema: RssSourceSchema },
       { name: SearchEventModelName, schema: SearchEventSchema },
       { name: HotKeywordModelName, schema: HotKeywordSchema },
       { name: HashtagEventModelName, schema: HashtagEventSchema },
       { name: HotTopicModelName, schema: HotTopicSchema },
+      { name: ProductModelName, schema: ProductSchema },
+      { name: OrderModelName, schema: OrderSchema },
+      { name: PaymentModelName, schema: PaymentSchema },
+      { name: OrderCounterModelName, schema: OrderCounterSchema },
     ]),
   ],
   controllers: [
@@ -85,6 +126,9 @@ import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
     HashtagsController,
     SearchController,
     NotificationsController,
+    ProductsController,
+    OrdersController,
+    PaymentsController,
   ],
   providers: [
     HealthService,
@@ -105,6 +149,9 @@ import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
     NewsImportWorkerService,
     HotKeywordsWorkerService,
     HotTopicsWorkerService,
+    ProductsService,
+    OrdersService,
+    PaymentsService,
     AiService,
     CommentModerationWorkerService,
     JwtStrategy,

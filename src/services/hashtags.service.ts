@@ -2,9 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model, PipelineStage } from 'mongoose';
 import { PostModelName, type PostDocument } from '../models/post.model';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
-import { HashtagEventModelName, type HashtagEventDocument } from '../models/hashtag-event.model';
-import { HotTopicModelName, type HotTopicDocument, type HotTopicWindow } from '../models/hot-topic.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
+import {
+  HashtagEventModelName,
+  type HashtagEventDocument,
+} from '../models/hashtag-event.model';
+import {
+  HotTopicModelName,
+  type HotTopicDocument,
+  type HotTopicWindow,
+} from '../models/hot-topic.model';
 import type { JwtUser } from '../types/auth';
 import type { CreateHashtagEventDto } from '../dto/hashtags/create-hashtag-event.dto';
 import type { HotTopicsDto } from '../dto/hashtags/hot-topics.dto';
@@ -22,7 +32,10 @@ export class HashtagsService {
     private readonly hotTopicModel: Model<HotTopicDocument>,
   ) {}
 
-  async listPostsByTag(tag: string, opts: { tab: 'latest' | 'hot'; page: number; limit: number }) {
+  async listPostsByTag(
+    tag: string,
+    opts: { tab: 'latest' | 'hot'; page: number; limit: number },
+  ) {
     const page = opts.page;
     const limit = opts.limit;
     const skip = (page - 1) * limit;
@@ -64,7 +77,8 @@ export class HashtagsService {
   }
 
   async trending(window: '24h' | '7d') {
-    const sinceMs = window === '7d' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const sinceMs =
+      window === '7d' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
     const since = new Date(Date.now() - sinceMs);
 
     const pipeline: PipelineStage[] = [
@@ -201,4 +215,3 @@ function recencyBoostExpr() {
     },
   };
 }
-

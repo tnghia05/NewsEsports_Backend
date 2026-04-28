@@ -18,4 +18,3 @@ export class SearchUsersDto {
   @Max(100)
   limit = 20;
 }
-

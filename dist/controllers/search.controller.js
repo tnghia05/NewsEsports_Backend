@@ -40,6 +40,12 @@ let SearchController = class SearchController {
             limit: limit ? Number(limit) : 10,
         });
     }
+    trends(window, limit) {
+        return this.searchService.getTrends({
+            window: window ?? '24h',
+            limit: limit ? Number(limit) : 10,
+        });
+    }
     suggest(q, limit) {
         return this.searchService.suggest({
             q: q ?? '',
@@ -79,6 +85,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], SearchController.prototype, "hot", null);
+__decorate([
+    (0, common_1.Get)('trends'),
+    __param(0, (0, common_1.Query)('window')),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], SearchController.prototype, "trends", null);
 __decorate([
     (0, common_1.Get)('suggest'),
     __param(0, (0, common_1.Query)('q')),

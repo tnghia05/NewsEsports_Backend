@@ -15,4 +15,3 @@ export class QueryNotificationsDto {
   @Max(100)
   limit = 20;
 }
-

@@ -31,4 +31,3 @@ export class SearchPostsDto {
   @Max(100)
   limit = 20;
 }
-

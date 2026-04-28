@@ -24,7 +24,10 @@ export class FollowsService {
     return rows.map((r) => r.followeeId);
   }
 
-  async toggleFollow(followerId: string, followeeId: string): Promise<{ following: boolean }> {
+  async toggleFollow(
+    followerId: string,
+    followeeId: string,
+  ): Promise<{ following: boolean }> {
     if (followerId === followeeId) return { following: false };
 
     const existing = await this.followModel
@@ -53,7 +56,13 @@ export class FollowsService {
   async listFollowers(
     followeeId: string,
     opts: { page: number; limit: number },
-  ): Promise<{ items: { id: string; displayName: string; avatarUrl?: string }[]; page: number; limit: number; total: number; hasMore: boolean }> {
+  ): Promise<{
+    items: { id: string; displayName: string; avatarUrl?: string }[];
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  }> {
     const page = Math.max(1, Number(opts.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(opts.limit) || 20));
     const skip = (page - 1) * limit;
@@ -81,9 +90,17 @@ export class FollowsService {
         .map((id) => {
           const u: any = byId.get(String(id));
           if (!u) return undefined;
-          return { id: String(id), displayName: u.displayName, avatarUrl: u.avatarUrl ?? undefined };
+          return {
+            id: String(id),
+            displayName: u.displayName,
+            avatarUrl: u.avatarUrl ?? undefined,
+          };
         })
-        .filter(Boolean) as { id: string; displayName: string; avatarUrl?: string }[],
+        .filter(Boolean) as {
+        id: string;
+        displayName: string;
+        avatarUrl?: string;
+      }[],
       page,
       limit,
       total,
@@ -94,7 +111,13 @@ export class FollowsService {
   async listFollowing(
     followerId: string,
     opts: { page: number; limit: number },
-  ): Promise<{ items: { id: string; displayName: string; avatarUrl?: string }[]; page: number; limit: number; total: number; hasMore: boolean }> {
+  ): Promise<{
+    items: { id: string; displayName: string; avatarUrl?: string }[];
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  }> {
     const page = Math.max(1, Number(opts.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(opts.limit) || 20));
     const skip = (page - 1) * limit;
@@ -122,9 +145,17 @@ export class FollowsService {
         .map((id) => {
           const u: any = byId.get(String(id));
           if (!u) return undefined;
-          return { id: String(id), displayName: u.displayName, avatarUrl: u.avatarUrl ?? undefined };
+          return {
+            id: String(id),
+            displayName: u.displayName,
+            avatarUrl: u.avatarUrl ?? undefined,
+          };
         })
-        .filter(Boolean) as { id: string; displayName: string; avatarUrl?: string }[],
+        .filter(Boolean) as {
+        id: string;
+        displayName: string;
+        avatarUrl?: string;
+      }[],
       page,
       limit,
       total,

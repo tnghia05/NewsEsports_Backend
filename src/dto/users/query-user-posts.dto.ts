@@ -27,4 +27,3 @@ export class QueryUserPostsDto {
   @IsString()
   tag?: string;
 }
-

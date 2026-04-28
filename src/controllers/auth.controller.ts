@@ -90,9 +90,9 @@ export class AuthController {
   }
 }
 
-function stripCookieFields<T extends { refresh_token: string; csrf_token: string }>(
-  data: T,
-): Omit<T, 'refresh_token' | 'csrf_token'> {
+function stripCookieFields<
+  T extends { refresh_token: string; csrf_token: string },
+>(data: T): Omit<T, 'refresh_token' | 'csrf_token'> {
   const { refresh_token: _rt, csrf_token: _ct, ...rest } = data;
   return rest;
 }
@@ -113,7 +113,11 @@ function setRefreshCookie(res: Response, refreshToken: string) {
   });
 }
 
-function setAuthCookies(res: Response, refreshToken: string, csrfToken: string) {
+function setAuthCookies(
+  res: Response,
+  refreshToken: string,
+  csrfToken: string,
+) {
   setRefreshCookie(res, refreshToken);
   res.cookie('csrf_token', csrfToken, {
     ...cookieBaseOptions(),

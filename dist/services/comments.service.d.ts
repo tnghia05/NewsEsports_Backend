@@ -12,6 +12,7 @@ export declare class CommentsService {
     private readonly postModel;
     private readonly notificationsService;
     private readonly jobModel;
+    private readonly logger;
     constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, notificationsService: NotificationsService, jobModel: Model<CommentModerationJobDocument>);
     listForPost(viewer: JwtUser | undefined, postId: string, query: QueryCommentsDto): Promise<{
         items: (import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {

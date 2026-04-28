@@ -32,7 +32,10 @@ export class PostsController {
 
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
-  list(@CurrentUser() user: JwtUser | undefined, @Query() query: QueryPostsDto) {
+  list(
+    @CurrentUser() user: JwtUser | undefined,
+    @Query() query: QueryPostsDto,
+  ) {
     return this.postsService.list(user, query);
   }
 
@@ -77,7 +80,11 @@ export class PostsController {
   }
 
   @Get(':id/likes')
-  getLikes(@Param('id') id: string, @Query('page') page?: string, @Query('limit') limit?: string) {
+  getLikes(
+    @Param('id') id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     return this.postsService.listLikes(id, {
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,

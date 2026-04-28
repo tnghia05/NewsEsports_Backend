@@ -43,7 +43,7 @@ let UsersService = class UsersService {
     }
     async linkGoogleSub(userId, googleSub, avatarUrl) {
         return this.userModel
-            .findByIdAndUpdate(userId, { $set: { googleSub, ...(avatarUrl ? { avatarUrl } : {}) } }, { new: true })
+            .findByIdAndUpdate(userId, { $set: { googleSub, ...(avatarUrl ? { avatarUrl } : {}) } }, { returnDocument: 'after' })
             .exec();
     }
 };

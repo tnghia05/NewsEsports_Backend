@@ -17,6 +17,10 @@ const common_1 = require("@nestjs/common");
 const hashtags_service_1 = require("../services/hashtags.service");
 const query_hashtag_posts_dto_1 = require("../dto/hashtags/query-hashtag-posts.dto");
 const trending_hashtags_dto_1 = require("../dto/hashtags/trending-hashtags.dto");
+const hot_topics_dto_1 = require("../dto/hashtags/hot-topics.dto");
+const create_hashtag_event_dto_1 = require("../dto/hashtags/create-hashtag-event.dto");
+const optional_jwt_auth_guard_1 = require("../guards/optional-jwt-auth.guard");
+const user_decorator_1 = require("../decorators/user.decorator");
 let HashtagsController = class HashtagsController {
     hashtagsService;
     constructor(hashtagsService) {
@@ -27,6 +31,12 @@ let HashtagsController = class HashtagsController {
     }
     trending(query) {
         return this.hashtagsService.trending(query.window);
+    }
+    createEvent(user, dto) {
+        return this.hashtagsService.createEvent(user, dto);
+    }
+    hotTopics(query) {
+        return this.hashtagsService.hotTopics(query);
     }
 };
 exports.HashtagsController = HashtagsController;
@@ -45,6 +55,22 @@ __decorate([
     __metadata("design:paramtypes", [trending_hashtags_dto_1.TrendingHashtagsDto]),
     __metadata("design:returntype", void 0)
 ], HashtagsController.prototype, "trending", null);
+__decorate([
+    (0, common_1.Post)('events'),
+    (0, common_1.UseGuards)(optional_jwt_auth_guard_1.OptionalJwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, create_hashtag_event_dto_1.CreateHashtagEventDto]),
+    __metadata("design:returntype", void 0)
+], HashtagsController.prototype, "createEvent", null);
+__decorate([
+    (0, common_1.Get)('hot-topics'),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [hot_topics_dto_1.HotTopicsDto]),
+    __metadata("design:returntype", void 0)
+], HashtagsController.prototype, "hotTopics", null);
 exports.HashtagsController = HashtagsController = __decorate([
     (0, common_1.Controller)('hashtags'),
     __metadata("design:paramtypes", [hashtags_service_1.HashtagsService])

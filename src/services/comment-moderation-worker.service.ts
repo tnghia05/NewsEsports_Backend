@@ -1,17 +1,27 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import {
   CommentModerationJobModelName,
   type CommentModerationJobDocument,
 } from '../models/comment-moderation-job.model';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import { AiService } from '../infra/ai/ai.service';
 import { NotificationsService } from './notifications.service';
 
 @Injectable()
-export class CommentModerationWorkerService implements OnModuleInit, OnModuleDestroy {
+export class CommentModerationWorkerService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(CommentModerationWorkerService.name);
   private timer?: NodeJS.Timeout;
   private running = false;
@@ -65,7 +75,10 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
           $or: [
             {
               status: 'pending',
-              $or: [{ nextRunAt: { $exists: false } }, { nextRunAt: { $lte: now } }],
+              $or: [
+                { nextRunAt: { $exists: false } },
+                { nextRunAt: { $lte: now } },
+              ],
             },
             { status: 'processing', lockedAt: { $lt: stuckBefore } },
           ],
@@ -145,7 +158,9 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
 
         // Notifications only on approved comments (skip self-notifications).
         if (comment.parentId) {
-          const parent = await this.commentModel.findById(comment.parentId).exec();
+          const parent = await this.commentModel
+            .findById(comment.parentId)
+            .exec();
           if (parent && parent.authorId !== comment.authorId) {
             await this.notificationsService.create({
               userId: parent.authorId,
@@ -167,7 +182,10 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
       }
 
       await this.jobModel
-        .updateOne({ _id: job._id }, { $set: { status: 'done', lastError: undefined } })
+        .updateOne(
+          { _id: job._id },
+          { $set: { status: 'done', lastError: undefined } },
+        )
         .exec();
     } catch (e: any) {
       const attempts = (job.attempts ?? 0) + 1;
@@ -194,4 +212,3 @@ export class CommentModerationWorkerService implements OnModuleInit, OnModuleDes
     }
   }
 }
-

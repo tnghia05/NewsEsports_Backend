@@ -1,8 +1,18 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { CommentLikeModelName, type CommentLikeDocument } from '../models/comment-like.model';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import {
+  CommentLikeModelName,
+  type CommentLikeDocument,
+} from '../models/comment-like.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import type { JwtUser } from '../types/auth';
 import { assertCanReadPost } from '../utils/assert-can-read-post';
@@ -18,7 +28,10 @@ export class CommentLikesService {
     private readonly postModel: Model<PostDocument>,
   ) {}
 
-  async toggleLike(viewer: JwtUser, commentId: string): Promise<{ liked: boolean }> {
+  async toggleLike(
+    viewer: JwtUser,
+    commentId: string,
+  ): Promise<{ liked: boolean }> {
     const comment = await this.commentModel.findById(commentId).exec();
     if (!comment) throw new NotFoundException('Comment not found');
     if (comment.isDeleted) throw new ForbiddenException('Comment deleted');
@@ -34,16 +47,13 @@ export class CommentLikesService {
     if (existing) {
       await existing.deleteOne();
       await this.commentModel
-        .updateOne(
-          { _id: comment._id },
-          [
-            {
-              $set: {
-                likeCount: { $max: [0, { $subtract: ['$likeCount', 1] }] },
-              },
+        .updateOne({ _id: comment._id }, [
+          {
+            $set: {
+              likeCount: { $max: [0, { $subtract: ['$likeCount', 1] }] },
             },
-          ],
-        )
+          },
+        ])
         .exec();
       return { liked: false };
     }
@@ -60,4 +70,3 @@ export class CommentLikesService {
     return { liked: true };
   }
 }
-

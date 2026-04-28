@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
@@ -21,8 +26,12 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly rssService: RssService,
     private readonly rssSourcesService: RssSourcesService,
   ) {
-    this.intervalMs = Number(this.config.get('RSS_IMPORT_INTERVAL_MS') ?? 10 * 60_000);
-    this.maxItemsPerFeed = Number(this.config.get('RSS_IMPORT_MAX_ITEMS') ?? 30);
+    this.intervalMs = Number(
+      this.config.get('RSS_IMPORT_INTERVAL_MS') ?? 10 * 60_000,
+    );
+    this.maxItemsPerFeed = Number(
+      this.config.get('RSS_IMPORT_MAX_ITEMS') ?? 30,
+    );
   }
 
   onModuleInit() {
@@ -66,7 +75,8 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
 
   private async runImport() {
     const sources = await this.getSources();
-    if (!sources.length) return { ok: true, imported: 0, skipped: 0, sources: 0 };
+    if (!sources.length)
+      return { ok: true, imported: 0, skipped: 0, sources: 0 };
 
     const started = Date.now();
     let imported = 0;
@@ -74,10 +84,17 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
 
     for (const feedUrl of sources) {
       try {
-        const items = (await this.rssService.fetchFeed(feedUrl)).slice(0, this.maxItemsPerFeed);
+        const items = (await this.rssService.fetchFeed(feedUrl)).slice(
+          0,
+          this.maxItemsPerFeed,
+        );
         for (const item of items) {
           const externalId = (item.guid ?? item.link).trim();
-          const created = await this.tryCreateFromRss(feedUrl, item, externalId);
+          const created = await this.tryCreateFromRss(
+            feedUrl,
+            item,
+            externalId,
+          );
           if (created) imported++;
           else skipped++;
         }
@@ -85,7 +102,10 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
       } catch (e: any) {
         const err = String(e?.message ?? e);
         this.logger.warn(`RSS import failed feed=${feedUrl} err=${err}`);
-        await this.rssSourcesService.markImportResult(feedUrl, { ok: false, error: err });
+        await this.rssSourcesService.markImportResult(feedUrl, {
+          ok: false,
+          error: err,
+        });
       }
     }
 
@@ -161,4 +181,3 @@ function shortHash(s: string) {
   }
   return (h >>> 0).toString(16).slice(0, 8);
 }
-

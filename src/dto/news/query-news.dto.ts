@@ -27,4 +27,3 @@ export class QueryNewsDto {
   @IsString()
   q?: string;
 }
-

@@ -12,4 +12,3 @@ export function assertCanReadPost(
   if (post.authorId === viewer.id) return;
   throw new ForbiddenException('Forbidden');
 }
-

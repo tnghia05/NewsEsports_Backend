@@ -18,6 +18,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const post_like_model_1 = require("../models/post-like.model");
 const post_model_1 = require("../models/post.model");
 const notifications_service_1 = require("./notifications.service");
+const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let PostLikesService = class PostLikesService {
     postLikeModel;
     postModel;
@@ -31,7 +32,7 @@ let PostLikesService = class PostLikesService {
         const post = await this.postModel.findById(postId).exec();
         if (!post)
             throw new common_1.NotFoundException('Post not found');
-        assertCanReadPost(viewer, post);
+        (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
         const existing = await this.postLikeModel
             .findOne({ postId, userId: viewer.id })
             .exec();
@@ -57,12 +58,14 @@ let PostLikesService = class PostLikesService {
         await this.postModel
             .updateOne({ _id: post._id }, { $inc: { likeCount: 1 } })
             .exec();
-        await this.notificationsService.create({
-            userId: post.authorId,
-            actorId: viewer.id,
-            type: 'post_like',
-            postId: String(post._id),
-        });
+        if (viewer.id !== post.authorId) {
+            await this.notificationsService.create({
+                userId: post.authorId,
+                actorId: viewer.id,
+                type: 'post_like',
+                postId: String(post._id),
+            });
+        }
         return { liked: true };
     }
 };
@@ -73,13 +76,4 @@ exports.PostLikesService = PostLikesService = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __metadata("design:paramtypes", [Function, Function, notifications_service_1.NotificationsService])
 ], PostLikesService);
-function assertCanReadPost(viewer, post) {
-    if (post.status === 'published')
-        return;
-    if (viewer.role === 'admin')
-        return;
-    if (post.authorId === viewer.id)
-        return;
-    throw new common_1.ForbiddenException('Forbidden');
-}
 //# sourceMappingURL=post-likes.service.js.map

@@ -28,4 +28,3 @@ export class QueryCommentsDto {
   @Type(() => Boolean)
   topLevelOnly = false;
 }
-

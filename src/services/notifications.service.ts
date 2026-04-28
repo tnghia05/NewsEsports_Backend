@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import {
@@ -56,7 +60,10 @@ export class NotificationsService {
 
     if (notif.isRead) return { ok: true };
     await this.notificationModel
-      .updateOne({ _id: notif._id }, { $set: { isRead: true, readAt: new Date() } })
+      .updateOne(
+        { _id: notif._id },
+        { $set: { isRead: true, readAt: new Date() } },
+      )
       .exec();
     return { ok: true };
   }
@@ -71,4 +78,3 @@ export class NotificationsService {
     return { ok: true };
   }
 }
-

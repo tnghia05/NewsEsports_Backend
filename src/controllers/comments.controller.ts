@@ -78,4 +78,3 @@ export class CommentsController {
     return this.commentLikesService.toggleLike(user, id);
   }
 }
-

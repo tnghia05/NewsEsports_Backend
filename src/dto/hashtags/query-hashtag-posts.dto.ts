@@ -19,4 +19,3 @@ export class QueryHashtagPostsDto {
   @Max(100)
   limit = 20;
 }
-

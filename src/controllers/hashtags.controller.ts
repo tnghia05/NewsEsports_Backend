@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { HashtagsService } from '../services/hashtags.service';
 import { QueryHashtagPostsDto } from '../dto/hashtags/query-hashtag-posts.dto';
 import { TrendingHashtagsDto } from '../dto/hashtags/trending-hashtags.dto';
@@ -24,7 +32,10 @@ export class HashtagsController {
 
   @Post('events')
   @UseGuards(OptionalJwtAuthGuard)
-  createEvent(@CurrentUser() user: JwtUser | undefined, @Body() dto: CreateHashtagEventDto) {
+  createEvent(
+    @CurrentUser() user: JwtUser | undefined,
+    @Body() dto: CreateHashtagEventDto,
+  ) {
     return this.hashtagsService.createEvent(user, dto);
   }
 
@@ -33,4 +44,3 @@ export class HashtagsController {
     return this.hashtagsService.hotTopics(query);
   }
 }
-

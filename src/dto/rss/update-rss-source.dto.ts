@@ -10,4 +10,3 @@ export class UpdateRssSourceDto {
   @MaxLength(120)
   name?: string;
 }
-

@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
@@ -14,7 +19,10 @@ import {
   type HotKeywordTrend,
 } from '../models/hot-keyword.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
 import { NewsModelName, type NewsDocument } from '../models/news.model';
 
 @Injectable()
@@ -41,9 +49,13 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
     @InjectModel(NewsModelName)
     private readonly newsModel: Model<NewsDocument>,
   ) {
-    this.intervalMs = Number(this.config.get('HOT_KEYWORDS_INTERVAL_MS') ?? 60_000);
+    this.intervalMs = Number(
+      this.config.get('HOT_KEYWORDS_INTERVAL_MS') ?? 60_000,
+    );
     this.trendTopN = Number(this.config.get('HOT_KEYWORDS_TREND_TOP_N') ?? 20);
-    this.trendSampleN = Number(this.config.get('HOT_KEYWORDS_TREND_SAMPLE_N') ?? 20);
+    this.trendSampleN = Number(
+      this.config.get('HOT_KEYWORDS_TREND_SAMPLE_N') ?? 20,
+    );
   }
 
   onModuleInit() {
@@ -69,7 +81,10 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async recompute(window: HotKeywordWindow) {
-    const since = window === '7d' ? Date.now() - 7 * 24 * 60 * 60_000 : Date.now() - 24 * 60 * 60_000;
+    const since =
+      window === '7d'
+        ? Date.now() - 7 * 24 * 60 * 60_000
+        : Date.now() - 24 * 60 * 60_000;
     const sinceDate = new Date(since);
     const started = Date.now();
 
@@ -91,7 +106,9 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
         },
         {
           $addFields: {
-            score: { $add: ['$searchCount', { $multiply: ['$clickCount', 3] }] },
+            score: {
+              $add: ['$searchCount', { $multiply: ['$clickCount', 3] }],
+            },
           },
         },
         { $sort: { score: -1, lastAt: -1 } },
@@ -104,7 +121,7 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
     const topN = Math.min(Math.max(0, this.trendTopN), 50);
     const topKeywords: string[] = [];
 
-    for (const r of rows as any[]) {
+    for (const r of rows) {
       const keyword = String(r._id);
       const score = Number(r.score) || 0;
       if (!keyword || score <= 0) continue;
@@ -135,14 +152,22 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
 
     // prune old keywords not updated recently (optional hygiene)
     await this.hotKeywordModel
-      .deleteMany({ window, updatedAt: { $lt: new Date(Date.now() - 30 * 24 * 60 * 60_000) } })
+      .deleteMany({
+        window,
+        updatedAt: { $lt: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
+      })
       .exec();
 
     const elapsed = Date.now() - started;
-    this.logger.log(`recompute window=${window} rows=${rows.length} in ${elapsed}ms`);
+    this.logger.log(
+      `recompute window=${window} rows=${rows.length} in ${elapsed}ms`,
+    );
   }
 
-  private async computeTrendForKeyword(keyword: string, sinceDate: Date): Promise<HotKeywordTrend | null> {
+  private async computeTrendForKeyword(
+    keyword: string,
+    sinceDate: Date,
+  ): Promise<HotKeywordTrend | null> {
     const sampleN = Math.min(50, Math.max(1, Number(this.trendSampleN) || 20));
 
     const clickEvents = await this.searchEventModel
@@ -255,13 +280,12 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
       trend.labeledCount += 1;
 
       if (r.sentiment4)
-        trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
-      if (r.intent)
-        trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
+        trend.sentiment4[r.sentiment4] =
+          (trend.sentiment4[r.sentiment4] ?? 0) + 1;
+      if (r.intent) trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
       for (const a of r.aspects ?? [])
         trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
-      if (r.sentiment4 === 'toxic' || r.toxicity.isToxic)
-        trend.toxicCount += 1;
+      if (r.sentiment4 === 'toxic' || r.toxicity.isToxic) trend.toxicCount += 1;
 
       const hasScores = r.sentiment4Scores || r.intentScores || r.aspectScores;
       if (hasScores) scoredCount += 1;
@@ -291,7 +315,6 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
 
     return trend;
   }
-
 }
 
 function makeText(input: string) {
@@ -313,4 +336,3 @@ function divideMap(
   }
   return out;
 }
-

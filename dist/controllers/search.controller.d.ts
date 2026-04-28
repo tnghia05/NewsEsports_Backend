@@ -25,9 +25,19 @@ export declare class SearchController {
     }>;
     hot(window?: string, limit?: string): Promise<{
         window: import("../models/hot-keyword.model").HotKeywordWindow;
+        updatedAt: string | undefined;
+        items: {
+            rank: number;
+            keyword: any;
+            score: any;
+        }[];
+    }>;
+    trends(window?: string, limit?: string): Promise<{
+        window: import("../models/hot-keyword.model").HotKeywordWindow;
         items: {
             keyword: any;
             score: any;
+            trend: any;
         }[];
     }>;
     suggest(q?: string, limit?: string): Promise<{

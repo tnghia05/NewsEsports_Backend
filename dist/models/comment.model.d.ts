@@ -14,6 +14,12 @@ export declare class Comment {
         isToxic: boolean;
         score: number;
     };
+    sentiment4?: string;
+    intent?: string;
+    aspects?: string[];
+    sentiment4Scores?: Record<string, number>;
+    intentScores?: Record<string, number>;
+    aspectScores?: Record<string, number>;
     aiVersion?: string;
     aiError?: string;
     likeCount: number;
@@ -87,6 +93,60 @@ export declare const CommentSchema: import("mongoose").Schema<Comment, import("m
         isToxic: boolean;
         score: number;
     } | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    sentiment4?: import("mongoose").SchemaDefinitionProperty<string | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    intent?: import("mongoose").SchemaDefinitionProperty<string | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    aspects?: import("mongoose").SchemaDefinitionProperty<string[] | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    sentiment4Scores?: import("mongoose").SchemaDefinitionProperty<Record<string, number> | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    intentScores?: import("mongoose").SchemaDefinitionProperty<Record<string, number> | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    aspectScores?: import("mongoose").SchemaDefinitionProperty<Record<string, number> | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
         _id: import("mongoose").Types.ObjectId;

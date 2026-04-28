@@ -25,7 +25,8 @@ export class RssService {
     const res = await fetch(url, {
       headers: {
         'user-agent': 'backend-rss-import/1.0',
-        accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+        accept:
+          'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
       },
     });
     if (!res.ok) {
@@ -33,7 +34,9 @@ export class RssService {
     }
     const xml = await res.text();
     const elapsed = Date.now() - started;
-    this.logger.log(`fetchFeed ok in ${elapsed}ms url=${redactUrl(url)} bytes=${xml.length}`);
+    this.logger.log(
+      `fetchFeed ok in ${elapsed}ms url=${redactUrl(url)} bytes=${xml.length}`,
+    );
 
     const doc: any = this.parser.parse(xml);
     const items = extractItems(doc);
@@ -119,4 +122,3 @@ function redactUrl(url: string) {
     return url;
   }
 }
-

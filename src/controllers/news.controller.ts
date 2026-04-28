@@ -83,4 +83,3 @@ export class NewsController {
     return this.newsImportWorkerService.importNow();
   }
 }
-

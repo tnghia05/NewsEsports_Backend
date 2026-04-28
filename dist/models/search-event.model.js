@@ -17,6 +17,7 @@ let SearchEvent = class SearchEvent {
     sessionId;
     q;
     action;
+    targetType;
     targetId;
 };
 exports.SearchEvent = SearchEvent;
@@ -41,6 +42,13 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], SearchEvent.prototype, "action", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: String,
+        enum: ['post', 'comment', 'news', 'user', 'other'],
+    }),
+    __metadata("design:type", String)
+], SearchEvent.prototype, "targetType", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)

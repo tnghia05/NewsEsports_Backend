@@ -16,6 +16,7 @@ let HotKeyword = class HotKeyword {
     keyword;
     window;
     score;
+    trend;
     updatedAt;
 };
 exports.HotKeyword = HotKeyword;
@@ -36,6 +37,23 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true, index: true }),
     __metadata("design:type", Number)
 ], HotKeyword.prototype, "score", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: {
+            sampleCount: { type: Number, required: true },
+            labeledCount: { type: Number, required: true },
+            toxicCount: { type: Number, required: true },
+            sentiment4: { type: Object, required: true },
+            intent: { type: Object, required: true },
+            aspect: { type: Object, required: true },
+            sentiment4Avg: { type: Object },
+            intentAvg: { type: Object },
+            aspectAvg: { type: Object },
+        },
+        default: undefined,
+    }),
+    __metadata("design:type", Object)
+], HotKeyword.prototype, "trend", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date, required: true, index: true }),
     __metadata("design:type", Date)

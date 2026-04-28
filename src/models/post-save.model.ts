@@ -18,4 +18,3 @@ export const PostSaveSchema = SchemaFactory.createForClass(PostSave);
 
 PostSaveSchema.index({ postId: 1, userId: 1 }, { unique: true });
 PostSaveSchema.index({ userId: 1, createdAt: -1 });
-

@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const post_save_model_1 = require("../models/post-save.model");
 const post_model_1 = require("../models/post.model");
+const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let PostSavesService = class PostSavesService {
     postSaveModel;
     postModel;
@@ -28,7 +29,7 @@ let PostSavesService = class PostSavesService {
         const post = await this.postModel.findById(postId).exec();
         if (!post)
             throw new common_1.NotFoundException('Post not found');
-        assertCanReadPost(viewer, post);
+        (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
         const existing = await this.postSaveModel
             .findOne({ postId, userId: viewer.id })
             .exec();
@@ -52,13 +53,4 @@ exports.PostSavesService = PostSavesService = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __metadata("design:paramtypes", [Function, Function])
 ], PostSavesService);
-function assertCanReadPost(viewer, post) {
-    if (post.status === 'published')
-        return;
-    if (viewer.role === 'admin')
-        return;
-    if (post.authorId === viewer.id)
-        return;
-    throw new common_1.ForbiddenException('Forbidden');
-}
 //# sourceMappingURL=post-saves.service.js.map

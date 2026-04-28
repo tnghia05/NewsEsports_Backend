@@ -12,8 +12,8 @@ export declare class UsersController {
     }>;
     listUserPosts(viewer: JwtUser | undefined, userId: string, query: QueryUserPostsDto): Promise<{
         following: boolean;
-        total: number;
-        hasMore: boolean;
+        total?: number | undefined;
+        hasMore?: boolean | undefined;
         items: any[];
         page: number;
         limit: number;

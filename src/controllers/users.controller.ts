@@ -29,7 +29,9 @@ export class UsersController {
     @Query() query: QueryUserPostsDto,
   ) {
     const data = await this.postsService.listByUser(viewer, userId, query);
-    const following = viewer ? await this.followsService.isFollowing(viewer.id, userId) : false;
+    const following = viewer
+      ? await this.followsService.isFollowing(viewer.id, userId)
+      : false;
     return { ...data, following };
   }
 

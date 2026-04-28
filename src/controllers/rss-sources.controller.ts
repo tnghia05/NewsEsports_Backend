@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { Roles } from '../decorators/roles.decorator';
 import { CurrentUser } from '../decorators/user.decorator';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -25,7 +34,11 @@ export class RssSourcesController {
   }
 
   @Patch(':id')
-  update(@CurrentUser() admin: JwtUser, @Param('id') id: string, @Body() dto: UpdateRssSourceDto) {
+  update(
+    @CurrentUser() admin: JwtUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateRssSourceDto,
+  ) {
     return this.rssSourcesService.update(admin, id, dto);
   }
 
@@ -34,4 +47,3 @@ export class RssSourcesController {
     return this.rssSourcesService.remove(admin, id);
   }
 }
-

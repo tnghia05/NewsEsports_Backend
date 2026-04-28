@@ -20,7 +20,10 @@ export class PostLikesService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async toggleLike(viewer: JwtUser, postId: string): Promise<{ liked: boolean }> {
+  async toggleLike(
+    viewer: JwtUser,
+    postId: string,
+  ): Promise<{ liked: boolean }> {
     const post = await this.postModel.findById(postId).exec();
     if (!post) throw new NotFoundException('Post not found');
 
@@ -33,16 +36,13 @@ export class PostLikesService {
     if (existing) {
       await existing.deleteOne();
       await this.postModel
-        .updateOne(
-          { _id: post._id },
-          [
-            {
-              $set: {
-                likeCount: { $max: [0, { $subtract: ['$likeCount', 1] }] },
-              },
+        .updateOne({ _id: post._id }, [
+          {
+            $set: {
+              likeCount: { $max: [0, { $subtract: ['$likeCount', 1] }] },
             },
-          ],
-        )
+          },
+        ])
         .exec();
       return { liked: false };
     }
@@ -69,4 +69,3 @@ export class PostLikesService {
     return { liked: true };
   }
 }
-

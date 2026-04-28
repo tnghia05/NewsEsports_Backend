@@ -6,7 +6,12 @@ export type SearchEventDocument = HydratedDocument<SearchEvent>;
 export const SearchEventModelName = 'SearchEvent';
 
 export type SearchEventAction = 'search' | 'click';
-export type SearchEventTargetType = 'post' | 'comment' | 'news' | 'user' | 'other';
+export type SearchEventTargetType =
+  | 'post'
+  | 'comment'
+  | 'news'
+  | 'user'
+  | 'other';
 
 @Schema({ timestamps: true })
 export class SearchEvent {
@@ -42,4 +47,3 @@ export const SearchEventSchema = SchemaFactory.createForClass(SearchEvent);
 SearchEventSchema.index({ createdAt: -1, action: 1 });
 SearchEventSchema.index({ q: 1, createdAt: -1 });
 SearchEventSchema.index({ userId: 1, createdAt: -1 });
-

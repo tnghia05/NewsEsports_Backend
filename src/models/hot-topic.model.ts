@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
-import type { AspectLabel, IntentLabel, Sentiment4Label } from './hot-keyword.model';
+import type {
+  AspectLabel,
+  IntentLabel,
+  Sentiment4Label,
+} from './hot-keyword.model';
 
 export type HotTopicDocument = HydratedDocument<HotTopic>;
 
@@ -77,4 +81,3 @@ export const HotTopicSchema = SchemaFactory.createForClass(HotTopic);
 
 HotTopicSchema.index({ window: 1, hotness: -1 });
 HotTopicSchema.index({ window: 1, tag: 1 }, { unique: true });
-

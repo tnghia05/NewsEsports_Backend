@@ -5,7 +5,10 @@ import {
   CommentModerationJobModelName,
   type CommentModerationJobDocument,
 } from '../models/comment-moderation-job.model';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
 
 @Injectable()
 export class HealthService {

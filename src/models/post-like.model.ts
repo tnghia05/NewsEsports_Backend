@@ -18,4 +18,3 @@ export const PostLikeSchema = SchemaFactory.createForClass(PostLike);
 
 PostLikeSchema.index({ postId: 1, userId: 1 }, { unique: true });
 PostLikeSchema.index({ userId: 1, createdAt: -1 });
-

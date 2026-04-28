@@ -20,6 +20,12 @@ let Comment = class Comment {
     moderationStatus;
     sentiment;
     toxicity;
+    sentiment4;
+    intent;
+    aspects;
+    sentiment4Scores;
+    intentScores;
+    aspectScores;
     aiVersion;
     aiError;
     likeCount;
@@ -66,6 +72,34 @@ __decorate([
     }),
     __metadata("design:type", Object)
 ], Comment.prototype, "toxicity", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: String,
+        enum: ['positive', 'negative', 'neutral', 'toxic'],
+        index: true,
+    }),
+    __metadata("design:type", String)
+], Comment.prototype, "sentiment4", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, enum: ['praise', 'complain', 'question', 'other'] }),
+    __metadata("design:type", String)
+], Comment.prototype, "intent", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: [String] }),
+    __metadata("design:type", Array)
+], Comment.prototype, "aspects", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Object }),
+    __metadata("design:type", Object)
+], Comment.prototype, "sentiment4Scores", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Object }),
+    __metadata("design:type", Object)
+], Comment.prototype, "intentScores", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Object }),
+    __metadata("design:type", Object)
+], Comment.prototype, "aspectScores", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)

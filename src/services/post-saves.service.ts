@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { PostSaveModelName, type PostSaveDocument } from '../models/post-save.model';
+import {
+  PostSaveModelName,
+  type PostSaveDocument,
+} from '../models/post-save.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import type { JwtUser } from '../types/auth';
 import { assertCanReadPost } from '../utils/assert-can-read-post';
@@ -15,7 +18,10 @@ export class PostSavesService {
     private readonly postModel: Model<PostDocument>,
   ) {}
 
-  async toggleSave(viewer: JwtUser, postId: string): Promise<{ saved: boolean }> {
+  async toggleSave(
+    viewer: JwtUser,
+    postId: string,
+  ): Promise<{ saved: boolean }> {
     const post = await this.postModel.findById(postId).exec();
     if (!post) throw new NotFoundException('Post not found');
 
@@ -39,4 +45,3 @@ export class PostSavesService {
     return { saved: true };
   }
 }
-

@@ -20,6 +20,9 @@ const search_controller_1 = require("../controllers/search.controller");
 const hashtags_controller_1 = require("../controllers/hashtags.controller");
 const news_controller_1 = require("../controllers/news.controller");
 const rss_sources_controller_1 = require("../controllers/rss-sources.controller");
+const products_controller_1 = require("../controllers/products.controller");
+const orders_controller_1 = require("../controllers/orders.controller");
+const payments_controller_1 = require("../controllers/payments.controller");
 const health_service_1 = require("../services/health.service");
 const users_service_1 = require("../services/users.service");
 const auth_service_1 = require("../services/auth.service");
@@ -36,6 +39,9 @@ const comment_moderation_worker_service_1 = require("../services/comment-moderat
 const news_service_1 = require("../services/news.service");
 const news_import_worker_service_1 = require("../services/news-import-worker.service");
 const rss_sources_service_1 = require("../services/rss-sources.service");
+const products_service_1 = require("../services/products.service");
+const orders_service_1 = require("../services/orders.service");
+const payments_service_1 = require("../services/payments.service");
 const user_model_1 = require("../models/user.model");
 const refresh_token_model_1 = require("../models/refresh-token.model");
 const post_model_1 = require("../models/post.model");
@@ -50,10 +56,17 @@ const news_model_1 = require("../models/news.model");
 const rss_source_model_1 = require("../models/rss-source.model");
 const search_event_model_1 = require("../models/search-event.model");
 const hot_keyword_model_1 = require("../models/hot-keyword.model");
+const hashtag_event_model_1 = require("../models/hashtag-event.model");
+const hot_topic_model_1 = require("../models/hot-topic.model");
+const product_model_1 = require("../models/product.model");
+const order_model_1 = require("../models/order.model");
+const payment_model_1 = require("../models/payment.model");
+const order_counter_model_1 = require("../models/order-counter.model");
 const jwt_strategy_1 = require("../infra/auth/jwt.strategy");
 const ai_service_1 = require("../infra/ai/ai.service");
 const rss_service_1 = require("../infra/rss/rss.service");
 const hot_keywords_worker_service_1 = require("../services/hot-keywords-worker.service");
+const hot_topics_worker_service_1 = require("../services/hot-topics-worker.service");
 let ApiV1Module = class ApiV1Module {
 };
 exports.ApiV1Module = ApiV1Module;
@@ -75,6 +88,12 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: rss_source_model_1.RssSourceModelName, schema: rss_source_model_1.RssSourceSchema },
                 { name: search_event_model_1.SearchEventModelName, schema: search_event_model_1.SearchEventSchema },
                 { name: hot_keyword_model_1.HotKeywordModelName, schema: hot_keyword_model_1.HotKeywordSchema },
+                { name: hashtag_event_model_1.HashtagEventModelName, schema: hashtag_event_model_1.HashtagEventSchema },
+                { name: hot_topic_model_1.HotTopicModelName, schema: hot_topic_model_1.HotTopicSchema },
+                { name: product_model_1.ProductModelName, schema: product_model_1.ProductSchema },
+                { name: order_model_1.OrderModelName, schema: order_model_1.OrderSchema },
+                { name: payment_model_1.PaymentModelName, schema: payment_model_1.PaymentSchema },
+                { name: order_counter_model_1.OrderCounterModelName, schema: order_counter_model_1.OrderCounterSchema },
             ]),
         ],
         controllers: [
@@ -89,6 +108,9 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             hashtags_controller_1.HashtagsController,
             search_controller_1.SearchController,
             notifications_controller_1.NotificationsController,
+            products_controller_1.ProductsController,
+            orders_controller_1.OrdersController,
+            payments_controller_1.PaymentsController,
         ],
         providers: [
             health_service_1.HealthService,
@@ -108,6 +130,10 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             rss_service_1.RssService,
             news_import_worker_service_1.NewsImportWorkerService,
             hot_keywords_worker_service_1.HotKeywordsWorkerService,
+            hot_topics_worker_service_1.HotTopicsWorkerService,
+            products_service_1.ProductsService,
+            orders_service_1.OrdersService,
+            payments_service_1.PaymentsService,
             ai_service_1.AiService,
             comment_moderation_worker_service_1.CommentModerationWorkerService,
             jwt_strategy_1.JwtStrategy,

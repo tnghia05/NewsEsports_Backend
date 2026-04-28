@@ -15,6 +15,7 @@ class CreateSearchEventDto {
     q;
     action;
     sessionId;
+    targetType;
     targetId;
 }
 exports.CreateSearchEventDto = CreateSearchEventDto;
@@ -33,6 +34,11 @@ __decorate([
     (0, class_validator_1.MaxLength)(200),
     __metadata("design:type", String)
 ], CreateSearchEventDto.prototype, "sessionId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['post', 'comment', 'news', 'user', 'other']),
+    __metadata("design:type", String)
+], CreateSearchEventDto.prototype, "targetType", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

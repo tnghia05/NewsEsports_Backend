@@ -11,33 +11,11 @@ export declare class PostsController {
     private readonly postSavesService;
     constructor(postsService: PostsService, postLikesService: PostLikesService, postSavesService: PostSavesService);
     list(user: JwtUser | undefined, query: QueryPostsDto): Promise<{
+        total?: number | undefined;
+        hasMore?: boolean | undefined;
         items: any[];
         page: number;
         limit: number;
-    } | {
-        items: {
-            likedByMe: boolean;
-            savedByMe: boolean;
-            authorId: string;
-            title: string;
-            content: string;
-            thumbnailUrl?: string;
-            game: string;
-            tournament?: string;
-            tags: string[];
-            status: "draft" | "published";
-            viewCount: number;
-            commentCount: number;
-            likeCount: number;
-            isPinned: boolean;
-            pinnedAt?: Date;
-            _id: import("mongoose").Types.ObjectId;
-            __v: number;
-        }[];
-        page: number;
-        limit: number;
-        total: number;
-        hasMore: boolean;
     }>;
     getById(user: JwtUser | undefined, id: string): Promise<(import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
         _id: import("mongoose").Types.ObjectId;

@@ -13,4 +13,3 @@ export class HotTopicsDto {
   @Max(50)
   limit = 10;
 }
-

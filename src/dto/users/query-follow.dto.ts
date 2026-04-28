@@ -15,4 +15,3 @@ export class QueryFollowDto {
   @Max(100)
   limit = 20;
 }
-

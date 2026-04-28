@@ -125,7 +125,8 @@ export class AuthService {
       .findOne({ userId: decoded.sub, jti: decoded.jti })
       .exec();
     if (!stored) throw new UnauthorizedException('Invalid refresh token');
-    if (stored.revokedAt) throw new UnauthorizedException('Refresh token revoked');
+    if (stored.revokedAt)
+      throw new UnauthorizedException('Refresh token revoked');
     if (stored.expiresAt.getTime() <= Date.now())
       throw new UnauthorizedException('Refresh token expired');
 
@@ -133,10 +134,7 @@ export class AuthService {
     if (presentedHash !== stored.tokenHash) {
       // Token reuse / mismatch: revoke defensively
       await this.refreshTokenModel
-        .updateOne(
-          { _id: stored._id },
-          { $set: { revokedAt: new Date() } },
-        )
+        .updateOne({ _id: stored._id }, { $set: { revokedAt: new Date() } })
         .exec();
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -183,7 +181,11 @@ export class AuthService {
 
     await this.refreshTokenModel
       .updateOne(
-        { userId: decoded.sub, jti: decoded.jti, revokedAt: { $exists: false } },
+        {
+          userId: decoded.sub,
+          jti: decoded.jti,
+          revokedAt: { $exists: false },
+        },
         { $set: { revokedAt: new Date() } },
       )
       .exec();
@@ -265,7 +267,12 @@ export class AuthService {
       infer: true,
     });
     const expiresIn = this.getRefreshExpiresIn();
-    const { jti, token, expiresAt } = createRefreshJwt(userId, role, secret, expiresIn);
+    const { jti, token, expiresAt } = createRefreshJwt(
+      userId,
+      role,
+      secret,
+      expiresIn,
+    );
     await this.refreshTokenModel.create({
       userId,
       jti,

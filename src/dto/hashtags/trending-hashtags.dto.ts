@@ -5,4 +5,3 @@ export class TrendingHashtagsDto {
   @IsEnum(['24h', '7d'] as const)
   window: '24h' | '7d' = '24h';
 }
-

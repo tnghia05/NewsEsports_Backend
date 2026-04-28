@@ -16,10 +16,19 @@ exports.HashtagsService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const post_model_1 = require("../models/post.model");
+const comment_model_1 = require("../models/comment.model");
+const hashtag_event_model_1 = require("../models/hashtag-event.model");
+const hot_topic_model_1 = require("../models/hot-topic.model");
 let HashtagsService = class HashtagsService {
     postModel;
-    constructor(postModel) {
+    commentModel;
+    hashtagEventModel;
+    hotTopicModel;
+    constructor(postModel, commentModel, hashtagEventModel, hotTopicModel) {
         this.postModel = postModel;
+        this.commentModel = commentModel;
+        this.hashtagEventModel = hashtagEventModel;
+        this.hotTopicModel = hotTopicModel;
     }
     async listPostsByTag(tag, opts) {
         const page = opts.page;
@@ -101,15 +110,63 @@ let HashtagsService = class HashtagsService {
         const items = await this.postModel.aggregate(pipeline).exec();
         return { window, items };
     }
+    async createEvent(user, dto) {
+        const tag = normalizeTag(dto.tag);
+        if (!tag)
+            return { ok: true };
+        await this.hashtagEventModel.create({
+            userId: user?.id,
+            sessionId: dto.sessionId?.trim(),
+            tag,
+            action: 'view',
+        });
+        return { ok: true };
+    }
+    async hotTopics(query) {
+        const window = normalizeHotTopicWindow(query.window);
+        const limit = Math.min(50, Math.max(1, Number(query.limit) || 10));
+        const items = await this.hotTopicModel
+            .find({ window })
+            .sort({ hotness: -1 })
+            .limit(limit)
+            .lean()
+            .exec();
+        const updatedAt = items.length > 0
+            ? new Date(Math.max(...items.map((r) => r?.updatedAt instanceof Date
+                ? r.updatedAt.getTime()
+                : new Date(r?.updatedAt ?? 0).getTime()))).toISOString()
+            : undefined;
+        return {
+            window,
+            updatedAt,
+            items: items.map((r, idx) => ({
+                rank: idx + 1,
+                tag: r.tag,
+                hotness: r.hotness,
+                components: r.components,
+                trend: r.trend ?? undefined,
+            })),
+        };
+    }
 };
 exports.HashtagsService = HashtagsService;
 exports.HashtagsService = HashtagsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __metadata("design:paramtypes", [Function])
+    __param(1, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
+    __param(2, (0, mongoose_1.InjectModel)(hashtag_event_model_1.HashtagEventModelName)),
+    __param(3, (0, mongoose_1.InjectModel)(hot_topic_model_1.HotTopicModelName)),
+    __metadata("design:paramtypes", [Function, Function, Function, Function])
 ], HashtagsService);
 function normalizeTag(tag) {
     return tag.trim().toLowerCase().replace(/^#/, '');
+}
+function normalizeHotTopicWindow(w) {
+    if (w === '7d')
+        return '7d';
+    if (w === '24h')
+        return '24h';
+    return '3h';
 }
 function recencyBoostExpr() {
     const now = Date.now();

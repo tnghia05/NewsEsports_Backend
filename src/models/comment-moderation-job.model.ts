@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
-export type CommentModerationJobDocument = HydratedDocument<CommentModerationJob>;
+export type CommentModerationJobDocument =
+  HydratedDocument<CommentModerationJob>;
 
 export const CommentModerationJobModelName = 'CommentModerationJob';
 
@@ -37,4 +38,3 @@ export const CommentModerationJobSchema =
   SchemaFactory.createForClass(CommentModerationJob);
 
 CommentModerationJobSchema.index({ status: 1, nextRunAt: 1, createdAt: 1 });
-

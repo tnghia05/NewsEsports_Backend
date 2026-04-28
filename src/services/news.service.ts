@@ -18,7 +18,9 @@ import type { JwtUser } from '../types/auth';
 
 @Injectable()
 export class NewsService {
-  constructor(@InjectModel(NewsModelName) private readonly newsModel: Model<NewsDocument>) {}
+  constructor(
+    @InjectModel(NewsModelName) private readonly newsModel: Model<NewsDocument>,
+  ) {}
 
   async create(admin: JwtUser, dto: CreateNewsDto) {
     if (admin.role !== 'admin') throw new ForbiddenException('Forbidden');
@@ -59,7 +61,8 @@ export class NewsService {
     if (dto.slug !== undefined) patch.slug = normalizeSlug(dto.slug);
     if (dto.excerpt !== undefined) patch.excerpt = dto.excerpt?.trim();
     if (dto.content !== undefined) patch.content = dto.content;
-    if (dto.coverImageUrl !== undefined) patch.coverImageUrl = dto.coverImageUrl?.trim();
+    if (dto.coverImageUrl !== undefined)
+      patch.coverImageUrl = dto.coverImageUrl?.trim();
     if (dto.tags !== undefined) patch.tags = normalizeTags(dto.tags);
 
     if (dto.status !== undefined) {
@@ -73,7 +76,11 @@ export class NewsService {
 
     try {
       const updated = await this.newsModel
-        .findByIdAndUpdate(news._id, { $set: patch }, { returnDocument: 'after' })
+        .findByIdAndUpdate(
+          news._id,
+          { $set: patch },
+          { returnDocument: 'after' },
+        )
         .exec();
       if (!updated) throw new NotFoundException('News not found');
       return updated;
@@ -104,7 +111,8 @@ export class NewsService {
 
   async getPublicById(id: string) {
     const news = await this.newsModel.findById(id).exec();
-    if (!news || news.status !== 'published') throw new NotFoundException('News not found');
+    if (!news || news.status !== 'published')
+      throw new NotFoundException('News not found');
     return news;
   }
 
@@ -139,7 +147,8 @@ export class NewsService {
     const status = query.status ?? 'all';
     if (status !== 'all') filter['status'] = status;
     if (query.tag) filter['tags'] = { $in: [normalizeTag(query.tag)] };
-    if (query.q) filter['title'] = { $regex: escapeRegex(query.q.trim()), $options: 'i' };
+    if (query.q)
+      filter['title'] = { $regex: escapeRegex(query.q.trim()), $options: 'i' };
 
     const [items, total] = await Promise.all([
       this.newsModel
@@ -201,4 +210,3 @@ function slugify(title: string) {
 function escapeRegex(input: string) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-

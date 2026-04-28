@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var CommentsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommentsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -19,11 +20,13 @@ const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
 const notifications_service_1 = require("./notifications.service");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
-let CommentsService = class CommentsService {
+const assert_can_read_post_1 = require("../utils/assert-can-read-post");
+let CommentsService = CommentsService_1 = class CommentsService {
     commentModel;
     postModel;
     notificationsService;
     jobModel;
+    logger = new common_1.Logger(CommentsService_1.name);
     constructor(commentModel, postModel, notificationsService, jobModel) {
         this.commentModel = commentModel;
         this.postModel = postModel;
@@ -32,11 +35,11 @@ let CommentsService = class CommentsService {
     }
     async listForPost(viewer, postId, query) {
         const post = await this.requirePost(postId);
-        assertCanReadPost(viewer, post);
+        (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
         const page = query.page;
         const limit = query.limit;
         const skip = (page - 1) * limit;
-        const filter = { postId };
+        const filter = { postId, isDeleted: { $ne: true } };
         if (query.parentId) {
             filter.parentId = query.parentId;
         }
@@ -70,7 +73,7 @@ let CommentsService = class CommentsService {
     async listReplies(viewer, commentId, query) {
         const parent = await this.requireComment(commentId);
         const post = await this.requirePost(parent.postId);
-        assertCanReadPost(viewer, post);
+        (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
         return this.listForPost(viewer, parent.postId, {
             ...query,
             parentId: String(parent._id),
@@ -79,7 +82,12 @@ let CommentsService = class CommentsService {
     }
     async createForPost(viewer, postId, dto) {
         const post = await this.requirePost(postId);
-        assertCanReadPost(viewer, post);
+        (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
+        const contentPreview = String(dto.content ?? '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .slice(0, 80);
+        this.logger.log(`createForPost start postId=${postId} viewerId=${viewer.id} len=${String(dto.content ?? '').length} preview="${contentPreview}"`);
         let parentAuthorId;
         if (dto.parentId) {
             const parent = await this.requireComment(dto.parentId);
@@ -99,13 +107,15 @@ let CommentsService = class CommentsService {
             isDeleted: false,
             moderationStatus: 'pending',
         });
-        await this.jobModel.updateOne({ commentId: String(created._id) }, {
+        this.logger.log(`createForPost created commentId=${String(created._id)} status=${created.moderationStatus} parentId=${dto.parentId ?? 'null'}`);
+        const jobRes = await this.jobModel.updateOne({ commentId: String(created._id) }, {
             $setOnInsert: {
                 commentId: String(created._id),
                 status: 'pending',
                 attempts: 0,
             },
         }, { upsert: true });
+        this.logger.log(`createForPost moderationJob upserted commentId=${String(created._id)} matched=${jobRes?.matchedCount ?? '?'} upserted=${jobRes?.upsertedCount ?? '?'} acknowledged=${jobRes?.acknowledged ?? '?'}`);
         return created;
     }
     async update(viewer, commentId, dto) {
@@ -116,11 +126,43 @@ let CommentsService = class CommentsService {
         const patch = {};
         if (dto.content !== undefined)
             patch.content = dto.content;
+        const contentChanged = dto.content !== undefined && dto.content !== comment.content;
+        if (contentChanged) {
+            this.logger.log(`update contentChanged commentId=${String(comment._id)} viewerId=${viewer.id} oldStatus=${comment.moderationStatus} -> pending`);
+            patch.moderationStatus = 'pending';
+            patch.sentiment = undefined;
+            patch.toxicity = undefined;
+            patch.sentiment4 = undefined;
+            patch.intent = undefined;
+            patch.aspects = undefined;
+            patch.sentiment4Scores = undefined;
+            patch.intentScores = undefined;
+            patch.aspectScores = undefined;
+            patch.aiVersion = undefined;
+            patch.aiError = undefined;
+            if (comment.moderationStatus === 'approved') {
+                await this.postModel
+                    .updateOne({ _id: comment.postId }, [{ $set: { commentCount: { $max: [0, { $subtract: ['$commentCount', 1] }] } } }])
+                    .exec();
+            }
+        }
         const updated = await this.commentModel
-            .findByIdAndUpdate(comment._id, { $set: patch }, { new: true })
+            .findByIdAndUpdate(comment._id, { $set: patch }, { returnDocument: 'after' })
             .exec();
         if (!updated)
             throw new common_1.NotFoundException('Comment not found');
+        if (contentChanged) {
+            const jobRes = await this.jobModel.updateOne({ commentId: String(comment._id) }, {
+                $set: {
+                    status: 'pending',
+                    attempts: 0,
+                    lastError: undefined,
+                    nextRunAt: undefined,
+                    lockedAt: undefined,
+                },
+            }, { upsert: true });
+            this.logger.log(`update moderationJob reset commentId=${String(comment._id)} matched=${jobRes?.matchedCount ?? '?'} modified=${jobRes?.modifiedCount ?? '?'} acknowledged=${jobRes?.acknowledged ?? '?'}`);
+        }
         return updated;
     }
     async remove(viewer, commentId) {
@@ -160,24 +202,13 @@ let CommentsService = class CommentsService {
     }
 };
 exports.CommentsService = CommentsService;
-exports.CommentsService = CommentsService = __decorate([
+exports.CommentsService = CommentsService = CommentsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __param(3, (0, mongoose_1.InjectModel)(comment_moderation_job_model_1.CommentModerationJobModelName)),
     __metadata("design:paramtypes", [Function, Function, notifications_service_1.NotificationsService, Function])
 ], CommentsService);
-function assertCanReadPost(viewer, post) {
-    if (post.status === 'published')
-        return;
-    if (!viewer)
-        throw new common_1.ForbiddenException('Forbidden');
-    if (viewer.role === 'admin')
-        return;
-    if (post.authorId === viewer.id)
-        return;
-    throw new common_1.ForbiddenException('Forbidden');
-}
 function assertCanEditComment(viewer, comment) {
     if (viewer.role === 'admin')
         return;

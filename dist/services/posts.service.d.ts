@@ -2,6 +2,7 @@ import type { Model } from 'mongoose';
 import { type PostDocument } from '../models/post.model';
 import { type PostLikeDocument } from '../models/post-like.model';
 import { type PostSaveDocument } from '../models/post-save.model';
+import { type CommentDocument } from '../models/comment.model';
 import type { JwtUser } from '../types/auth';
 import type { CreatePostDto } from '../dto/posts/create-post.dto';
 import type { UpdatePostDto } from '../dto/posts/update-post.dto';
@@ -12,8 +13,9 @@ export declare class PostsService {
     private readonly postModel;
     private readonly postLikeModel;
     private readonly postSaveModel;
+    private readonly commentModel;
     private readonly followsService;
-    constructor(postModel: Model<PostDocument>, postLikeModel: Model<PostLikeDocument>, postSaveModel: Model<PostSaveDocument>, followsService: FollowsService);
+    constructor(postModel: Model<PostDocument>, postLikeModel: Model<PostLikeDocument>, postSaveModel: Model<PostSaveDocument>, commentModel: Model<CommentDocument>, followsService: FollowsService);
     create(author: JwtUser, dto: CreatePostDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
         _id: import("mongoose").Types.ObjectId;
     } & {
@@ -74,37 +76,15 @@ export declare class PostsService {
         savedByMe: boolean;
     })>;
     list(author: JwtUser | undefined, query: QueryPostsDto): Promise<{
+        total?: number | undefined;
+        hasMore?: boolean | undefined;
         items: any[];
         page: number;
         limit: number;
-    } | {
-        items: {
-            likedByMe: boolean;
-            savedByMe: boolean;
-            authorId: string;
-            title: string;
-            content: string;
-            thumbnailUrl?: string;
-            game: string;
-            tournament?: string;
-            tags: string[];
-            status: "draft" | "published";
-            viewCount: number;
-            commentCount: number;
-            likeCount: number;
-            isPinned: boolean;
-            pinnedAt?: Date;
-            _id: import("mongoose").Types.ObjectId;
-            __v: number;
-        }[];
-        page: number;
-        limit: number;
-        total: number;
-        hasMore: boolean;
     }>;
     listByUser(viewer: JwtUser | undefined, userId: string, query: QueryUserPostsDto): Promise<{
-        total: number;
-        hasMore: boolean;
+        total?: number | undefined;
+        hasMore?: boolean | undefined;
         items: any[];
         page: number;
         limit: number;

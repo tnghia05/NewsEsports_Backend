@@ -1,8 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CommentSentiment } from '../../models/comment.model';
-export type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
-import type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
+export type {
+  Sentiment4Label,
+  IntentLabel,
+  AspectLabel,
+} from '../../types/ai-labels';
+import type {
+  Sentiment4Label,
+  IntentLabel,
+  AspectLabel,
+} from '../../types/ai-labels';
 
 export type AiModerationResult = {
   // legacy fields used by comment moderation
@@ -79,7 +87,11 @@ export class AiService {
         throw new Error(`AI service HTTP ${res.status}`);
       }
       const data: any = await res.json();
-      const normalized = normalizeAiResponse(data, this.toxicThreshold, this.version);
+      const normalized = normalizeAiResponse(
+        data,
+        this.toxicThreshold,
+        this.version,
+      );
       const elapsedMs = Date.now() - startedAt;
 
       // High-signal logs only (no raw text, no raw payload).
@@ -95,7 +107,9 @@ export class AiService {
       const elapsedMs = Date.now() - startedAt;
       const isTimeout =
         e?.name === 'AbortError' ||
-        String(e?.message ?? '').toLowerCase().includes('aborted');
+        String(e?.message ?? '')
+          .toLowerCase()
+          .includes('aborted');
       const errMsg = String(e?.message ?? e);
       this.logger.warn(
         `analyzeComment ${isTimeout ? 'timeout' : 'error'} after ${elapsedMs}ms url=${redactUrl(this.url)}: ${errMsg}`,
@@ -123,13 +137,13 @@ function summarizeAiResponseShape(data: any) {
   if (typeof data !== 'object') return typeof data;
 
   const keys = Object.keys(data).sort();
-  const hasSentiment = typeof (data as any).sentiment !== 'undefined';
-  const hasLabel = typeof (data as any).label !== 'undefined';
-  const hasToxicity = typeof (data as any).toxicity !== 'undefined';
+  const hasSentiment = typeof data.sentiment !== 'undefined';
+  const hasLabel = typeof data.label !== 'undefined';
+  const hasToxicity = typeof data.toxicity !== 'undefined';
   const hasScore =
-    typeof (data as any).toxicity_score !== 'undefined' ||
-    typeof (data as any).toxicityScore !== 'undefined' ||
-    typeof (data as any).toxic_score !== 'undefined';
+    typeof data.toxicity_score !== 'undefined' ||
+    typeof data.toxicityScore !== 'undefined' ||
+    typeof data.toxic_score !== 'undefined';
   return `object(keys=${keys.slice(0, 8).join(',')}${keys.length > 8 ? ',…' : ''};sentiment=${hasSentiment};label=${hasLabel};toxicity=${hasToxicity};toxScore=${hasScore})`;
 }
 
@@ -144,7 +158,8 @@ function normalizeAiResponse(
   // - { label: 'Positive'|'Negative'|'Neutral'|'Toxic', score }
 
   const sentiment4 = parseSentiment4(data);
-  const sentiment: CommentSentiment = mapSentiment4ToCommentSentiment(sentiment4);
+  const sentiment: CommentSentiment =
+    mapSentiment4ToCommentSentiment(sentiment4);
 
   const toxScoreRaw =
     data?.toxicity?.score ??
@@ -158,7 +173,9 @@ function normalizeAiResponse(
       ? Boolean(data.toxicity.isToxic)
       : score >= toxicThreshold ||
         sentiment4 === 'toxic' ||
-        String(data?.label ?? '').toLowerCase().includes('toxic');
+        String(data?.label ?? '')
+          .toLowerCase()
+          .includes('toxic');
 
   const intent = parseIntent(data);
   const aspects = parseAspects(data);
@@ -167,10 +184,12 @@ function normalizeAiResponse(
     data?.debug?.sentiment4,
     ['positive', 'negative', 'neutral', 'toxic'],
   );
-  const intentScores = parseScoreMap<IntentLabel>(
-    data?.debug?.intent,
-    ['praise', 'complain', 'question', 'other'],
-  );
+  const intentScores = parseScoreMap<IntentLabel>(data?.debug?.intent, [
+    'praise',
+    'complain',
+    'question',
+    'other',
+  ]);
   const aspectScores = parseAspectScores(data?.debug?.aspect);
 
   const aiVersion =
@@ -196,7 +215,9 @@ function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
 }
 
-function mapSentiment4ToCommentSentiment(s: Sentiment4Label | null): CommentSentiment {
+function mapSentiment4ToCommentSentiment(
+  s: Sentiment4Label | null,
+): CommentSentiment {
   // Comment model currently stores only positive/neutral/negative.
   // "toxic" is represented separately in `toxicity`.
   if (s === 'positive') return 'positive';
@@ -316,14 +337,23 @@ function parseAspects(data: any): AspectLabel[] {
   // - { aspect: { caster: 1, meta: 0, ... } } (or 0/1 booleans)
   // - { debug: { aspects: [...] } }
   // - { debug: { aspect: { ... } } }
-  const raw = data?.aspects ?? data?.aspect ?? data?.debug?.aspects ?? data?.debug?.aspect;
+  const raw =
+    data?.aspects ??
+    data?.aspect ??
+    data?.debug?.aspects ??
+    data?.debug?.aspect;
 
   const out: AspectLabel[] = [];
   const push = (x: any) => {
     const v = String(x ?? '').toLowerCase();
     if (v === 'caster') out.push('caster');
     else if (v === 'meta') out.push('meta');
-    else if (v === 'player/team' || v === 'player_team' || v === 'player' || v === 'team')
+    else if (
+      v === 'player/team' ||
+      v === 'player_team' ||
+      v === 'player' ||
+      v === 'team'
+    )
       out.push('player_team');
     else if (v === 'giải đấu' || v === 'tournament') out.push('tournament');
     else if (v === 'result') out.push('result');
@@ -346,4 +376,3 @@ function parseAspects(data: any): AspectLabel[] {
   // unique
   return Array.from(new Set(out));
 }
-

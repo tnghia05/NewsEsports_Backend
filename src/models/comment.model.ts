@@ -31,7 +31,11 @@ export class Comment {
   })
   moderationStatus!: CommentModerationStatus;
 
-  @Prop({ type: String, enum: ['positive', 'neutral', 'negative'], index: true })
+  @Prop({
+    type: String,
+    enum: ['positive', 'neutral', 'negative'],
+    index: true,
+  })
   sentiment?: CommentSentiment;
 
   @Prop({

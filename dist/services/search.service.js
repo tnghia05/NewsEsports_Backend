@@ -108,6 +108,7 @@ let SearchService = class SearchService {
             sessionId: dto.sessionId?.trim(),
             q,
             action: dto.action,
+            targetType: dto.targetType,
             targetId: dto.targetId?.trim(),
         });
         return { ok: true };
@@ -121,9 +122,37 @@ let SearchService = class SearchService {
             .limit(limit)
             .lean()
             .exec();
+        const updatedAt = items.length > 0
+            ? new Date(Math.max(...items.map((r) => r?.updatedAt instanceof Date
+                ? r.updatedAt.getTime()
+                : new Date(r?.updatedAt ?? 0).getTime()))).toISOString()
+            : undefined;
         return {
             window,
-            items: items.map((r) => ({ keyword: r.keyword, score: r.score })),
+            updatedAt,
+            items: items.map((r, idx) => ({
+                rank: idx + 1,
+                keyword: r.keyword,
+                score: r.score,
+            })),
+        };
+    }
+    async getTrends(opts) {
+        const window = normalizeWindow(opts.window);
+        const limit = Math.min(50, Math.max(1, Number(opts.limit) || 10));
+        const items = await this.hotKeywordModel
+            .find({ window })
+            .sort({ score: -1 })
+            .limit(limit)
+            .lean()
+            .exec();
+        return {
+            window,
+            items: items.map((r) => ({
+                keyword: r.keyword,
+                score: r.score,
+                trend: r.trend ?? undefined,
+            })),
         };
     }
     async suggest(opts) {

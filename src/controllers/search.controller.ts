@@ -23,7 +23,10 @@ export class SearchController {
 
   @Post('events')
   @UseGuards(OptionalJwtAuthGuard)
-  createEvent(@CurrentUser() user: JwtUser | undefined, @Body() dto: CreateSearchEventDto) {
+  createEvent(
+    @CurrentUser() user: JwtUser | undefined,
+    @Body() dto: CreateSearchEventDto,
+  ) {
     return this.searchService.createEvent(user, dto);
   }
 
@@ -51,4 +54,3 @@ export class SearchController {
     });
   }
 }
-

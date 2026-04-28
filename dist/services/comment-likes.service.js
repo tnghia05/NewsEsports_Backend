@@ -18,6 +18,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const comment_like_model_1 = require("../models/comment-like.model");
 const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
+const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let CommentLikesService = class CommentLikesService {
     commentLikeModel;
     commentModel;
@@ -36,7 +37,7 @@ let CommentLikesService = class CommentLikesService {
         const post = await this.postModel.findById(comment.postId).exec();
         if (!post)
             throw new common_1.NotFoundException('Post not found');
-        assertCanReadPost(viewer, post);
+        (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
         const existing = await this.commentLikeModel
             .findOne({ commentId, userId: viewer.id })
             .exec();
@@ -73,13 +74,4 @@ exports.CommentLikesService = CommentLikesService = __decorate([
     __param(2, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __metadata("design:paramtypes", [Function, Function, Function])
 ], CommentLikesService);
-function assertCanReadPost(viewer, post) {
-    if (post.status === 'published')
-        return;
-    if (viewer.role === 'admin')
-        return;
-    if (post.authorId === viewer.id)
-        return;
-    throw new common_1.ForbiddenException('Forbidden');
-}
 //# sourceMappingURL=comment-likes.service.js.map

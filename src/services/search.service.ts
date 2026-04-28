@@ -211,7 +211,7 @@ export class SearchService {
         out.push(k);
       }
     }
-    for (const r of recentMatches as any[]) {
+    for (const r of recentMatches) {
       const k = String(r._id);
       if (!seen.has(k)) {
         seen.add(k);
@@ -267,4 +267,3 @@ function normalizeWindow(w: any): HotKeywordWindow {
 function escapeRegex(input: string) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-

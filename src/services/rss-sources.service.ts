@@ -1,9 +1,17 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import type { CreateRssSourceDto } from '../dto/rss/create-rss-source.dto';
 import type { UpdateRssSourceDto } from '../dto/rss/update-rss-source.dto';
-import { RssSourceModelName, type RssSourceDocument } from '../models/rss-source.model';
+import {
+  RssSourceModelName,
+  type RssSourceDocument,
+} from '../models/rss-source.model';
 import type { JwtUser } from '../types/auth';
 
 @Injectable()
@@ -30,7 +38,8 @@ export class RssSourcesService {
       });
     } catch (e: any) {
       const msg = String(e?.message ?? e).toLowerCase();
-      if (msg.includes('duplicate key')) throw new BadRequestException('RSS source already exists');
+      if (msg.includes('duplicate key'))
+        throw new BadRequestException('RSS source already exists');
       throw e;
     }
   }
@@ -42,7 +51,11 @@ export class RssSourcesService {
     if (dto.enabled !== undefined) patch.enabled = dto.enabled;
     if (dto.name !== undefined) patch.name = dto.name?.trim();
     const updated = await this.rssSourceModel
-      .findByIdAndUpdate(source._id, { $set: patch }, { returnDocument: 'after' })
+      .findByIdAndUpdate(
+        source._id,
+        { $set: patch },
+        { returnDocument: 'after' },
+      )
       .exec();
     if (!updated) throw new NotFoundException('RSS source not found');
     return updated;
@@ -95,4 +108,3 @@ function normalizeUrl(url: string) {
     throw new BadRequestException('Invalid URL');
   }
 }
-

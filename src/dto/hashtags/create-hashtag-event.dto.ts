@@ -13,4 +13,3 @@ export class CreateHashtagEventDto {
   @MaxLength(200)
   sessionId?: string;
 }
-

@@ -48,7 +48,10 @@ export class CommentsService {
     const limit = query.limit;
     const skip = (page - 1) * limit;
 
-    const filter: QueryFilter<CommentDocument> = { postId, isDeleted: { $ne: true } };
+    const filter: QueryFilter<CommentDocument> = {
+      postId,
+      isDeleted: { $ne: true },
+    };
     if (query.parentId) {
       filter.parentId = query.parentId;
     } else if (query.topLevelOnly) {
@@ -68,7 +71,7 @@ export class CommentsService {
       filter['$or'] = [
         { moderationStatus: 'approved' },
         { authorId: viewer.id },
-      ] as any;
+      ];
     }
 
     const sort =
@@ -194,16 +197,25 @@ export class CommentsService {
       // If comment was previously approved, decrement post commentCount.
       if (comment.moderationStatus === 'approved') {
         await this.postModel
-          .updateOne(
-            { _id: comment.postId },
-            [{ $set: { commentCount: { $max: [0, { $subtract: ['$commentCount', 1] }] } } }],
-          )
+          .updateOne({ _id: comment.postId }, [
+            {
+              $set: {
+                commentCount: {
+                  $max: [0, { $subtract: ['$commentCount', 1] }],
+                },
+              },
+            },
+          ])
           .exec();
       }
     }
 
     const updated = await this.commentModel
-      .findByIdAndUpdate(comment._id, { $set: patch }, { returnDocument: 'after' })
+      .findByIdAndUpdate(
+        comment._id,
+        { $set: patch },
+        { returnDocument: 'after' },
+      )
       .exec();
     if (!updated) throw new NotFoundException('Comment not found');
 
@@ -239,25 +251,28 @@ export class CommentsService {
     await this.commentModel
       .updateOne(
         { _id: comment._id },
-        { $set: { isDeleted: true, deletedAt: new Date(), content: '[deleted]' } },
+        {
+          $set: {
+            isDeleted: true,
+            deletedAt: new Date(),
+            content: '[deleted]',
+          },
+        },
       )
       .exec();
 
     // Only decrement commentCount if the comment was approved/visible.
     if (comment.moderationStatus === 'approved') {
       await this.postModel
-        .updateOne(
-          { _id: comment.postId },
-          [
-            {
-              $set: {
-                commentCount: {
-                  $max: [0, { $subtract: ['$commentCount', 1] }],
-                },
+        .updateOne({ _id: comment.postId }, [
+          {
+            $set: {
+              commentCount: {
+                $max: [0, { $subtract: ['$commentCount', 1] }],
               },
             },
-          ],
-        )
+          },
+        ])
         .exec();
     }
     return { ok: true };
@@ -281,4 +296,3 @@ function assertCanEditComment(viewer: JwtUser, comment: CommentDocument) {
   if (comment.authorId === viewer.id) return;
   throw new ForbiddenException('Forbidden');
 }
-

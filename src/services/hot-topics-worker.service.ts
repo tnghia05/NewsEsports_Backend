@@ -1,11 +1,22 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { AiService, type AiModerationResult } from '../infra/ai/ai.service';
 import { PostModelName, type PostDocument } from '../models/post.model';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
-import { HashtagEventModelName, type HashtagEventDocument } from '../models/hashtag-event.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
+import {
+  HashtagEventModelName,
+  type HashtagEventDocument,
+} from '../models/hashtag-event.model';
 import {
   HotTopicModelName,
   type HotTopicDocument,
@@ -27,12 +38,16 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
     private readonly aiService: AiService,
     @InjectModel(PostModelName) private readonly postModel: Model<PostDocument>,
-    @InjectModel(CommentModelName) private readonly commentModel: Model<CommentDocument>,
+    @InjectModel(CommentModelName)
+    private readonly commentModel: Model<CommentDocument>,
     @InjectModel(HashtagEventModelName)
     private readonly hashtagEventModel: Model<HashtagEventDocument>,
-    @InjectModel(HotTopicModelName) private readonly hotTopicModel: Model<HotTopicDocument>,
+    @InjectModel(HotTopicModelName)
+    private readonly hotTopicModel: Model<HotTopicDocument>,
   ) {
-    this.intervalMs = Number(this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 60_000);
+    this.intervalMs = Number(
+      this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 60_000,
+    );
     this.topN = Number(this.config.get('HOT_TOPICS_TOP_N') ?? 30);
     this.sampleN = Number(this.config.get('HOT_TOPICS_SAMPLE_N') ?? 20);
   }
@@ -97,10 +112,12 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       ])
       .exec();
 
-    const tagList = (rows as any[]).map((r) => String(r.tag)).filter(Boolean);
+    const tagList = rows.map((r) => String(r.tag)).filter(Boolean);
     if (!tagList.length) {
       await this.hotTopicModel.deleteMany({ window }).exec();
-      this.logger.log(`recompute window=${window} empty in ${Date.now() - started}ms`);
+      this.logger.log(
+        `recompute window=${window} empty in ${Date.now() - started}ms`,
+      );
       return;
     }
 
@@ -109,11 +126,14 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     const tagPostAuthors = new Map<string, Set<string>>();
     const tagRecentPosts = new Map<string, number>();
     const allPostIds: string[] = [];
-    for (const r of rows as any[]) {
+    for (const r of rows) {
       const tag = String(r.tag);
       const ids = ((r.postIds ?? []) as any[]).map(String);
       tagToPostIds.set(tag, ids);
-      tagPostAuthors.set(tag, new Set(((r.originalUsers ?? []) as any[]).map(String)));
+      tagPostAuthors.set(
+        tag,
+        new Set(((r.originalUsers ?? []) as any[]).map(String)),
+      );
       tagRecentPosts.set(tag, Number(r.recentPostCount) || 0);
       allPostIds.push(...ids);
     }
@@ -124,13 +144,20 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       uniquePostIds.length > 0
         ? await this.commentModel
             .aggregate([
-              { $match: { createdAt: { $gte: sinceDate }, postId: { $in: uniquePostIds } } },
+              {
+                $match: {
+                  createdAt: { $gte: sinceDate },
+                  postId: { $in: uniquePostIds },
+                },
+              },
               {
                 $group: {
                   _id: '$postId',
                   count: { $sum: 1 },
                   recentCount: {
-                    $sum: { $cond: [{ $gte: ['$createdAt', recentCutoff] }, 1, 0] },
+                    $sum: {
+                      $cond: [{ $gte: ['$createdAt', recentCutoff] }, 1, 0],
+                    },
                   },
                   authors: { $addToSet: '$authorId' },
                 },
@@ -143,7 +170,7 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       string,
       { count: number; recentCount: number; authors: string[] }
     >();
-    for (const r of commentsByPost as any[]) {
+    for (const r of commentsByPost) {
       postCommentStats.set(String(r._id), {
         count: Number(r.count) || 0,
         recentCount: Number(r.recentCount) || 0,
@@ -175,12 +202,21 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     // Read counts (unique viewers) from hashtag events.
     const readRows = await this.hashtagEventModel
       .aggregate([
-        { $match: { createdAt: { $gte: sinceDate }, action: 'view', tag: { $in: tagList } } },
+        {
+          $match: {
+            createdAt: { $gte: sinceDate },
+            action: 'view',
+            tag: { $in: tagList },
+          },
+        },
         {
           $project: {
             tag: 1,
             viewer: {
-              $ifNull: ['$userId', { $concat: ['sess:', { $ifNull: ['$sessionId', ''] }] }],
+              $ifNull: [
+                '$userId',
+                { $concat: ['sess:', { $ifNull: ['$sessionId', ''] }] },
+              ],
             },
           },
         },
@@ -191,7 +227,7 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       .exec();
 
     const readMap = new Map<string, number>();
-    for (const r of readRows as any[]) {
+    for (const r of readRows) {
       readMap.set(String(r._id), Number(r.read) || 0);
     }
 
@@ -204,7 +240,7 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       components: { read: number; discuss: number; originalUsers: number };
     }> = [];
 
-    for (const r of rows as any[]) {
+    for (const r of rows) {
       const tag = String(r.tag);
       const postCount = Number(r.postCount) || 0;
       const originalUsers = mergedUsersMap.get(tag) ?? 0;
@@ -218,17 +254,15 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       const discussScore = Math.log1p(discuss);
       const originalScore = Math.log1p(originalUsers);
 
-      const raw =
-        0.3 * readScore +
-        0.3 * discussScore +
-        0.4 * originalScore;
+      const raw = 0.3 * readScore + 0.3 * discussScore + 0.4 * originalScore;
 
       // Time decay: boost topics with recent activity (last 1/3 of window).
       const recentPosts = tagRecentPosts.get(tag) ?? 0;
       const recentComments = recentCommentMap.get(tag) ?? 0;
       const totalActivity = postCount + commentCount;
       const recentActivity = recentPosts + recentComments;
-      const recencyRatio = totalActivity > 0 ? recentActivity / totalActivity : 0;
+      const recencyRatio =
+        totalActivity > 0 ? recentActivity / totalActivity : 0;
       const recencyBoost = 1 + 0.5 * recencyRatio; // 1.0 .. 1.5
 
       // Map to 0..10 for UI (smooth mapping with recency boost).
@@ -269,7 +303,10 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
             const trend = await this.computeTrendForTag(s.tag, sinceDate);
             if (!trend) return;
             await this.hotTopicModel
-              .updateOne({ window, tag: s.tag }, { $set: { trend, updatedAt: now } })
+              .updateOne(
+                { window, tag: s.tag },
+                { $set: { trend, updatedAt: now } },
+              )
               .exec();
           } catch (e: any) {
             this.logger.warn(`trend ${s.tag}: ${String(e?.message ?? e)}`);
@@ -283,15 +320,24 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       .deleteMany({ window, updatedAt: { $lt: new Date(Date.now() - wMs) } })
       .exec();
 
-    this.logger.log(`recompute window=${window} top=${topN.length} in ${Date.now() - started}ms`);
+    this.logger.log(
+      `recompute window=${window} top=${topN.length} in ${Date.now() - started}ms`,
+    );
   }
 
-  private async computeTrendForTag(tag: string, sinceDate: Date): Promise<HotTopicTrend | null> {
+  private async computeTrendForTag(
+    tag: string,
+    sinceDate: Date,
+  ): Promise<HotTopicTrend | null> {
     const sampleN = Math.min(50, Math.max(1, Number(this.sampleN) || 20));
 
     // Step 1: get postIds for this tag
     const posts = await this.postModel
-      .find({ status: 'published', tags: { $in: [tag] }, createdAt: { $gte: sinceDate } })
+      .find({
+        status: 'published',
+        tags: { $in: [tag] },
+        createdAt: { $gte: sinceDate },
+      })
       .sort({ createdAt: -1 })
       .limit(200)
       .select({ _id: 1, title: 1, content: 1 })
@@ -377,7 +423,12 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       aspect: {},
     };
 
-    const acc = { sentiment4Sum: {} as Record<string, number>, intentSum: {} as Record<string, number>, aspectSum: {} as Record<string, number>, scoredCount: 0 };
+    const acc = {
+      sentiment4Sum: {} as Record<string, number>,
+      intentSum: {} as Record<string, number>,
+      aspectSum: {} as Record<string, number>,
+      scoredCount: 0,
+    };
 
     // (A) From pre-labeled comments + (B) From fresh AI calls
     for (const r of [...labeledComments, ...aiResults] as any[]) {
@@ -402,30 +453,29 @@ type ScoreAccumulator = {
   scoredCount: number;
 };
 
-function accumulateResult(
-  trend: HotTopicTrend,
-  acc: ScoreAccumulator,
-  r: any,
-) {
+function accumulateResult(trend: HotTopicTrend, acc: ScoreAccumulator, r: any) {
   trend.labeledCount += 1;
 
   if (r.sentiment4)
     trend.sentiment4[r.sentiment4] = (trend.sentiment4[r.sentiment4] ?? 0) + 1;
-  if (r.intent)
-    trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
-  for (const a of r.aspects ?? [])
-    trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
-  if (r.sentiment4 === 'toxic' || r.toxicity?.isToxic)
-    trend.toxicCount += 1;
+  if (r.intent) trend.intent[r.intent] = (trend.intent[r.intent] ?? 0) + 1;
+  for (const a of r.aspects ?? []) trend.aspect[a] = (trend.aspect[a] ?? 0) + 1;
+  if (r.sentiment4 === 'toxic' || r.toxicity?.isToxic) trend.toxicCount += 1;
 
   const hasScores = r.sentiment4Scores || r.intentScores || r.aspectScores;
   if (hasScores) acc.scoredCount += 1;
 
-  for (const [k, v] of Object.entries((r.sentiment4Scores ?? {}) as Record<string, number>))
+  for (const [k, v] of Object.entries(
+    (r.sentiment4Scores ?? {}) as Record<string, number>,
+  ))
     acc.sentiment4Sum[k] = (acc.sentiment4Sum[k] ?? 0) + (v ?? 0);
-  for (const [k, v] of Object.entries((r.intentScores ?? {}) as Record<string, number>))
+  for (const [k, v] of Object.entries(
+    (r.intentScores ?? {}) as Record<string, number>,
+  ))
     acc.intentSum[k] = (acc.intentSum[k] ?? 0) + (v ?? 0);
-  for (const [k, v] of Object.entries((r.aspectScores ?? {}) as Record<string, number>))
+  for (const [k, v] of Object.entries(
+    (r.aspectScores ?? {}) as Record<string, number>,
+  ))
     acc.aspectSum[k] = (acc.aspectSum[k] ?? 0) + (v ?? 0);
 }
 
@@ -462,4 +512,3 @@ function divideMap(
   }
   return out;
 }
-

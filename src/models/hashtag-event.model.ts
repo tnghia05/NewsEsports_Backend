@@ -27,4 +27,3 @@ export const HashtagEventSchema = SchemaFactory.createForClass(HashtagEvent);
 HashtagEventSchema.index({ createdAt: -1, action: 1 });
 HashtagEventSchema.index({ tag: 1, createdAt: -1 });
 HashtagEventSchema.index({ userId: 1, createdAt: -1 });
-

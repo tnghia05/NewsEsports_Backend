@@ -29,4 +29,3 @@ export class RssSource {
 export const RssSourceSchema = SchemaFactory.createForClass(RssSource);
 
 RssSourceSchema.index({ enabled: 1, createdAt: -1 });
-

@@ -22,4 +22,3 @@ export class CreateSearchEventDto {
   @MaxLength(200)
   targetId?: string;
 }
-

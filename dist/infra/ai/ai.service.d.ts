@@ -1,11 +1,19 @@
 import { ConfigService } from '@nestjs/config';
 import type { CommentSentiment } from '../../models/comment.model';
+export type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
+import type { Sentiment4Label, IntentLabel, AspectLabel } from '../../types/ai-labels';
 export type AiModerationResult = {
     sentiment: CommentSentiment;
     toxicity: {
         isToxic: boolean;
         score: number;
     };
+    sentiment4?: Sentiment4Label;
+    intent?: IntentLabel;
+    aspects?: AspectLabel[];
+    sentiment4Scores?: Partial<Record<Sentiment4Label, number>>;
+    intentScores?: Partial<Record<IntentLabel, number>>;
+    aspectScores?: Partial<Record<AspectLabel, number>>;
     aiVersion?: string;
 };
 export declare class AiService {

@@ -1,4 +1,10 @@
-import { IsArray, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateNewsDto {
   @IsOptional()
@@ -33,4 +39,3 @@ export class UpdateNewsDto {
   @IsIn(['draft', 'published'])
   status?: 'draft' | 'published';
 }
-

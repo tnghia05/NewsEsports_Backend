@@ -6,9 +6,18 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model, PipelineStage, QueryFilter } from 'mongoose';
 import { PostModelName, type PostDocument } from '../models/post.model';
-import { PostLikeModelName, type PostLikeDocument } from '../models/post-like.model';
-import { PostSaveModelName, type PostSaveDocument } from '../models/post-save.model';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import {
+  PostLikeModelName,
+  type PostLikeDocument,
+} from '../models/post-like.model';
+import {
+  PostSaveModelName,
+  type PostSaveDocument,
+} from '../models/post-save.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
 import type { JwtUser } from '../types/auth';
 import type { CreatePostDto } from '../dto/posts/create-post.dto';
 import type { UpdatePostDto } from '../dto/posts/update-post.dto';
@@ -21,9 +30,12 @@ import { assertCanReadPost } from '../utils/assert-can-read-post';
 export class PostsService {
   constructor(
     @InjectModel(PostModelName) private readonly postModel: Model<PostDocument>,
-    @InjectModel(PostLikeModelName) private readonly postLikeModel: Model<PostLikeDocument>,
-    @InjectModel(PostSaveModelName) private readonly postSaveModel: Model<PostSaveDocument>,
-    @InjectModel(CommentModelName) private readonly commentModel: Model<CommentDocument>,
+    @InjectModel(PostLikeModelName)
+    private readonly postLikeModel: Model<PostLikeDocument>,
+    @InjectModel(PostSaveModelName)
+    private readonly postSaveModel: Model<PostSaveDocument>,
+    @InjectModel(CommentModelName)
+    private readonly commentModel: Model<CommentDocument>,
     private readonly followsService: FollowsService,
   ) {}
 
@@ -55,8 +67,7 @@ export class PostsService {
     if (dto.thumbnailUrl !== undefined)
       patch.thumbnailUrl = dto.thumbnailUrl?.trim();
     if (dto.game !== undefined) patch.game = dto.game.trim().toLowerCase();
-    if (dto.tournament !== undefined)
-      patch.tournament = dto.tournament?.trim();
+    if (dto.tournament !== undefined) patch.tournament = dto.tournament?.trim();
     if (dto.tags !== undefined) patch.tags = normalizeTags(dto.tags);
     if (dto.status !== undefined) patch.status = dto.status;
 
@@ -92,9 +103,13 @@ export class PostsService {
     const isAuthor = author && post.authorId === author.id;
     const refreshed = isAuthor
       ? post
-      : (await this.postModel
-          .findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } }, { returnDocument: 'after' })
-          .exec()) ?? post;
+      : ((await this.postModel
+          .findByIdAndUpdate(
+            post._id,
+            { $inc: { viewCount: 1 } },
+            { returnDocument: 'after' },
+          )
+          .exec()) ?? post);
 
     if (!author) return refreshed;
 
@@ -103,7 +118,10 @@ export class PostsService {
       this.postLikeModel.exists({ postId: pid, userId: author.id }),
       this.postSaveModel.exists({ postId: pid, userId: author.id }),
     ]);
-    const obj = typeof refreshed.toObject === 'function' ? refreshed.toObject() : refreshed;
+    const obj =
+      typeof refreshed.toObject === 'function'
+        ? refreshed.toObject()
+        : refreshed;
     return Object.assign(obj, {
       likedByMe: Boolean(liked),
       savedByMe: Boolean(saved),
@@ -116,7 +134,8 @@ export class PostsService {
     const skip = (page - 1) * limit;
 
     if (query.tab === 'saved') {
-      if (!author) throw new ForbiddenException('Login required for saved feed');
+      if (!author)
+        throw new ForbiddenException('Login required for saved feed');
 
       const saves = await this.postSaveModel
         .find({ userId: author.id })
@@ -126,7 +145,9 @@ export class PostsService {
         .lean()
         .exec();
 
-      const total = await this.postSaveModel.countDocuments({ userId: author.id }).exec();
+      const total = await this.postSaveModel
+        .countDocuments({ userId: author.id })
+        .exec();
 
       const postIds = saves.map((s) => s.postId);
       if (postIds.length === 0) {
@@ -139,7 +160,9 @@ export class PostsService {
 
       const posts = await this.postModel.find(baseFilter).exec();
       const byId = new Map(posts.map((p) => [String(p._id), p]));
-      const items = postIds.map((id) => byId.get(String(id))).filter(Boolean) as PostDocument[];
+      const items = postIds
+        .map((id) => byId.get(String(id)))
+        .filter(Boolean) as PostDocument[];
 
       const likedIds = new Set(
         (
@@ -157,11 +180,18 @@ export class PostsService {
         savedByMe: true,
       }));
 
-      return { items: out, page, limit, total, hasMore: skip + out.length < total };
+      return {
+        items: out,
+        page,
+        limit,
+        total,
+        hasMore: skip + out.length < total,
+      };
     }
 
     if (query.tab === 'following') {
-      if (!author) throw new ForbiddenException('Login required for following feed');
+      if (!author)
+        throw new ForbiddenException('Login required for following feed');
       const followeeIds = await this.followsService.listFolloweeIds(author.id);
       if (followeeIds.length === 0) {
         return { items: [], page, limit, total: 0, hasMore: false };
@@ -183,7 +213,16 @@ export class PostsService {
         this.postModel.countDocuments(filter).exec(),
       ]);
 
-      return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
+      return attachLikeSaveFlags(
+        this.postLikeModel,
+        this.postSaveModel,
+        author,
+        items,
+        page,
+        limit,
+        total,
+        skip,
+      );
     }
 
     const baseFilter: QueryFilter<PostDocument> = {};
@@ -214,7 +253,16 @@ export class PostsService {
         this.postModel.aggregate(pipeline).exec(),
         this.postModel.countDocuments(baseFilter).exec(),
       ]);
-      return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, rawItems, page, limit, total, skip);
+      return attachLikeSaveFlags(
+        this.postLikeModel,
+        this.postSaveModel,
+        author,
+        rawItems,
+        page,
+        limit,
+        total,
+        skip,
+      );
     }
 
     // latest
@@ -228,7 +276,16 @@ export class PostsService {
       this.postModel.countDocuments(baseFilter).exec(),
     ]);
 
-    return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
+    return attachLikeSaveFlags(
+      this.postLikeModel,
+      this.postSaveModel,
+      author,
+      items,
+      page,
+      limit,
+      total,
+      skip,
+    );
   }
 
   async listByUser(
@@ -303,7 +360,10 @@ export class PostsService {
       .exec();
 
     return {
-      items: rows.map((r: any) => ({ userId: r.userId, createdAt: r.createdAt })),
+      items: rows.map((r: any) => ({
+        userId: r.userId,
+        createdAt: r.createdAt,
+      })),
       page,
       limit,
       total,
@@ -352,10 +412,13 @@ async function attachLikeSaveFlags(
   total?: number,
   skip?: number,
 ) {
-  const hasMore = total != null && skip != null ? skip + items.length < total : undefined;
-  if (!viewer) return { items, page, limit, ...(total != null ? { total, hasMore } : {}) };
+  const hasMore =
+    total != null && skip != null ? skip + items.length < total : undefined;
+  if (!viewer)
+    return { items, page, limit, ...(total != null ? { total, hasMore } : {}) };
   const ids = items.map((p) => String(p._id));
-  if (ids.length === 0) return { items, page, limit, ...(total != null ? { total, hasMore } : {}) };
+  if (ids.length === 0)
+    return { items, page, limit, ...(total != null ? { total, hasMore } : {}) };
 
   const [likes, saves] = await Promise.all([
     postLikeModel
@@ -379,7 +442,12 @@ async function attachLikeSaveFlags(
     savedByMe: saved.has(String(p._id)),
   }));
 
-  return { items: out, page, limit, ...(total != null ? { total, hasMore } : {}) };
+  return {
+    items: out,
+    page,
+    limit,
+    ...(total != null ? { total, hasMore } : {}),
+  };
 }
 
 function applyVisibility(
@@ -448,10 +516,7 @@ function recencyBoostExpr() {
     $let: {
       vars: {
         ageMs: {
-          $subtract: [
-            now,
-            { $toLong: { $toDate: '$createdAt' } },
-          ],
+          $subtract: [now, { $toLong: { $toDate: '$createdAt' } }],
         },
       },
       in: {
@@ -464,10 +529,7 @@ function recencyBoostExpr() {
                 $max: [
                   0,
                   {
-                    $subtract: [
-                      1,
-                      { $divide: ['$$ageMs', windowMs] },
-                    ],
+                    $subtract: [1, { $divide: ['$$ageMs', windowMs] }],
                   },
                 ],
               },
