@@ -78,8 +78,11 @@ let OrdersService = class OrdersService {
         const shippingFee = 0;
         const total = subtotal + shippingFee;
         const orderCode = await this.nextOrderCode();
+        const userObjectId = mongoose_2.Types.ObjectId.isValid(user.id)
+            ? new mongoose_2.Types.ObjectId(user.id)
+            : user.id;
         return this.orderModel.create({
-            userId: user.id,
+            userId: userObjectId,
             orderCode,
             items,
             subtotal,
@@ -104,7 +107,13 @@ let OrdersService = class OrdersService {
         const page = query.page ?? 1;
         const limit = Math.min(query.limit ?? 20, 50);
         const skip = (page - 1) * limit;
-        const match = { userId: new mongoose_2.Types.ObjectId(user.id) };
+        const userIdConditions = [user.id];
+        if (mongoose_2.Types.ObjectId.isValid(user.id)) {
+            userIdConditions.push(new mongoose_2.Types.ObjectId(user.id));
+        }
+        const match = {
+            userId: userIdConditions.length === 1 ? user.id : { $in: userIdConditions },
+        };
         if (query.status)
             match.status = query.status;
         const pipeline = [

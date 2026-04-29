@@ -90,9 +90,12 @@ export class OrdersService {
     const shippingFee = 0;
     const total = subtotal + shippingFee;
     const orderCode = await this.nextOrderCode();
+    const userObjectId = Types.ObjectId.isValid(user.id)
+      ? new Types.ObjectId(user.id)
+      : user.id;
 
     return this.orderModel.create({
-      userId: user.id,
+      userId: userObjectId,
       orderCode,
       items,
       subtotal,
@@ -119,7 +122,11 @@ export class OrdersService {
     const limit = Math.min(query.limit ?? 20, 50);
     const skip = (page - 1) * limit;
 
-    const match: Record<string, any> = { userId: new Types.ObjectId(user.id) };
+    const userId = Types.ObjectId.isValid(user.id)
+      ? new Types.ObjectId(user.id)
+      : user.id;
+
+    const match: Record<string, any> = { userId };
     if (query.status) match.status = query.status;
 
     const pipeline: PipelineStage[] = [
