@@ -18,6 +18,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const vnpay_1 = require("vnpay");
+const mongoose_2 = require("mongoose");
 const order_model_1 = require("../models/order.model");
 const payment_model_1 = require("../models/payment.model");
 let PaymentsService = PaymentsService_1 = class PaymentsService {
@@ -56,12 +57,20 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
         });
         this.logger.log(`VNPay enabled testMode=${testMode} host=${vnpayHost ?? 'sandbox'}`);
     }
-    async createVNPayPaymentUrl(orderId, dto, clientIp) {
+    async createVNPayPaymentUrl(user, orderRef, dto, clientIp) {
         if (!this.vnpay)
             throw new common_1.BadRequestException('VNPay is not configured');
-        const order = await this.orderModel.findById(orderId).exec();
+        const order = mongoose_2.Types.ObjectId.isValid(orderRef)
+            ? await this.orderModel
+                .findOne({
+                $or: [{ orderCode: orderRef }, { _id: new mongoose_2.Types.ObjectId(orderRef) }],
+            })
+                .exec()
+            : await this.orderModel.findOne({ orderCode: orderRef }).exec();
         if (!order)
             throw new common_1.NotFoundException('Order not found');
+        if (String(order.userId) !== user.id)
+            throw new common_1.ForbiddenException('Forbidden');
         if (order.status !== 'pending_payment')
             throw new common_1.BadRequestException(`Order status is ${order.status}`);
         const returnUrl = dto.returnUrl ?? this.defaultReturnUrl;

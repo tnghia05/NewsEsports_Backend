@@ -6,7 +6,7 @@ import type { ReturnQueryFromVNPay } from 'vnpay/types';
 export declare class PaymentsController {
     private readonly paymentsService;
     constructor(paymentsService: PaymentsService);
-    createVNPayUrl(user: JwtUser, orderId: string, dto: VNPayCreatePaymentUrlDto, req: Request): Promise<{
+    createVNPayUrl(user: JwtUser, orderRef: string, dto: VNPayCreatePaymentUrlDto, req: Request): Promise<{
         orderId: string;
         orderCode: string;
         paymentUrl: string;

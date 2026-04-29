@@ -5,6 +5,7 @@ import type { ReturnQueryFromVNPay } from 'vnpay/types';
 import { type OrderDocument } from '../models/order.model';
 import { type PaymentDocument } from '../models/payment.model';
 import type { VNPayCreatePaymentUrlDto } from '../dto/shop/payments/vnpay-create-payment-url.dto';
+import type { JwtUser } from '../types/auth';
 export declare class PaymentsService {
     private readonly config;
     private readonly orderModel;
@@ -13,7 +14,7 @@ export declare class PaymentsService {
     private readonly vnpay?;
     private readonly defaultReturnUrl?;
     constructor(config: ConfigService, orderModel: Model<OrderDocument>, paymentModel: Model<PaymentDocument>);
-    createVNPayPaymentUrl(orderId: string, dto: VNPayCreatePaymentUrlDto, clientIp: string): Promise<{
+    createVNPayPaymentUrl(user: JwtUser, orderRef: string, dto: VNPayCreatePaymentUrlDto, clientIp: string): Promise<{
         orderId: string;
         orderCode: string;
         paymentUrl: string;

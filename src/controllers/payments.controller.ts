@@ -20,15 +20,14 @@ import type { ReturnQueryFromVNPay } from 'vnpay/types';
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Post('vnpay/orders/:orderId/url')
+  @Post('vnpay/orders/:orderRef/url')
   @UseGuards(JwtAuthGuard)
   async createVNPayUrl(
     @CurrentUser() user: JwtUser,
-    @Param('orderId') orderId: string,
+    @Param('orderRef') orderRef: string,
     @Body() dto: VNPayCreatePaymentUrlDto,
     @Req() req: Request,
   ) {
-    void user;
     const ip =
       (req.headers['x-forwarded-for'] as string | undefined)
         ?.split(',')[0]
@@ -36,7 +35,7 @@ export class PaymentsController {
       req.ip ||
       req.socket.remoteAddress ||
       '127.0.0.1';
-    return this.paymentsService.createVNPayPaymentUrl(orderId, dto, ip);
+    return this.paymentsService.createVNPayPaymentUrl(user, orderRef, dto, ip);
   }
 
   // Return URL (UI only)

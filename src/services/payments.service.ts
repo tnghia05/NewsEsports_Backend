@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -10,6 +11,7 @@ import type { Model } from 'mongoose';
 import { VNPay, ProductCode, VnpLocale, ignoreLogger } from 'vnpay';
 import type { VerifyIpnCall, VerifyReturnUrl } from 'vnpay/types-only';
 import type { ReturnQueryFromVNPay } from 'vnpay/types';
+import { Types } from 'mongoose';
 import { OrderModelName, type OrderDocument } from '../models/order.model';
 import {
   PaymentModelName,
@@ -17,6 +19,7 @@ import {
   type PaymentStatus,
 } from '../models/payment.model';
 import type { VNPayCreatePaymentUrlDto } from '../dto/shop/payments/vnpay-create-payment-url.dto';
+import type { JwtUser } from '../types/auth';
 
 @Injectable()
 export class PaymentsService {
@@ -68,14 +71,23 @@ export class PaymentsService {
   }
 
   async createVNPayPaymentUrl(
-    orderId: string,
+    user: JwtUser,
+    orderRef: string,
     dto: VNPayCreatePaymentUrlDto,
     clientIp: string,
   ) {
     if (!this.vnpay) throw new BadRequestException('VNPay is not configured');
 
-    const order = await this.orderModel.findById(orderId).exec();
+    // Production-facing identifier is orderCode. Keep _id backward-compatible.
+    const order = Types.ObjectId.isValid(orderRef)
+      ? await this.orderModel
+          .findOne({
+            $or: [{ orderCode: orderRef }, { _id: new Types.ObjectId(orderRef) }],
+          })
+          .exec()
+      : await this.orderModel.findOne({ orderCode: orderRef }).exec();
     if (!order) throw new NotFoundException('Order not found');
+    if (String(order.userId) !== user.id) throw new ForbiddenException('Forbidden');
     if (order.status !== 'pending_payment')
       throw new BadRequestException(`Order status is ${order.status}`);
 

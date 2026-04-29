@@ -23,15 +23,14 @@ let PaymentsController = class PaymentsController {
     constructor(paymentsService) {
         this.paymentsService = paymentsService;
     }
-    async createVNPayUrl(user, orderId, dto, req) {
-        void user;
+    async createVNPayUrl(user, orderRef, dto, req) {
         const ip = req.headers['x-forwarded-for']
             ?.split(',')[0]
             ?.trim() ||
             req.ip ||
             req.socket.remoteAddress ||
             '127.0.0.1';
-        return this.paymentsService.createVNPayPaymentUrl(orderId, dto, ip);
+        return this.paymentsService.createVNPayPaymentUrl(user, orderRef, dto, ip);
     }
     verifyReturn(query) {
         return this.paymentsService.verifyVNPayReturn(query);
@@ -42,10 +41,10 @@ let PaymentsController = class PaymentsController {
 };
 exports.PaymentsController = PaymentsController;
 __decorate([
-    (0, common_1.Post)('vnpay/orders/:orderId/url'),
+    (0, common_1.Post)('vnpay/orders/:orderRef/url'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Param)('orderId')),
+    __param(1, (0, common_1.Param)('orderRef')),
     __param(2, (0, common_1.Body)()),
     __param(3, (0, common_1.Req)()),
     __metadata("design:type", Function),
