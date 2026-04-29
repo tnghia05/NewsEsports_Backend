@@ -96,7 +96,9 @@ let OrdersService = class OrdersService {
         });
     }
     async getMine(user, orderId) {
-        const order = await this.orderModel.findById(orderId).exec();
+        const order = mongoose_2.Types.ObjectId.isValid(orderId)
+            ? await this.orderModel.findById(orderId).exec()
+            : await this.orderModel.findOne({ orderCode: orderId }).exec();
         if (!order)
             throw new common_1.NotFoundException('Order not found');
         if (String(order.userId) !== user.id)
@@ -107,13 +109,10 @@ let OrdersService = class OrdersService {
         const page = query.page ?? 1;
         const limit = Math.min(query.limit ?? 20, 50);
         const skip = (page - 1) * limit;
-        const userIdConditions = [user.id];
-        if (mongoose_2.Types.ObjectId.isValid(user.id)) {
-            userIdConditions.push(new mongoose_2.Types.ObjectId(user.id));
-        }
-        const match = {
-            userId: userIdConditions.length === 1 ? user.id : { $in: userIdConditions },
-        };
+        const userId = mongoose_2.Types.ObjectId.isValid(user.id)
+            ? new mongoose_2.Types.ObjectId(user.id)
+            : user.id;
+        const match = { userId };
         if (query.status)
             match.status = query.status;
         const pipeline = [

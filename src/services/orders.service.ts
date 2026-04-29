@@ -110,7 +110,9 @@ export class OrdersService {
   }
 
   async getMine(user: JwtUser, orderId: string) {
-    const order = await this.orderModel.findById(orderId).exec();
+    const order = Types.ObjectId.isValid(orderId)
+      ? await this.orderModel.findById(orderId).exec()
+      : await this.orderModel.findOne({ orderCode: orderId }).exec();
     if (!order) throw new NotFoundException('Order not found');
     if (String(order.userId) !== user.id)
       throw new ForbiddenException('Forbidden');
