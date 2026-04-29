@@ -358,7 +358,9 @@ function applyVisibility(filter, viewer) {
     filter['$or'] = [
         { status: 'published' },
         { status: 'draft', authorId: viewer.id },
-        ...(viewer.role === 'admin' ? [{ status: 'draft' }] : []),
+        ...(viewer.role === 'admin'
+            ? [{ status: 'draft' }]
+            : []),
     ];
 }
 function assertCanEditPost(viewer, post) {

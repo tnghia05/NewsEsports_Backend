@@ -462,7 +462,9 @@ function applyVisibility(
   filter['$or'] = [
     { status: 'published' },
     { status: 'draft', authorId: viewer.id },
-    ...(viewer.role === 'admin' ? [{ status: 'draft' }] : []),
+    ...(viewer.role === 'admin'
+      ? ([{ status: 'draft' as const }] as const)
+      : []),
   ];
 }
 
