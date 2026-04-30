@@ -17,7 +17,7 @@ const EnvSchema = z.object({
     .min(1, 'JWT_REFRESH_EXPIRES_IN is required')
     .optional(),
 
-  // AI service (Milestone 3)s
+  // AI service (Milestone 3)ss
   AI_SERVICE_URL: z.string().url().optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
 
