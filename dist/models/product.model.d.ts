@@ -2,13 +2,16 @@ import type { HydratedDocument } from 'mongoose';
 export type ProductDocument = HydratedDocument<Product>;
 export declare const ProductModelName = "Product";
 export type ProductStatus = 'active' | 'inactive';
+export type ProductType = 'physical' | 'digital' | 'ticket' | 'service';
 export declare class Product {
     name: string;
     slug: string;
     description?: string;
     imageUrls: string[];
+    type: ProductType;
     price: number;
     stock: number;
+    reserved: number;
     status: ProductStatus;
     tags: string[];
 }
@@ -57,6 +60,15 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }, "id"> & {
         id: string;
     }> | undefined;
+    type?: import("mongoose").SchemaDefinitionProperty<ProductType, Product, import("mongoose").Document<unknown, {}, Product, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     price?: import("mongoose").SchemaDefinitionProperty<number, Product, import("mongoose").Document<unknown, {}, Product, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
@@ -67,6 +79,15 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
         id: string;
     }> | undefined;
     stock?: import("mongoose").SchemaDefinitionProperty<number, Product, import("mongoose").Document<unknown, {}, Product, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    reserved?: import("mongoose").SchemaDefinitionProperty<number, Product, import("mongoose").Document<unknown, {}, Product, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;

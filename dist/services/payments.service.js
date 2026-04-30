@@ -21,17 +21,23 @@ const vnpay_1 = require("vnpay");
 const mongoose_2 = require("mongoose");
 const order_model_1 = require("../models/order.model");
 const payment_model_1 = require("../models/payment.model");
+const product_model_1 = require("../models/product.model");
+const product_variant_model_1 = require("../models/product-variant.model");
 let PaymentsService = PaymentsService_1 = class PaymentsService {
     config;
     orderModel;
     paymentModel;
+    productModel;
+    variantModel;
     logger = new common_1.Logger(PaymentsService_1.name);
     vnpay;
     defaultReturnUrl;
-    constructor(config, orderModel, paymentModel) {
+    constructor(config, orderModel, paymentModel, productModel, variantModel) {
         this.config = config;
         this.orderModel = orderModel;
         this.paymentModel = paymentModel;
+        this.productModel = productModel;
+        this.variantModel = variantModel;
         const tmnCode = this.config.get('VNPAY_TMN_CODE', { infer: true });
         const secureSecret = this.config.get('VNPAY_SECURE_SECRET', {
             infer: true,
@@ -73,6 +79,9 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             throw new common_1.ForbiddenException('Forbidden');
         if (order.status !== 'pending_payment')
             throw new common_1.BadRequestException(`Order status is ${order.status}`);
+        if (order.reservedUntil && order.reservedUntil.getTime() < Date.now()) {
+            throw new common_1.BadRequestException('Order reservation expired');
+        }
         const returnUrl = dto.returnUrl ?? this.defaultReturnUrl;
         if (!returnUrl)
             throw new common_1.BadRequestException('returnUrl is required');
@@ -154,8 +163,57 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
         if (order.status === 'paid') {
             return { RspCode: '02', Message: 'Order already confirmed' };
         }
+        const now = new Date();
+        if (order.status !== 'pending_payment') {
+            await this.markPaymentResult(order.orderCode, 'succeeded', verify);
+            return { RspCode: '00', Message: 'Confirm Success' };
+        }
+        if (order.reservedUntil && order.reservedUntil.getTime() < now.getTime()) {
+            await this.orderModel
+                .updateOne({ _id: order._id, status: 'pending_payment' }, {
+                $set: {
+                    status: 'cancelled_expired',
+                    'payment.provider': 'vnpay',
+                    'payment.providerTxnRef': order.orderCode,
+                    'payment.vnp_TxnRef': verify.vnp_TxnRef,
+                    'payment.vnp_TransactionNo': verify.vnp_TransactionNo,
+                    'payment.vnp_BankCode': verify.vnp_BankCode,
+                    'payment.vnp_ResponseCode': verify.vnp_ResponseCode,
+                    'payment.vnp_TransactionStatus': verify
+                        .vnp_TransactionStatus,
+                    'payment.vnp_PayDate': verify.vnp_PayDate,
+                    'payment.paidAt': new Date().toISOString(),
+                },
+            })
+                .exec();
+            await this.markPaymentResult(order.orderCode, 'succeeded', verify);
+            return { RspCode: '00', Message: 'Confirm Success' };
+        }
+        for (const it of order.items) {
+            const qty = Number(it.qty ?? 0);
+            if (!qty)
+                continue;
+            if (it.variantId) {
+                const updated = await this.variantModel
+                    .updateOne({ _id: it.variantId, reserved: { $gte: qty }, stock: { $gte: qty } }, { $inc: { reserved: -qty, stock: -qty } })
+                    .exec();
+                if (updated.modifiedCount !== 1) {
+                    this.logger.error(`finalize failed variant=${String(it.variantId)} qty=${qty}`);
+                    throw new common_1.BadRequestException('Failed to finalize stock');
+                }
+            }
+            else {
+                const updated = await this.productModel
+                    .updateOne({ _id: it.productId, reserved: { $gte: qty }, stock: { $gte: qty } }, { $inc: { reserved: -qty, stock: -qty } })
+                    .exec();
+                if (updated.modifiedCount !== 1) {
+                    this.logger.error(`finalize failed product=${String(it.productId)} qty=${qty}`);
+                    throw new common_1.BadRequestException('Failed to finalize stock');
+                }
+            }
+        }
         await this.orderModel
-            .updateOne({ _id: order._id }, {
+            .updateOne({ _id: order._id, status: 'pending_payment' }, {
             $set: {
                 status: 'paid',
                 'payment.provider': 'vnpay',
@@ -204,7 +262,9 @@ exports.PaymentsService = PaymentsService = PaymentsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, mongoose_1.InjectModel)(order_model_1.OrderModelName)),
     __param(2, (0, mongoose_1.InjectModel)(payment_model_1.PaymentModelName)),
-    __metadata("design:paramtypes", [config_1.ConfigService, Function, Function])
+    __param(3, (0, mongoose_1.InjectModel)(product_model_1.ProductModelName)),
+    __param(4, (0, mongoose_1.InjectModel)(product_variant_model_1.ProductVariantModelName)),
+    __metadata("design:paramtypes", [config_1.ConfigService, Function, Function, Function, Function])
 ], PaymentsService);
 function safeOrderInfo(input) {
     return input

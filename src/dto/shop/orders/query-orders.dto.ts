@@ -15,6 +15,23 @@ export class QueryOrdersDto {
   limit?: number = 20;
 
   @IsOptional()
-  @IsIn(['pending_payment', 'paid', 'cancelled', 'refunded'])
-  status?: 'pending_payment' | 'paid' | 'cancelled' | 'refunded';
+  @IsIn([
+    'pending_payment',
+    'paid',
+    'processing',
+    'shipped',
+    'delivered',
+    'cancelled',
+    'cancelled_expired',
+    'refunded',
+  ])
+  status?:
+    | 'pending_payment'
+    | 'paid'
+    | 'processing'
+    | 'shipped'
+    | 'delivered'
+    | 'cancelled'
+    | 'cancelled_expired'
+    | 'refunded';
 }

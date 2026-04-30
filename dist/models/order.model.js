@@ -17,8 +17,12 @@ const product_model_1 = require("./product.model");
 exports.OrderModelName = 'Order';
 class OrderItemSnapshot {
     productId;
+    variantId;
     name;
     slug;
+    variantTitle;
+    skuCode;
+    variantOptions;
     unitPrice;
     qty;
     lineTotal;
@@ -34,6 +38,10 @@ __decorate([
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], OrderItemSnapshot.prototype, "productId", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, required: false, index: true }),
+    __metadata("design:type", mongoose_2.Types.ObjectId)
+], OrderItemSnapshot.prototype, "variantId", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: String, required: true }),
     __metadata("design:type", String)
 ], OrderItemSnapshot.prototype, "name", void 0);
@@ -41,6 +49,18 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String, required: true }),
     __metadata("design:type", String)
 ], OrderItemSnapshot.prototype, "slug", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], OrderItemSnapshot.prototype, "variantTitle", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], OrderItemSnapshot.prototype, "skuCode", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: [{ k: String, v: String }], default: [] }),
+    __metadata("design:type", Array)
+], OrderItemSnapshot.prototype, "variantOptions", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true, min: 0 }),
     __metadata("design:type", Number)
@@ -105,6 +125,13 @@ let Order = class Order {
     userId;
     orderCode;
     items;
+    receiverName;
+    receiverPhone;
+    receiverEmail;
+    shippingAddress;
+    shippingMethod;
+    trackingCode;
+    reservedUntil;
     subtotal;
     shippingFee;
     total;
@@ -130,6 +157,34 @@ __decorate([
     __metadata("design:type", Array)
 ], Order.prototype, "items", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Order.prototype, "receiverName", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Order.prototype, "receiverPhone", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Order.prototype, "receiverEmail", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Order.prototype, "shippingAddress", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Order.prototype, "shippingMethod", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Order.prototype, "trackingCode", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, index: true }),
+    __metadata("design:type", Date)
+], Order.prototype, "reservedUntil", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true, min: 0 }),
     __metadata("design:type", Number)
 ], Order.prototype, "subtotal", void 0);
@@ -144,7 +199,16 @@ __decorate([
 __decorate([
     (0, mongoose_1.Prop)({
         type: String,
-        enum: ['pending_payment', 'paid', 'cancelled', 'refunded'],
+        enum: [
+            'pending_payment',
+            'paid',
+            'processing',
+            'shipped',
+            'delivered',
+            'cancelled',
+            'cancelled_expired',
+            'refunded',
+        ],
         default: 'pending_payment',
         index: true,
     }),
@@ -160,4 +224,6 @@ exports.Order = Order = __decorate([
 exports.OrderSchema = mongoose_1.SchemaFactory.createForClass(Order);
 exports.OrderSchema.index({ userId: 1, createdAt: -1 });
 exports.OrderSchema.index({ status: 1, createdAt: -1 });
+exports.OrderSchema.index({ status: 1, reservedUntil: 1 });
+exports.OrderSchema.index({ status: 1, orderCode: 1 });
 //# sourceMappingURL=order.model.js.map

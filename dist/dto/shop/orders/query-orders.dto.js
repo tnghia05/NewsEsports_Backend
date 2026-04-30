@@ -34,7 +34,16 @@ __decorate([
 ], QueryOrdersDto.prototype, "limit", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsIn)(['pending_payment', 'paid', 'cancelled', 'refunded']),
+    (0, class_validator_1.IsIn)([
+        'pending_payment',
+        'paid',
+        'processing',
+        'shipped',
+        'delivered',
+        'cancelled',
+        'cancelled_expired',
+        'refunded',
+    ]),
     __metadata("design:type", String)
 ], QueryOrdersDto.prototype, "status", void 0);
 //# sourceMappingURL=query-orders.dto.js.map

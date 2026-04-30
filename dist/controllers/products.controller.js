@@ -22,6 +22,8 @@ const user_decorator_1 = require("../decorators/user.decorator");
 const create_product_dto_1 = require("../dto/shop/products/create-product.dto");
 const update_product_dto_1 = require("../dto/shop/products/update-product.dto");
 const query_products_dto_1 = require("../dto/shop/products/query-products.dto");
+const create_product_variant_dto_1 = require("../dto/shop/products/variants/create-product-variant.dto");
+const update_product_variant_dto_1 = require("../dto/shop/products/variants/update-product-variant.dto");
 let ProductsController = class ProductsController {
     productsService;
     constructor(productsService) {
@@ -32,6 +34,9 @@ let ProductsController = class ProductsController {
     }
     getById(id) {
         return this.productsService.getById(id);
+    }
+    listVariantsPublic(productId) {
+        return this.productsService.listVariantsPublic(productId);
     }
     listAdmin(admin, query) {
         return this.productsService.listAdmin(admin, query);
@@ -44,6 +49,18 @@ let ProductsController = class ProductsController {
     }
     remove(admin, id) {
         return this.productsService.remove(admin, id);
+    }
+    listVariantsAdmin(admin, productId) {
+        return this.productsService.listVariantsAdmin(admin, productId);
+    }
+    createVariant(admin, productId, dto) {
+        return this.productsService.createVariant(admin, productId, dto);
+    }
+    updateVariant(admin, variantId, dto) {
+        return this.productsService.updateVariant(admin, variantId, dto);
+    }
+    removeVariant(admin, variantId) {
+        return this.productsService.removeVariant(admin, variantId);
     }
 };
 exports.ProductsController = ProductsController;
@@ -61,6 +78,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "getById", null);
+__decorate([
+    (0, common_1.Get)(':id/variants'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "listVariantsPublic", null);
 __decorate([
     (0, common_1.Get)('admin/list'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
@@ -102,6 +126,48 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)('admin/:id/variants'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "listVariantsAdmin", null);
+__decorate([
+    (0, common_1.Post)('admin/:id/variants'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, create_product_variant_dto_1.CreateProductVariantDto]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "createVariant", null);
+__decorate([
+    (0, common_1.Patch)('admin/variants/:variantId'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('variantId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, update_product_variant_dto_1.UpdateProductVariantDto]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "updateVariant", null);
+__decorate([
+    (0, common_1.Delete)('admin/variants/:variantId'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('variantId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "removeVariant", null);
 exports.ProductsController = ProductsController = __decorate([
     (0, common_1.Controller)('products'),
     __metadata("design:paramtypes", [products_service_1.ProductsService])

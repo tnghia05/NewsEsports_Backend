@@ -16,13 +16,25 @@ exports.OrdersController = void 0;
 const common_1 = require("@nestjs/common");
 const orders_service_1 = require("../services/orders.service");
 const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
+const roles_guard_1 = require("../guards/roles.guard");
+const roles_decorator_1 = require("../decorators/roles.decorator");
 const user_decorator_1 = require("../decorators/user.decorator");
 const create_order_dto_1 = require("../dto/shop/orders/create-order.dto");
 const query_orders_dto_1 = require("../dto/shop/orders/query-orders.dto");
+const admin_update_order_status_dto_1 = require("../dto/shop/orders/admin-update-order-status.dto");
 let OrdersController = class OrdersController {
     ordersService;
     constructor(ordersService) {
         this.ordersService = ordersService;
+    }
+    listAdmin(admin, query) {
+        return this.ordersService.listAdmin(admin, query);
+    }
+    getAdmin(admin, orderRef) {
+        return this.ordersService.getAdmin(admin, orderRef);
+    }
+    updateStatus(admin, orderRef, dto) {
+        return this.ordersService.adminUpdateStatus(admin, orderRef, dto);
     }
     create(user, dto) {
         return this.ordersService.create(user, dto);
@@ -35,6 +47,37 @@ let OrdersController = class OrdersController {
     }
 };
 exports.OrdersController = OrdersController;
+__decorate([
+    (0, common_1.Get)('admin/list'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, query_orders_dto_1.QueryOrdersDto]),
+    __metadata("design:returntype", void 0)
+], OrdersController.prototype, "listAdmin", null);
+__decorate([
+    (0, common_1.Get)('admin/:orderRef'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('orderRef')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], OrdersController.prototype, "getAdmin", null);
+__decorate([
+    (0, common_1.Patch)('admin/:orderRef/status'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('orderRef')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, admin_update_order_status_dto_1.AdminUpdateOrderStatusDto]),
+    __metadata("design:returntype", void 0)
+], OrdersController.prototype, "updateStatus", null);
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, user_decorator_1.CurrentUser)()),

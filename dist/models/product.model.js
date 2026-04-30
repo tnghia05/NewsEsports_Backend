@@ -17,8 +17,10 @@ let Product = class Product {
     slug;
     description;
     imageUrls;
+    type;
     price;
     stock;
+    reserved;
     status;
     tags;
 };
@@ -40,6 +42,15 @@ __decorate([
     __metadata("design:type", Array)
 ], Product.prototype, "imageUrls", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({
+        type: String,
+        enum: ['physical', 'digital', 'ticket', 'service'],
+        default: 'physical',
+        index: true,
+    }),
+    __metadata("design:type", String)
+], Product.prototype, "type", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true, min: 0, index: true }),
     __metadata("design:type", Number)
 ], Product.prototype, "price", void 0);
@@ -47,6 +58,10 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true, min: 0, index: true }),
     __metadata("design:type", Number)
 ], Product.prototype, "stock", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, required: true, min: 0, default: 0, index: true }),
+    __metadata("design:type", Number)
+], Product.prototype, "reserved", void 0);
 __decorate([
     (0, mongoose_1.Prop)({
         type: String,
@@ -66,4 +81,5 @@ exports.Product = Product = __decorate([
 exports.ProductSchema = mongoose_1.SchemaFactory.createForClass(Product);
 exports.ProductSchema.index({ status: 1, createdAt: -1 });
 exports.ProductSchema.index({ status: 1, price: 1 });
+exports.ProductSchema.index({ type: 1, status: 1, createdAt: -1 });
 //# sourceMappingURL=product.model.js.map

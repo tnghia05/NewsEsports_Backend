@@ -1,12 +1,19 @@
 import { Types, type HydratedDocument } from 'mongoose';
 export type OrderDocument = HydratedDocument<Order>;
 export declare const OrderModelName = "Order";
-export type OrderStatus = 'pending_payment' | 'paid' | 'cancelled' | 'refunded';
+export type OrderStatus = 'pending_payment' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'cancelled_expired' | 'refunded';
 export type OrderPaymentProvider = 'vnpay';
 export declare class OrderItemSnapshot {
     productId: Types.ObjectId;
+    variantId?: Types.ObjectId;
     name: string;
     slug: string;
+    variantTitle?: string;
+    skuCode?: string;
+    variantOptions?: Array<{
+        k: string;
+        v: string;
+    }>;
     unitPrice: number;
     qty: number;
     lineTotal: number;
@@ -26,6 +33,13 @@ export declare class Order {
     userId: Types.ObjectId;
     orderCode: string;
     items: OrderItemSnapshot[];
+    receiverName?: string;
+    receiverPhone?: string;
+    receiverEmail?: string;
+    shippingAddress?: string;
+    shippingMethod?: string;
+    trackingCode?: string;
+    reservedUntil?: Date;
     subtotal: number;
     shippingFee: number;
     total: number;
@@ -60,6 +74,69 @@ export declare const OrderSchema: import("mongoose").Schema<Order, import("mongo
         id: string;
     }> | undefined;
     items?: import("mongoose").SchemaDefinitionProperty<OrderItemSnapshot[], Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    receiverName?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    receiverPhone?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    receiverEmail?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    shippingAddress?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    shippingMethod?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    trackingCode?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    reservedUntil?: import("mongoose").SchemaDefinitionProperty<Date | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
         _id: Types.ObjectId;

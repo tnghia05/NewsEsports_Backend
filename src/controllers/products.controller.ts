@@ -18,6 +18,8 @@ import type { JwtUser } from '../types/auth';
 import { CreateProductDto } from '../dto/shop/products/create-product.dto';
 import { UpdateProductDto } from '../dto/shop/products/update-product.dto';
 import { QueryProductsDto } from '../dto/shop/products/query-products.dto';
+import { CreateProductVariantDto } from '../dto/shop/products/variants/create-product-variant.dto';
+import { UpdateProductVariantDto } from '../dto/shop/products/variants/update-product-variant.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -32,6 +34,11 @@ export class ProductsController {
   @Get(':id')
   getById(@Param('id') id: string) {
     return this.productsService.getById(id);
+  }
+
+  @Get(':id/variants')
+  listVariantsPublic(@Param('id') productId: string) {
+    return this.productsService.listVariantsPublic(productId);
   }
 
   // Admin
@@ -65,5 +72,41 @@ export class ProductsController {
   @Roles('admin')
   remove(@CurrentUser() admin: JwtUser, @Param('id') id: string) {
     return this.productsService.remove(admin, id);
+  }
+
+  @Get('admin/:id/variants')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  listVariantsAdmin(@CurrentUser() admin: JwtUser, @Param('id') productId: string) {
+    return this.productsService.listVariantsAdmin(admin, productId);
+  }
+
+  @Post('admin/:id/variants')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  createVariant(
+    @CurrentUser() admin: JwtUser,
+    @Param('id') productId: string,
+    @Body() dto: CreateProductVariantDto,
+  ) {
+    return this.productsService.createVariant(admin, productId, dto);
+  }
+
+  @Patch('admin/variants/:variantId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  updateVariant(
+    @CurrentUser() admin: JwtUser,
+    @Param('variantId') variantId: string,
+    @Body() dto: UpdateProductVariantDto,
+  ) {
+    return this.productsService.updateVariant(admin, variantId, dto);
+  }
+
+  @Delete('admin/variants/:variantId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  removeVariant(@CurrentUser() admin: JwtUser, @Param('variantId') variantId: string) {
+    return this.productsService.removeVariant(admin, variantId);
   }
 }

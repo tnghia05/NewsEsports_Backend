@@ -20,6 +20,11 @@ import {
 } from '../models/payment.model';
 import type { VNPayCreatePaymentUrlDto } from '../dto/shop/payments/vnpay-create-payment-url.dto';
 import type { JwtUser } from '../types/auth';
+import { ProductModelName, type ProductDocument } from '../models/product.model';
+import {
+  ProductVariantModelName,
+  type ProductVariantDocument,
+} from '../models/product-variant.model';
 
 @Injectable()
 export class PaymentsService {
@@ -33,6 +38,10 @@ export class PaymentsService {
     private readonly orderModel: Model<OrderDocument>,
     @InjectModel(PaymentModelName)
     private readonly paymentModel: Model<PaymentDocument>,
+    @InjectModel(ProductModelName)
+    private readonly productModel: Model<ProductDocument>,
+    @InjectModel(ProductVariantModelName)
+    private readonly variantModel: Model<ProductVariantDocument>,
   ) {
     const tmnCode = this.config.get<string>('VNPAY_TMN_CODE', { infer: true });
     const secureSecret = this.config.get<string>('VNPAY_SECURE_SECRET', {
@@ -90,6 +99,9 @@ export class PaymentsService {
     if (String(order.userId) !== user.id) throw new ForbiddenException('Forbidden');
     if (order.status !== 'pending_payment')
       throw new BadRequestException(`Order status is ${order.status}`);
+    if (order.reservedUntil && order.reservedUntil.getTime() < Date.now()) {
+      throw new BadRequestException('Order reservation expired');
+    }
 
     const returnUrl = dto.returnUrl ?? this.defaultReturnUrl;
     if (!returnUrl) throw new BadRequestException('returnUrl is required');
@@ -188,9 +200,73 @@ export class PaymentsService {
       return { RspCode: '02', Message: 'Order already confirmed' };
     }
 
+    // If reservation expired/cancelled before payment confirmation, record payment but don't finalize stock.
+    const now = new Date();
+    if (order.status !== 'pending_payment') {
+      await this.markPaymentResult(order.orderCode, 'succeeded', verify);
+      return { RspCode: '00', Message: 'Confirm Success' };
+    }
+    if (order.reservedUntil && order.reservedUntil.getTime() < now.getTime()) {
+      await this.orderModel
+        .updateOne(
+          { _id: order._id, status: 'pending_payment' },
+          {
+            $set: {
+              status: 'cancelled_expired',
+              'payment.provider': 'vnpay',
+              'payment.providerTxnRef': order.orderCode,
+              'payment.vnp_TxnRef': verify.vnp_TxnRef,
+              'payment.vnp_TransactionNo': (verify as any).vnp_TransactionNo,
+              'payment.vnp_BankCode': (verify as any).vnp_BankCode,
+              'payment.vnp_ResponseCode': (verify as any).vnp_ResponseCode,
+              'payment.vnp_TransactionStatus': (verify as any)
+                .vnp_TransactionStatus,
+              'payment.vnp_PayDate': (verify as any).vnp_PayDate,
+              'payment.paidAt': new Date().toISOString(),
+            },
+          },
+        )
+        .exec();
+      await this.markPaymentResult(order.orderCode, 'succeeded', verify);
+      return { RspCode: '00', Message: 'Confirm Success' };
+    }
+
+    // Finalize reservation: reserved -= qty, stock -= qty
+    for (const it of order.items as any[]) {
+      const qty = Number(it.qty ?? 0);
+      if (!qty) continue;
+      if (it.variantId) {
+        const updated = await this.variantModel
+          .updateOne(
+            { _id: it.variantId, reserved: { $gte: qty }, stock: { $gte: qty } },
+            { $inc: { reserved: -qty, stock: -qty } },
+          )
+          .exec();
+        if (updated.modifiedCount !== 1) {
+          this.logger.error(
+            `finalize failed variant=${String(it.variantId)} qty=${qty}`,
+          );
+          throw new BadRequestException('Failed to finalize stock');
+        }
+      } else {
+        const updated = await this.productModel
+          .updateOne(
+            { _id: it.productId, reserved: { $gte: qty }, stock: { $gte: qty } },
+            { $inc: { reserved: -qty, stock: -qty } },
+          )
+          .exec();
+        if (updated.modifiedCount !== 1) {
+          this.logger.error(
+            `finalize failed product=${String(it.productId)} qty=${qty}`,
+          );
+          throw new BadRequestException('Failed to finalize stock');
+        }
+      }
+    }
+
     await this.orderModel
       .updateOne(
-        { _id: order._id },
+        { _id: order._id, status: 'pending_payment' },
         {
           $set: {
             status: 'paid',

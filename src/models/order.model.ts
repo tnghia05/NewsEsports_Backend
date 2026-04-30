@@ -7,7 +7,15 @@ export type OrderDocument = HydratedDocument<Order>;
 
 export const OrderModelName = 'Order';
 
-export type OrderStatus = 'pending_payment' | 'paid' | 'cancelled' | 'refunded';
+export type OrderStatus =
+  | 'pending_payment'
+  | 'paid'
+  | 'processing'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled'
+  | 'cancelled_expired'
+  | 'refunded';
 
 export type OrderPaymentProvider = 'vnpay';
 
@@ -20,11 +28,23 @@ export class OrderItemSnapshot {
   })
   productId!: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, required: false, index: true })
+  variantId?: Types.ObjectId;
+
   @Prop({ type: String, required: true })
   name!: string;
 
   @Prop({ type: String, required: true })
   slug!: string;
+
+  @Prop({ type: String })
+  variantTitle?: string;
+
+  @Prop({ type: String })
+  skuCode?: string;
+
+  @Prop({ type: [{ k: String, v: String }], default: [] })
+  variantOptions?: Array<{ k: string; v: string }>;
 
   @Prop({ type: Number, required: true, min: 0 })
   unitPrice!: number;
@@ -81,6 +101,27 @@ export class Order {
   @Prop({ type: [OrderItemSnapshot], required: true })
   items!: OrderItemSnapshot[];
 
+  @Prop({ type: String })
+  receiverName?: string;
+
+  @Prop({ type: String })
+  receiverPhone?: string;
+
+  @Prop({ type: String })
+  receiverEmail?: string;
+
+  @Prop({ type: String })
+  shippingAddress?: string;
+
+  @Prop({ type: String })
+  shippingMethod?: string;
+
+  @Prop({ type: String })
+  trackingCode?: string;
+
+  @Prop({ type: Date, index: true })
+  reservedUntil?: Date;
+
   @Prop({ type: Number, required: true, min: 0 })
   subtotal!: number;
 
@@ -92,7 +133,16 @@ export class Order {
 
   @Prop({
     type: String,
-    enum: ['pending_payment', 'paid', 'cancelled', 'refunded'],
+    enum: [
+      'pending_payment',
+      'paid',
+      'processing',
+      'shipped',
+      'delivered',
+      'cancelled',
+      'cancelled_expired',
+      'refunded',
+    ],
     default: 'pending_payment',
     index: true,
   })
@@ -106,3 +156,5 @@ export const OrderSchema = SchemaFactory.createForClass(Order);
 
 OrderSchema.index({ userId: 1, createdAt: -1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
+OrderSchema.index({ status: 1, reservedUntil: 1 });
+OrderSchema.index({ status: 1, orderCode: 1 });

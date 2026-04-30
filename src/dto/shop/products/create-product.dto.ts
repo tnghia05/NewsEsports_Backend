@@ -35,6 +35,10 @@ export class CreateProductDto {
 
   @IsOptional()
   @IsString()
+  type?: 'physical' | 'digital' | 'ticket' | 'service';
+
+  @IsOptional()
+  @IsString()
   status?: 'active' | 'inactive';
 
   @IsOptional()

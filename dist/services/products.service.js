@@ -16,10 +16,13 @@ exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const product_model_1 = require("../models/product.model");
+const product_variant_model_1 = require("../models/product-variant.model");
 let ProductsService = class ProductsService {
     productModel;
-    constructor(productModel) {
+    variantModel;
+    constructor(productModel, variantModel) {
         this.productModel = productModel;
+        this.variantModel = variantModel;
     }
     async create(admin, dto) {
         if (admin.role !== 'admin')
@@ -31,6 +34,7 @@ let ProductsService = class ProductsService {
                 slug: dto.slug.trim().toLowerCase(),
                 description: dto.description?.trim(),
                 imageUrls: dto.imageUrls?.map((x) => x.trim()).filter(Boolean) ?? [],
+                type: dto.type ?? 'physical',
                 price: dto.price,
                 stock: dto.stock,
                 status,
@@ -60,6 +64,8 @@ let ProductsService = class ProductsService {
             patch.description = dto.description?.trim();
         if (dto.imageUrls !== undefined)
             patch.imageUrls = dto.imageUrls.map((x) => x.trim()).filter(Boolean);
+        if (dto.type !== undefined)
+            patch.type = dto.type;
         if (dto.price !== undefined)
             patch.price = dto.price;
         if (dto.stock !== undefined)
@@ -95,7 +101,11 @@ let ProductsService = class ProductsService {
         const product = await this.productModel.findById(id).exec();
         if (!product)
             throw new common_1.NotFoundException('Product not found');
-        return product;
+        const variants = await this.variantModel
+            .find({ productId: product._id, status: 'active' })
+            .sort({ createdAt: 1 })
+            .exec();
+        return { ...product.toObject(), variants };
     }
     async listPublic(query) {
         const page = query.page ?? 1;
@@ -153,12 +163,98 @@ let ProductsService = class ProductsService {
             throw new common_1.NotFoundException('Product not found');
         return product;
     }
+    async listVariantsPublic(productId) {
+        const product = await this.requireProduct(productId);
+        if (product.status !== 'active')
+            throw new common_1.NotFoundException('Product not found');
+        return this.variantModel
+            .find({ productId: product._id, status: 'active' })
+            .sort({ createdAt: 1 })
+            .exec();
+    }
+    async listVariantsAdmin(admin, productId) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const product = await this.requireProduct(productId);
+        return this.variantModel
+            .find({ productId: product._id })
+            .sort({ createdAt: 1 })
+            .exec();
+    }
+    async createVariant(admin, productId, dto) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const product = await this.requireProduct(productId);
+        try {
+            return await this.variantModel.create({
+                productId: product._id,
+                title: dto.title.trim(),
+                skuCode: dto.skuCode.trim(),
+                options: (dto.options ?? []).map((o) => ({ k: o.k.trim(), v: o.v.trim() })),
+                price: dto.price,
+                stock: dto.stock,
+                status: dto.status ?? 'active',
+            });
+        }
+        catch (e) {
+            const msg = String(e?.message ?? e);
+            if (msg.toLowerCase().includes('duplicate key') && msg.includes('skuCode')) {
+                throw new common_1.BadRequestException('Variant skuCode already exists');
+            }
+            throw e;
+        }
+    }
+    async updateVariant(admin, variantId, dto) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const variant = await this.variantModel.findById(variantId).exec();
+        if (!variant)
+            throw new common_1.NotFoundException('Variant not found');
+        const patch = {};
+        if (dto.title !== undefined)
+            patch.title = dto.title.trim();
+        if (dto.skuCode !== undefined)
+            patch.skuCode = dto.skuCode.trim();
+        if (dto.options !== undefined)
+            patch.options = dto.options.map((o) => ({ k: o.k.trim(), v: o.v.trim() }));
+        if (dto.price !== undefined)
+            patch.price = dto.price;
+        if (dto.stock !== undefined)
+            patch.stock = dto.stock;
+        if (dto.status !== undefined)
+            patch.status = dto.status;
+        try {
+            const updated = await this.variantModel
+                .findByIdAndUpdate(variant._id, { $set: patch }, { returnDocument: 'after' })
+                .exec();
+            if (!updated)
+                throw new common_1.NotFoundException('Variant not found');
+            return updated;
+        }
+        catch (e) {
+            const msg = String(e?.message ?? e);
+            if (msg.toLowerCase().includes('duplicate key') && msg.includes('skuCode')) {
+                throw new common_1.BadRequestException('Variant skuCode already exists');
+            }
+            throw e;
+        }
+    }
+    async removeVariant(admin, variantId) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const variant = await this.variantModel.findById(variantId).exec();
+        if (!variant)
+            throw new common_1.NotFoundException('Variant not found');
+        await this.variantModel.deleteOne({ _id: variant._id }).exec();
+        return { ok: true };
+    }
 };
 exports.ProductsService = ProductsService;
 exports.ProductsService = ProductsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(product_model_1.ProductModelName)),
-    __metadata("design:paramtypes", [Function])
+    __param(1, (0, mongoose_1.InjectModel)(product_variant_model_1.ProductVariantModelName)),
+    __metadata("design:paramtypes", [Function, Function])
 ], ProductsService);
 function escapeRegex(input) {
     return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

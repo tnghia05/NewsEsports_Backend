@@ -43,6 +43,7 @@ const rss_sources_service_1 = require("../services/rss-sources.service");
 const products_service_1 = require("../services/products.service");
 const orders_service_1 = require("../services/orders.service");
 const payments_service_1 = require("../services/payments.service");
+const order_reservations_worker_service_1 = require("../services/order-reservations-worker.service");
 const user_model_1 = require("../models/user.model");
 const refresh_token_model_1 = require("../models/refresh-token.model");
 const post_model_1 = require("../models/post.model");
@@ -60,6 +61,7 @@ const hot_keyword_model_1 = require("../models/hot-keyword.model");
 const hashtag_event_model_1 = require("../models/hashtag-event.model");
 const hot_topic_model_1 = require("../models/hot-topic.model");
 const product_model_1 = require("../models/product.model");
+const product_variant_model_1 = require("../models/product-variant.model");
 const order_model_1 = require("../models/order.model");
 const payment_model_1 = require("../models/payment.model");
 const order_counter_model_1 = require("../models/order-counter.model");
@@ -96,6 +98,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: hashtag_event_model_1.HashtagEventModelName, schema: hashtag_event_model_1.HashtagEventSchema },
                 { name: hot_topic_model_1.HotTopicModelName, schema: hot_topic_model_1.HotTopicSchema },
                 { name: product_model_1.ProductModelName, schema: product_model_1.ProductSchema },
+                { name: product_variant_model_1.ProductVariantModelName, schema: product_variant_model_1.ProductVariantSchema },
                 { name: order_model_1.OrderModelName, schema: order_model_1.OrderSchema },
                 { name: payment_model_1.PaymentModelName, schema: payment_model_1.PaymentSchema },
                 { name: order_counter_model_1.OrderCounterModelName, schema: order_counter_model_1.OrderCounterSchema },
@@ -140,6 +143,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             products_service_1.ProductsService,
             orders_service_1.OrdersService,
             payments_service_1.PaymentsService,
+            order_reservations_worker_service_1.OrderReservationsWorkerService,
             ai_service_1.AiService,
             comment_moderation_worker_service_1.CommentModerationWorkerService,
             jwt_strategy_1.JwtStrategy,

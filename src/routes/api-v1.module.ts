@@ -34,6 +34,7 @@ import { RssSourcesService } from '../services/rss-sources.service';
 import { ProductsService } from '../services/products.service';
 import { OrdersService } from '../services/orders.service';
 import { PaymentsService } from '../services/payments.service';
+import { OrderReservationsWorkerService } from '../services/order-reservations-worker.service';
 import { UserModelName, UserSchema } from '../models/user.model';
 import {
   RefreshTokenModelName,
@@ -75,6 +76,7 @@ import {
 } from '../models/hashtag-event.model';
 import { HotTopicModelName, HotTopicSchema } from '../models/hot-topic.model';
 import { ProductModelName, ProductSchema } from '../models/product.model';
+import { ProductVariantModelName, ProductVariantSchema } from '../models/product-variant.model';
 import { OrderModelName, OrderSchema } from '../models/order.model';
 import { PaymentModelName, PaymentSchema } from '../models/payment.model';
 import {
@@ -111,6 +113,7 @@ import { R2Service } from '../infra/r2/r2.service';
       { name: HashtagEventModelName, schema: HashtagEventSchema },
       { name: HotTopicModelName, schema: HotTopicSchema },
       { name: ProductModelName, schema: ProductSchema },
+      { name: ProductVariantModelName, schema: ProductVariantSchema },
       { name: OrderModelName, schema: OrderSchema },
       { name: PaymentModelName, schema: PaymentSchema },
       { name: OrderCounterModelName, schema: OrderCounterSchema },
@@ -155,6 +158,7 @@ import { R2Service } from '../infra/r2/r2.service';
     ProductsService,
     OrdersService,
     PaymentsService,
+    OrderReservationsWorkerService,
     AiService,
     CommentModerationWorkerService,
     JwtStrategy,
