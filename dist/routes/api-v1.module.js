@@ -23,6 +23,7 @@ const rss_sources_controller_1 = require("../controllers/rss-sources.controller"
 const products_controller_1 = require("../controllers/products.controller");
 const orders_controller_1 = require("../controllers/orders.controller");
 const payments_controller_1 = require("../controllers/payments.controller");
+const uploads_controller_1 = require("../controllers/uploads.controller");
 const health_service_1 = require("../services/health.service");
 const users_service_1 = require("../services/users.service");
 const auth_service_1 = require("../services/auth.service");
@@ -67,6 +68,7 @@ const ai_service_1 = require("../infra/ai/ai.service");
 const rss_service_1 = require("../infra/rss/rss.service");
 const hot_keywords_worker_service_1 = require("../services/hot-keywords-worker.service");
 const hot_topics_worker_service_1 = require("../services/hot-topics-worker.service");
+const r2_service_1 = require("../infra/r2/r2.service");
 let ApiV1Module = class ApiV1Module {
 };
 exports.ApiV1Module = ApiV1Module;
@@ -114,6 +116,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             products_controller_1.ProductsController,
             orders_controller_1.OrdersController,
             payments_controller_1.PaymentsController,
+            uploads_controller_1.UploadsController,
         ],
         providers: [
             health_service_1.HealthService,
@@ -140,6 +143,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             ai_service_1.AiService,
             comment_moderation_worker_service_1.CommentModerationWorkerService,
             jwt_strategy_1.JwtStrategy,
+            r2_service_1.R2Service,
         ],
     })
 ], ApiV1Module);

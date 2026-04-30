@@ -22,6 +22,11 @@ declare const EnvSchema: z.ZodObject<{
         true: "true";
         false: "false";
     }>>>>;
+    R2_ENDPOINT: z.ZodOptional<z.ZodString>;
+    R2_ACCESS_KEY_ID: z.ZodOptional<z.ZodString>;
+    R2_SECRET_ACCESS_KEY: z.ZodOptional<z.ZodString>;
+    R2_BUCKET: z.ZodOptional<z.ZodString>;
+    R2_PUBLIC_BASE_URL: z.ZodOptional<z.ZodString>;
     CLOUDINARY_CLOUD_NAME: z.ZodOptional<z.ZodString>;
     CLOUDINARY_API_KEY: z.ZodOptional<z.ZodString>;
     CLOUDINARY_API_SECRET: z.ZodOptional<z.ZodString>;

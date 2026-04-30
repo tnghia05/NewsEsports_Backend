@@ -14,6 +14,7 @@ import { RssSourcesController } from '../controllers/rss-sources.controller';
 import { ProductsController } from '../controllers/products.controller';
 import { OrdersController } from '../controllers/orders.controller';
 import { PaymentsController } from '../controllers/payments.controller';
+import { UploadsController } from '../controllers/uploads.controller';
 import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
@@ -85,6 +86,7 @@ import { AiService } from '../infra/ai/ai.service';
 import { RssService } from '../infra/rss/rss.service';
 import { HotKeywordsWorkerService } from '../services/hot-keywords-worker.service';
 import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
+import { R2Service } from '../infra/r2/r2.service';
 
 @Module({
   imports: [
@@ -129,6 +131,7 @@ import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
     ProductsController,
     OrdersController,
     PaymentsController,
+    UploadsController,
   ],
   providers: [
     HealthService,
@@ -155,6 +158,7 @@ import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
     AiService,
     CommentModerationWorkerService,
     JwtStrategy,
+    R2Service,
   ],
 })
 export class ApiV1Module {}

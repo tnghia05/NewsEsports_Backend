@@ -41,6 +41,13 @@ const EnvSchema = z.object({
     z.enum(['true', 'false']).optional().default('false'),
   ),
 
+  // R2 (S3-compatible) Object Storage
+  R2_ENDPOINT: z.string().url().optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_BUCKET: z.string().min(1).optional(),
+  R2_PUBLIC_BASE_URL: z.string().url().optional(),
+
   // Cloudinary (optional, when doing uploads)
   CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
   CLOUDINARY_API_KEY: z.string().min(1).optional(),
