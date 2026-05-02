@@ -66,7 +66,12 @@ __decorate([
     __metadata("design:type", Date)
 ], News.prototype, "publishedAt", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, enum: ['admin', 'rss'], default: 'admin', index: true }),
+    (0, mongoose_1.Prop)({
+        type: String,
+        enum: ['admin', 'rss', 'crawl'],
+        default: 'admin',
+        index: true,
+    }),
     __metadata("design:type", String)
 ], News.prototype, "source", void 0);
 __decorate([

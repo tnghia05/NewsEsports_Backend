@@ -16,6 +16,7 @@ import { CurrentUser } from '../decorators/user.decorator';
 import type { JwtUser } from '../types/auth';
 import { NewsService } from '../services/news.service';
 import { NewsImportWorkerService } from '../services/news-import-worker.service';
+import { NewsCrawlWorkerService } from '../services/news-crawl-worker.service';
 import { CreateNewsDto } from '../dto/news/create-news.dto';
 import { UpdateNewsDto } from '../dto/news/update-news.dto';
 import { QueryNewsDto } from '../dto/news/query-news.dto';
@@ -25,6 +26,7 @@ export class NewsController {
   constructor(
     private readonly newsService: NewsService,
     private readonly newsImportWorkerService: NewsImportWorkerService,
+    private readonly newsCrawlWorkerService: NewsCrawlWorkerService,
   ) {}
 
   // Public
@@ -81,5 +83,12 @@ export class NewsController {
   @Roles('admin')
   importRss() {
     return this.newsImportWorkerService.importNow();
+  }
+
+  @Post('admin/crawl-now')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  crawlNow() {
+    return this.newsCrawlWorkerService.crawlNow();
   }
 }

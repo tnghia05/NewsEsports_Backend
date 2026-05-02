@@ -11,6 +11,7 @@ import { SearchController } from '../controllers/search.controller';
 import { HashtagsController } from '../controllers/hashtags.controller';
 import { NewsController } from '../controllers/news.controller';
 import { RssSourcesController } from '../controllers/rss-sources.controller';
+import { CrawlSourcesController } from '../controllers/crawl-sources.controller';
 import { ProductsController } from '../controllers/products.controller';
 import { OrdersController } from '../controllers/orders.controller';
 import { PaymentsController } from '../controllers/payments.controller';
@@ -31,6 +32,8 @@ import { CommentModerationWorkerService } from '../services/comment-moderation-w
 import { NewsService } from '../services/news.service';
 import { NewsImportWorkerService } from '../services/news-import-worker.service';
 import { RssSourcesService } from '../services/rss-sources.service';
+import { CrawlSourcesService } from '../services/crawl-sources.service';
+import { NewsCrawlWorkerService } from '../services/news-crawl-worker.service';
 import { ProductsService } from '../services/products.service';
 import { OrdersService } from '../services/orders.service';
 import { PaymentsService } from '../services/payments.service';
@@ -63,6 +66,10 @@ import {
   RssSourceModelName,
   RssSourceSchema,
 } from '../models/rss-source.model';
+import {
+  CrawlSourceModelName,
+  CrawlSourceSchema,
+} from '../models/crawl-source.model';
 import {
   SearchEventModelName,
   SearchEventSchema,
@@ -109,6 +116,7 @@ import { R2Service } from '../infra/r2/r2.service';
       },
       { name: NewsModelName, schema: NewsSchema },
       { name: RssSourceModelName, schema: RssSourceSchema },
+      { name: CrawlSourceModelName, schema: CrawlSourceSchema },
       { name: SearchEventModelName, schema: SearchEventSchema },
       { name: HotKeywordModelName, schema: HotKeywordSchema },
       { name: HashtagEventModelName, schema: HashtagEventSchema },
@@ -129,6 +137,7 @@ import { R2Service } from '../infra/r2/r2.service';
     CommentsController,
     NewsController,
     RssSourcesController,
+    CrawlSourcesController,
     HashtagsController,
     SearchController,
     NotificationsController,
@@ -154,6 +163,8 @@ import { R2Service } from '../infra/r2/r2.service';
     RssSourcesService,
     RssService,
     NewsImportWorkerService,
+    CrawlSourcesService,
+    NewsCrawlWorkerService,
     HotKeywordsWorkerService,
     HotTopicsWorkerService,
     ProductsService,

@@ -2,7 +2,7 @@ import type { HydratedDocument } from 'mongoose';
 export type NewsDocument = HydratedDocument<News>;
 export declare const NewsModelName = "News";
 export type NewsStatus = 'draft' | 'published';
-export type NewsSource = 'admin' | 'rss';
+export type NewsSource = 'admin' | 'rss' | 'crawl';
 export declare class News {
     title: string;
     slug: string;

@@ -20,15 +20,18 @@ const roles_decorator_1 = require("../decorators/roles.decorator");
 const user_decorator_1 = require("../decorators/user.decorator");
 const news_service_1 = require("../services/news.service");
 const news_import_worker_service_1 = require("../services/news-import-worker.service");
+const news_crawl_worker_service_1 = require("../services/news-crawl-worker.service");
 const create_news_dto_1 = require("../dto/news/create-news.dto");
 const update_news_dto_1 = require("../dto/news/update-news.dto");
 const query_news_dto_1 = require("../dto/news/query-news.dto");
 let NewsController = class NewsController {
     newsService;
     newsImportWorkerService;
-    constructor(newsService, newsImportWorkerService) {
+    newsCrawlWorkerService;
+    constructor(newsService, newsImportWorkerService, newsCrawlWorkerService) {
         this.newsService = newsService;
         this.newsImportWorkerService = newsImportWorkerService;
+        this.newsCrawlWorkerService = newsCrawlWorkerService;
     }
     listPublic(query) {
         return this.newsService.listPublic(query);
@@ -53,6 +56,9 @@ let NewsController = class NewsController {
     }
     importRss() {
         return this.newsImportWorkerService.importNow();
+    }
+    crawlNow() {
+        return this.newsCrawlWorkerService.crawlNow();
     }
 };
 exports.NewsController = NewsController;
@@ -126,9 +132,18 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], NewsController.prototype, "importRss", null);
+__decorate([
+    (0, common_1.Post)('admin/crawl-now'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], NewsController.prototype, "crawlNow", null);
 exports.NewsController = NewsController = __decorate([
     (0, common_1.Controller)('news'),
     __metadata("design:paramtypes", [news_service_1.NewsService,
-        news_import_worker_service_1.NewsImportWorkerService])
+        news_import_worker_service_1.NewsImportWorkerService,
+        news_crawl_worker_service_1.NewsCrawlWorkerService])
 ], NewsController);
 //# sourceMappingURL=news.controller.js.map

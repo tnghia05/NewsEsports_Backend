@@ -6,7 +6,7 @@ export type NewsDocument = HydratedDocument<News>;
 export const NewsModelName = 'News';
 
 export type NewsStatus = 'draft' | 'published';
-export type NewsSource = 'admin' | 'rss';
+export type NewsSource = 'admin' | 'rss' | 'crawl';
 
 @Schema({ timestamps: true })
 export class News {
@@ -39,7 +39,12 @@ export class News {
   @Prop({ type: Date, index: true })
   publishedAt?: Date;
 
-  @Prop({ type: String, enum: ['admin', 'rss'], default: 'admin', index: true })
+  @Prop({
+    type: String,
+    enum: ['admin', 'rss', 'crawl'],
+    default: 'admin',
+    index: true,
+  })
   source!: NewsSource;
 
   // Admin author id (for source=admin). Keep string to match other models.

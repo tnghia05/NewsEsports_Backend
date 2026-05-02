@@ -20,6 +20,7 @@ const search_controller_1 = require("../controllers/search.controller");
 const hashtags_controller_1 = require("../controllers/hashtags.controller");
 const news_controller_1 = require("../controllers/news.controller");
 const rss_sources_controller_1 = require("../controllers/rss-sources.controller");
+const crawl_sources_controller_1 = require("../controllers/crawl-sources.controller");
 const products_controller_1 = require("../controllers/products.controller");
 const orders_controller_1 = require("../controllers/orders.controller");
 const payments_controller_1 = require("../controllers/payments.controller");
@@ -40,6 +41,8 @@ const comment_moderation_worker_service_1 = require("../services/comment-moderat
 const news_service_1 = require("../services/news.service");
 const news_import_worker_service_1 = require("../services/news-import-worker.service");
 const rss_sources_service_1 = require("../services/rss-sources.service");
+const crawl_sources_service_1 = require("../services/crawl-sources.service");
+const news_crawl_worker_service_1 = require("../services/news-crawl-worker.service");
 const products_service_1 = require("../services/products.service");
 const orders_service_1 = require("../services/orders.service");
 const payments_service_1 = require("../services/payments.service");
@@ -57,6 +60,7 @@ const notification_model_1 = require("../models/notification.model");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const news_model_1 = require("../models/news.model");
 const rss_source_model_1 = require("../models/rss-source.model");
+const crawl_source_model_1 = require("../models/crawl-source.model");
 const search_event_model_1 = require("../models/search-event.model");
 const hot_keyword_model_1 = require("../models/hot-keyword.model");
 const hashtag_event_model_1 = require("../models/hashtag-event.model");
@@ -94,6 +98,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 },
                 { name: news_model_1.NewsModelName, schema: news_model_1.NewsSchema },
                 { name: rss_source_model_1.RssSourceModelName, schema: rss_source_model_1.RssSourceSchema },
+                { name: crawl_source_model_1.CrawlSourceModelName, schema: crawl_source_model_1.CrawlSourceSchema },
                 { name: search_event_model_1.SearchEventModelName, schema: search_event_model_1.SearchEventSchema },
                 { name: hot_keyword_model_1.HotKeywordModelName, schema: hot_keyword_model_1.HotKeywordSchema },
                 { name: hashtag_event_model_1.HashtagEventModelName, schema: hashtag_event_model_1.HashtagEventSchema },
@@ -114,6 +119,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             comments_controller_1.CommentsController,
             news_controller_1.NewsController,
             rss_sources_controller_1.RssSourcesController,
+            crawl_sources_controller_1.CrawlSourcesController,
             hashtags_controller_1.HashtagsController,
             search_controller_1.SearchController,
             notifications_controller_1.NotificationsController,
@@ -139,6 +145,8 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             rss_sources_service_1.RssSourcesService,
             rss_service_1.RssService,
             news_import_worker_service_1.NewsImportWorkerService,
+            crawl_sources_service_1.CrawlSourcesService,
+            news_crawl_worker_service_1.NewsCrawlWorkerService,
             hot_keywords_worker_service_1.HotKeywordsWorkerService,
             hot_topics_worker_service_1.HotTopicsWorkerService,
             products_service_1.ProductsService,
