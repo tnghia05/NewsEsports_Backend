@@ -28,4 +28,5 @@ export declare class NewsImportWorkerService implements OnModuleInit, OnModuleDe
     private getSources;
     private runImport;
     private tryCreateFromRss;
+    private enrichFromExternalUrl;
 }

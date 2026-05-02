@@ -20,6 +20,8 @@ const mongoose_1 = require("@nestjs/mongoose");
 const news_model_1 = require("../models/news.model");
 const rss_service_1 = require("../infra/rss/rss.service");
 const rss_sources_service_1 = require("./rss-sources.service");
+const readability_1 = require("@mozilla/readability");
+const jsdom_1 = require("jsdom");
 let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorkerService {
     config;
     newsModel;
@@ -113,7 +115,7 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
         const content = (item.content ?? '').trim() || title;
         const slug = makeRssSlug(title, externalId);
         try {
-            await this.newsModel.create({
+            const created = await this.newsModel.create({
                 title,
                 slug,
                 excerpt: undefined,
@@ -127,6 +129,12 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
                 externalUrl: item.link,
                 externalId,
             });
+            try {
+                await this.enrichFromExternalUrl(created._id, item.link, content);
+            }
+            catch (e) {
+                this.logger.debug(`rss enrich skipped externalUrl=${item.link} err=${String(e?.message ?? e)}`);
+            }
             return true;
         }
         catch (e) {
@@ -136,6 +144,64 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
             this.logger.warn(`RSS item create failed feed=${feedUrl} externalId=${externalId} err=${String(e?.message ?? e)}`);
             return false;
         }
+    }
+    async enrichFromExternalUrl(newsId, externalUrl, currentContent) {
+        const curLen = (currentContent ?? '').trim().length;
+        if (curLen >= 2000)
+            return;
+        const timeoutMs = Number(this.config.get('RSS_SCRAPE_TIMEOUT_MS') ?? 12_000);
+        const maxBytes = Number(this.config.get('RSS_SCRAPE_MAX_BYTES') ?? 1_500_000);
+        const started = Date.now();
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
+        let html = '';
+        try {
+            const res = await fetch(externalUrl, {
+                signal: ctrl.signal,
+                headers: {
+                    'user-agent': 'Mozilla/5.0 (compatible; backend-rss-import/1.0; +https://backend)',
+                    accept: 'text/html,application/xhtml+xml',
+                },
+            });
+            if (!res.ok)
+                return;
+            html = await res.text();
+        }
+        finally {
+            clearTimeout(t);
+        }
+        if (!html || html.length > maxBytes)
+            return;
+        const dom = new jsdom_1.JSDOM(html, { url: externalUrl });
+        const reader = new readability_1.Readability(dom.window.document);
+        const article = reader.parse();
+        if (!article?.content)
+            return;
+        const extractedHtml = article.content.trim();
+        const extractedText = (article.textContent ?? '').trim();
+        if (extractedText.length < curLen)
+            return;
+        const excerpt = (article.excerpt ?? '').trim() ||
+            (extractedText.length > 260 ? `${extractedText.slice(0, 260).trim()}…` : extractedText);
+        const ogImage = dom.window.document
+            .querySelector('meta[property=\"og:image\"], meta[name=\"og:image\"]')
+            ?.getAttribute('content')
+            ?.trim() || undefined;
+        const firstImg = dom.window.document
+            .querySelector('img')
+            ?.getAttribute('src')
+            ?.trim() || undefined;
+        const coverImageUrl = ogImage ?? firstImg;
+        await this.newsModel
+            .updateOne({ _id: newsId }, {
+            $set: {
+                content: extractedHtml,
+                excerpt,
+                ...(coverImageUrl ? { coverImageUrl } : {}),
+            },
+        })
+            .exec();
+        this.logger.log(`rss enrich ok ms=${Date.now() - started} url=${externalUrl} chars=${extractedText.length}`);
     }
 };
 exports.NewsImportWorkerService = NewsImportWorkerService;
