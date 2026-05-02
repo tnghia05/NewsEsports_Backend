@@ -138,6 +138,22 @@ export class OrdersService {
     // Reserve TTL: hold stock for 15 minutes (no permanent stock decrement here)
     const reservedUntil = new Date(Date.now() + 15 * 60 * 1000);
 
+    // Sellable = stock - reserved. Dùng $ifNull vì document cũ có thể thiếu field `reserved`
+    // (khi đó $subtract với missing → null và filter không khớp → báo Out of stock sai).
+    const sellableGteQty = (qty: number) => ({
+      $expr: {
+        $gte: [
+          {
+            $subtract: [
+              { $ifNull: ['$stock', 0] },
+              { $ifNull: ['$reserved', 0] },
+            ],
+          },
+          qty,
+        ],
+      },
+    });
+
     // Best-effort reservation. If any item fails, rollback previous reservations.
     for (let i = 0; i < items.length; i++) {
       const it: any = items[i];
@@ -146,7 +162,7 @@ export class OrdersService {
             .updateOne(
               {
                 _id: it.variantId,
-                $expr: { $gte: [{ $subtract: ['$stock', '$reserved'] }, it.qty] },
+                ...sellableGteQty(it.qty),
               },
               { $inc: { reserved: it.qty } },
             )
@@ -155,7 +171,7 @@ export class OrdersService {
             .updateOne(
               {
                 _id: it.productId,
-                $expr: { $gte: [{ $subtract: ['$stock', '$reserved'] }, it.qty] },
+                ...sellableGteQty(it.qty),
               },
               { $inc: { reserved: it.qty } },
             )

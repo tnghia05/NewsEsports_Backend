@@ -42,6 +42,7 @@ let OrderReservationsWorkerService = OrderReservationsWorkerService_1 = class Or
         if (this.isRunning)
             return;
         this.isRunning = true;
+        const started = Date.now();
         try {
             const now = new Date();
             const expired = await this.orderModel
@@ -51,12 +52,18 @@ let OrderReservationsWorkerService = OrderReservationsWorkerService_1 = class Or
             })
                 .limit(50)
                 .exec();
+            let cancelled = 0;
             for (const order of expired) {
-                await this.cancelAndRelease(order._id, now);
+                const did = await this.cancelAndRelease(order._id, now);
+                if (did)
+                    cancelled += 1;
+            }
+            if (expired.length) {
+                this.logger.log(`reservation_tick scanned=${expired.length} cancelled=${cancelled} ms=${Date.now() - started}`);
             }
         }
         catch (e) {
-            this.logger.error(`reservation tick failed: ${String(e?.message ?? e)}`);
+            this.logger.error(`reservation tick failed: ${String(e?.message ?? e)} ms=${Date.now() - started}`);
         }
         finally {
             this.isRunning = false;
@@ -67,9 +74,10 @@ let OrderReservationsWorkerService = OrderReservationsWorkerService_1 = class Or
             .findOneAndUpdate({ _id: orderId, status: 'pending_payment', reservedUntil: { $lt: now } }, { $set: { status: 'cancelled_expired' } }, { returnDocument: 'after' })
             .exec();
         if (!cancelled)
-            return;
+            return false;
         await this.reservations.releasePendingReservationIfNeeded(cancelled._id);
-        this.logger.log(`released expired reservation order=${String(cancelled.orderCode)}`);
+        this.logger.log(`released expired reservation order=${String(cancelled.orderCode)} id=${String(cancelled._id)}`);
+        return true;
     }
 };
 exports.OrderReservationsWorkerService = OrderReservationsWorkerService;

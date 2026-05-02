@@ -126,19 +126,32 @@ let OrdersService = class OrdersService {
             };
         });
         const reservedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        const sellableGteQty = (qty) => ({
+            $expr: {
+                $gte: [
+                    {
+                        $subtract: [
+                            { $ifNull: ['$stock', 0] },
+                            { $ifNull: ['$reserved', 0] },
+                        ],
+                    },
+                    qty,
+                ],
+            },
+        });
         for (let i = 0; i < items.length; i++) {
             const it = items[i];
             const updated = it.variantId
                 ? await this.variantModel
                     .updateOne({
                     _id: it.variantId,
-                    $expr: { $gte: [{ $subtract: ['$stock', '$reserved'] }, it.qty] },
+                    ...sellableGteQty(it.qty),
                 }, { $inc: { reserved: it.qty } })
                     .exec()
                 : await this.productModel
                     .updateOne({
                     _id: it.productId,
-                    $expr: { $gte: [{ $subtract: ['$stock', '$reserved'] }, it.qty] },
+                    ...sellableGteQty(it.qty),
                 }, { $inc: { reserved: it.qty } })
                     .exec();
             if (updated.modifiedCount !== 1) {
