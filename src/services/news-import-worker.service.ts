@@ -10,8 +10,9 @@ import type { Model } from 'mongoose';
 import { NewsModelName, type NewsDocument } from '../models/news.model';
 import { RssService } from '../infra/rss/rss.service';
 import { RssSourcesService } from './rss-sources.service';
-import { Readability } from '@mozilla/readability';
-import { JSDOM } from 'jsdom';
+// NOTE: Do NOT import jsdom/readability at top-level.
+// Some production environments run older Node where `jsdom` dependency chain can trigger `ERR_REQUIRE_ESM`.
+// We lazy-load them inside `enrichFromExternalUrl` and gracefully fallback to RSS snippet.
 
 @Injectable()
 export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -169,6 +170,19 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
     externalUrl: string,
     currentContent: string,
   ) {
+    let JSDOM: any;
+    let Readability: any;
+    try {
+      // Lazy-load to avoid hard crash on older Node/PM2 environments (ERR_REQUIRE_ESM).
+      ({ JSDOM } = await import('jsdom'));
+      ({ Readability } = await import('@mozilla/readability'));
+    } catch (e: any) {
+      this.logger.warn(
+        `rss enrich unavailable (jsdom/readability load failed): ${String(e?.message ?? e)}`,
+      );
+      return;
+    }
+
     // Heuristic: skip if RSS content already looks substantial.
     const curLen = (currentContent ?? '').trim().length;
     if (curLen >= 2000) return;

@@ -20,8 +20,6 @@ const mongoose_1 = require("@nestjs/mongoose");
 const news_model_1 = require("../models/news.model");
 const rss_service_1 = require("../infra/rss/rss.service");
 const rss_sources_service_1 = require("./rss-sources.service");
-const readability_1 = require("@mozilla/readability");
-const jsdom_1 = require("jsdom");
 let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorkerService {
     config;
     newsModel;
@@ -146,6 +144,16 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
         }
     }
     async enrichFromExternalUrl(newsId, externalUrl, currentContent) {
+        let JSDOM;
+        let Readability;
+        try {
+            ({ JSDOM } = await import('jsdom'));
+            ({ Readability } = await import('@mozilla/readability'));
+        }
+        catch (e) {
+            this.logger.warn(`rss enrich unavailable (jsdom/readability load failed): ${String(e?.message ?? e)}`);
+            return;
+        }
         const curLen = (currentContent ?? '').trim().length;
         if (curLen >= 2000)
             return;
@@ -172,8 +180,8 @@ let NewsImportWorkerService = NewsImportWorkerService_1 = class NewsImportWorker
         }
         if (!html || html.length > maxBytes)
             return;
-        const dom = new jsdom_1.JSDOM(html, { url: externalUrl });
-        const reader = new readability_1.Readability(dom.window.document);
+        const dom = new JSDOM(html, { url: externalUrl });
+        const reader = new Readability(dom.window.document);
         const article = reader.parse();
         if (!article?.content)
             return;
