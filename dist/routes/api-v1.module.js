@@ -43,6 +43,7 @@ const rss_sources_service_1 = require("../services/rss-sources.service");
 const products_service_1 = require("../services/products.service");
 const orders_service_1 = require("../services/orders.service");
 const payments_service_1 = require("../services/payments.service");
+const order_reservations_service_1 = require("../services/order-reservations.service");
 const order_reservations_worker_service_1 = require("../services/order-reservations-worker.service");
 const user_model_1 = require("../models/user.model");
 const refresh_token_model_1 = require("../models/refresh-token.model");
@@ -143,6 +144,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             products_service_1.ProductsService,
             orders_service_1.OrdersService,
             payments_service_1.PaymentsService,
+            order_reservations_service_1.OrderReservationsService,
             order_reservations_worker_service_1.OrderReservationsWorkerService,
             ai_service_1.AiService,
             comment_moderation_worker_service_1.CommentModerationWorkerService,

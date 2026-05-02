@@ -18,19 +18,16 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const order_model_1 = require("../models/order.model");
-const product_model_1 = require("../models/product.model");
-const product_variant_model_1 = require("../models/product-variant.model");
+const order_reservations_service_1 = require("./order-reservations.service");
 let OrderReservationsWorkerService = OrderReservationsWorkerService_1 = class OrderReservationsWorkerService {
     orderModel;
-    productModel;
-    variantModel;
+    reservations;
     logger = new common_1.Logger(OrderReservationsWorkerService_1.name);
     timer;
     isRunning = false;
-    constructor(orderModel, productModel, variantModel) {
+    constructor(orderModel, reservations) {
         this.orderModel = orderModel;
-        this.productModel = productModel;
-        this.variantModel = variantModel;
+        this.reservations = reservations;
     }
     onModuleInit() {
         this.timer = setInterval(() => void this.tick(), 60_000);
@@ -71,21 +68,7 @@ let OrderReservationsWorkerService = OrderReservationsWorkerService_1 = class Or
             .exec();
         if (!cancelled)
             return;
-        for (const it of cancelled.items) {
-            const qty = Number(it.qty ?? 0);
-            if (!qty)
-                continue;
-            if (it.variantId) {
-                await this.variantModel
-                    .updateOne({ _id: it.variantId }, { $inc: { reserved: -qty } })
-                    .exec();
-            }
-            else {
-                await this.productModel
-                    .updateOne({ _id: it.productId }, { $inc: { reserved: -qty } })
-                    .exec();
-            }
-        }
+        await this.reservations.releasePendingReservationIfNeeded(cancelled._id);
         this.logger.log(`released expired reservation order=${String(cancelled.orderCode)}`);
     }
 };
@@ -93,10 +76,7 @@ exports.OrderReservationsWorkerService = OrderReservationsWorkerService;
 exports.OrderReservationsWorkerService = OrderReservationsWorkerService = OrderReservationsWorkerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(order_model_1.OrderModelName)),
-    __param(1, (0, mongoose_1.InjectModel)(product_model_1.ProductModelName)),
-    __param(2, (0, mongoose_1.InjectModel)(product_variant_model_1.ProductVariantModelName)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model,
-        mongoose_2.Model])
+        order_reservations_service_1.OrderReservationsService])
 ], OrderReservationsWorkerService);
 //# sourceMappingURL=order-reservations-worker.service.js.map

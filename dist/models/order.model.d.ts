@@ -29,6 +29,14 @@ export declare class OrderPaymentSnapshot {
     vnp_PayDate?: string;
     paidAt?: string;
 }
+export declare class OrderAuditEntry {
+    at: Date;
+    actorId: Types.ObjectId;
+    actorRole: string;
+    action: string;
+    message?: string;
+    meta?: Record<string, unknown>;
+}
 export declare class Order {
     userId: Types.ObjectId;
     orderCode: string;
@@ -39,6 +47,12 @@ export declare class Order {
     shippingAddress?: string;
     shippingMethod?: string;
     trackingCode?: string;
+    reservationReleased: boolean;
+    inventoryFinalized: boolean;
+    cancelReason?: string;
+    cancelledAt?: Date;
+    internalNotes?: string;
+    auditLog: OrderAuditEntry[];
     reservedUntil?: Date;
     subtotal: number;
     shippingFee: number;
@@ -128,6 +142,60 @@ export declare const OrderSchema: import("mongoose").Schema<Order, import("mongo
         id: string;
     }> | undefined;
     trackingCode?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    reservationReleased?: import("mongoose").SchemaDefinitionProperty<boolean, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    inventoryFinalized?: import("mongoose").SchemaDefinitionProperty<boolean, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    cancelReason?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    cancelledAt?: import("mongoose").SchemaDefinitionProperty<Date | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    internalNotes?: import("mongoose").SchemaDefinitionProperty<string | undefined, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    auditLog?: import("mongoose").SchemaDefinitionProperty<OrderAuditEntry[], Order, import("mongoose").Document<unknown, {}, Order, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
         _id: Types.ObjectId;

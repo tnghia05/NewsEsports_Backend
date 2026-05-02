@@ -20,6 +20,7 @@ import {
 } from '../models/payment.model';
 import type { VNPayCreatePaymentUrlDto } from '../dto/shop/payments/vnpay-create-payment-url.dto';
 import type { JwtUser } from '../types/auth';
+import { OrderReservationsService } from './order-reservations.service';
 import { ProductModelName, type ProductDocument } from '../models/product.model';
 import {
   ProductVariantModelName,
@@ -42,6 +43,7 @@ export class PaymentsService {
     private readonly productModel: Model<ProductDocument>,
     @InjectModel(ProductVariantModelName)
     private readonly variantModel: Model<ProductVariantDocument>,
+    private readonly reservations: OrderReservationsService,
   ) {
     const tmnCode = this.config.get<string>('VNPAY_TMN_CODE', { infer: true });
     const secureSecret = this.config.get<string>('VNPAY_SECURE_SECRET', {
@@ -184,6 +186,7 @@ export class PaymentsService {
     if (!verify.isSuccess) {
       // Payment failed/cancelled on gateway
       await this.markPaymentResult(verify.vnp_TxnRef, 'failed', verify);
+      await this.reservations.releasePendingReservationByTxnRef(verify.vnp_TxnRef);
       return { RspCode: '00', Message: 'Confirm Success' };
     }
 
@@ -227,6 +230,7 @@ export class PaymentsService {
           },
         )
         .exec();
+      await this.reservations.releasePendingReservationIfNeeded(order._id);
       await this.markPaymentResult(order.orderCode, 'succeeded', verify);
       return { RspCode: '00', Message: 'Confirm Success' };
     }
@@ -264,12 +268,16 @@ export class PaymentsService {
       }
     }
 
+    await this.reservations.markInventoryFinalizedIfNeeded(order._id);
+
     await this.orderModel
       .updateOne(
         { _id: order._id, status: 'pending_payment' },
         {
           $set: {
             status: 'paid',
+            reservationReleased: true,
+            inventoryFinalized: true,
             'payment.provider': 'vnpay',
             'payment.providerTxnRef': order.orderCode,
             'payment.vnp_TxnRef': verify.vnp_TxnRef,

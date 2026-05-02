@@ -21,6 +21,7 @@ const vnpay_1 = require("vnpay");
 const mongoose_2 = require("mongoose");
 const order_model_1 = require("../models/order.model");
 const payment_model_1 = require("../models/payment.model");
+const order_reservations_service_1 = require("./order-reservations.service");
 const product_model_1 = require("../models/product.model");
 const product_variant_model_1 = require("../models/product-variant.model");
 let PaymentsService = PaymentsService_1 = class PaymentsService {
@@ -29,15 +30,17 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
     paymentModel;
     productModel;
     variantModel;
+    reservations;
     logger = new common_1.Logger(PaymentsService_1.name);
     vnpay;
     defaultReturnUrl;
-    constructor(config, orderModel, paymentModel, productModel, variantModel) {
+    constructor(config, orderModel, paymentModel, productModel, variantModel, reservations) {
         this.config = config;
         this.orderModel = orderModel;
         this.paymentModel = paymentModel;
         this.productModel = productModel;
         this.variantModel = variantModel;
+        this.reservations = reservations;
         const tmnCode = this.config.get('VNPAY_TMN_CODE', { infer: true });
         const secureSecret = this.config.get('VNPAY_SECURE_SECRET', {
             infer: true,
@@ -150,6 +153,7 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
         }
         if (!verify.isSuccess) {
             await this.markPaymentResult(verify.vnp_TxnRef, 'failed', verify);
+            await this.reservations.releasePendingReservationByTxnRef(verify.vnp_TxnRef);
             return { RspCode: '00', Message: 'Confirm Success' };
         }
         const order = await this.orderModel
@@ -186,6 +190,7 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
                 },
             })
                 .exec();
+            await this.reservations.releasePendingReservationIfNeeded(order._id);
             await this.markPaymentResult(order.orderCode, 'succeeded', verify);
             return { RspCode: '00', Message: 'Confirm Success' };
         }
@@ -212,10 +217,13 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
                 }
             }
         }
+        await this.reservations.markInventoryFinalizedIfNeeded(order._id);
         await this.orderModel
             .updateOne({ _id: order._id, status: 'pending_payment' }, {
             $set: {
                 status: 'paid',
+                reservationReleased: true,
+                inventoryFinalized: true,
                 'payment.provider': 'vnpay',
                 'payment.providerTxnRef': order.orderCode,
                 'payment.vnp_TxnRef': verify.vnp_TxnRef,
@@ -264,7 +272,7 @@ exports.PaymentsService = PaymentsService = PaymentsService_1 = __decorate([
     __param(2, (0, mongoose_1.InjectModel)(payment_model_1.PaymentModelName)),
     __param(3, (0, mongoose_1.InjectModel)(product_model_1.ProductModelName)),
     __param(4, (0, mongoose_1.InjectModel)(product_variant_model_1.ProductVariantModelName)),
-    __metadata("design:paramtypes", [config_1.ConfigService, Function, Function, Function, Function])
+    __metadata("design:paramtypes", [config_1.ConfigService, Function, Function, Function, Function, order_reservations_service_1.OrderReservationsService])
 ], PaymentsService);
 function safeOrderInfo(input) {
     return input

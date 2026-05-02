@@ -16,6 +16,7 @@ class QueryOrdersDto {
     page = 1;
     limit = 20;
     status;
+    q;
 }
 exports.QueryOrdersDto = QueryOrdersDto;
 __decorate([
@@ -46,4 +47,9 @@ __decorate([
     ]),
     __metadata("design:type", String)
 ], QueryOrdersDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryOrdersDto.prototype, "q", void 0);
 //# sourceMappingURL=query-orders.dto.js.map

@@ -2,11 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { OrderModelName, type OrderDocument } from '../models/order.model';
-import { ProductModelName, type ProductDocument } from '../models/product.model';
-import {
-  ProductVariantModelName,
-  type ProductVariantDocument,
-} from '../models/product-variant.model';
+import { OrderReservationsService } from './order-reservations.service';
 
 @Injectable()
 export class OrderReservationsWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -16,10 +12,7 @@ export class OrderReservationsWorkerService implements OnModuleInit, OnModuleDes
 
   constructor(
     @InjectModel(OrderModelName) private readonly orderModel: Model<OrderDocument>,
-    @InjectModel(ProductModelName)
-    private readonly productModel: Model<ProductDocument>,
-    @InjectModel(ProductVariantModelName)
-    private readonly variantModel: Model<ProductVariantDocument>,
+    private readonly reservations: OrderReservationsService,
   ) {}
 
   onModuleInit() {
@@ -37,6 +30,7 @@ export class OrderReservationsWorkerService implements OnModuleInit, OnModuleDes
   private async tick() {
     if (this.isRunning) return;
     this.isRunning = true;
+    const started = Date.now();
     try {
       const now = new Date();
       const expired = await this.orderModel
@@ -47,17 +41,27 @@ export class OrderReservationsWorkerService implements OnModuleInit, OnModuleDes
         .limit(50)
         .exec();
 
+      let cancelled = 0;
       for (const order of expired) {
-        await this.cancelAndRelease(order._id, now);
+        const did = await this.cancelAndRelease(order._id, now);
+        if (did) cancelled += 1;
+      }
+
+      if (expired.length) {
+        this.logger.log(
+          `reservation_tick scanned=${expired.length} cancelled=${cancelled} ms=${Date.now() - started}`,
+        );
       }
     } catch (e: any) {
-      this.logger.error(`reservation tick failed: ${String(e?.message ?? e)}`);
+      this.logger.error(
+        `reservation tick failed: ${String(e?.message ?? e)} ms=${Date.now() - started}`,
+      );
     } finally {
       this.isRunning = false;
     }
   }
 
-  private async cancelAndRelease(orderId: any, now: Date) {
+  private async cancelAndRelease(orderId: any, now: Date): Promise<boolean> {
     // CAS: only cancel if still pending and still expired
     const cancelled = await this.orderModel
       .findOneAndUpdate(
@@ -66,24 +70,14 @@ export class OrderReservationsWorkerService implements OnModuleInit, OnModuleDes
         { returnDocument: 'after' },
       )
       .exec();
-    if (!cancelled) return;
+    if (!cancelled) return false;
 
-    // Release reservations
-    for (const it of cancelled.items as any[]) {
-      const qty = Number(it.qty ?? 0);
-      if (!qty) continue;
-      if (it.variantId) {
-        await this.variantModel
-          .updateOne({ _id: it.variantId }, { $inc: { reserved: -qty } })
-          .exec();
-      } else {
-        await this.productModel
-          .updateOne({ _id: it.productId }, { $inc: { reserved: -qty } })
-          .exec();
-      }
-    }
+    await this.reservations.releasePendingReservationIfNeeded(cancelled._id);
 
-    this.logger.log(`released expired reservation order=${String(cancelled.orderCode)}`);
+    this.logger.log(
+      `released expired reservation order=${String(cancelled.orderCode)} id=${String(cancelled._id)}`,
+    );
+    return true;
   }
 }
 

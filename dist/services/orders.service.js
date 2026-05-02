@@ -20,16 +20,51 @@ const order_counter_model_1 = require("../models/order-counter.model");
 const order_model_1 = require("../models/order.model");
 const product_model_1 = require("../models/product.model");
 const product_variant_model_1 = require("../models/product-variant.model");
+const order_reservations_service_1 = require("./order-reservations.service");
 let OrdersService = class OrdersService {
     orderModel;
     productModel;
     variantModel;
     orderCounterModel;
-    constructor(orderModel, productModel, variantModel, orderCounterModel) {
+    reservations;
+    constructor(orderModel, productModel, variantModel, orderCounterModel, reservations) {
         this.orderModel = orderModel;
         this.productModel = productModel;
         this.variantModel = variantModel;
         this.orderCounterModel = orderCounterModel;
+        this.reservations = reservations;
+    }
+    adminMatchFromQuery(query) {
+        const match = {};
+        if (query.status)
+            match.status = query.status;
+        if (query.q?.trim()) {
+            const q = query.q.trim();
+            const rx = escapeRegex(q);
+            const or = [
+                { orderCode: { $regex: rx, $options: 'i' } },
+                { receiverName: { $regex: rx, $options: 'i' } },
+                { receiverPhone: { $regex: rx, $options: 'i' } },
+                { receiverEmail: { $regex: rx, $options: 'i' } },
+                { shippingAddress: { $regex: rx, $options: 'i' } },
+                { trackingCode: { $regex: rx, $options: 'i' } },
+            ];
+            if (mongoose_2.Types.ObjectId.isValid(q)) {
+                or.push({ _id: new mongoose_2.Types.ObjectId(q) });
+            }
+            match.$or = or;
+        }
+        return match;
+    }
+    auditEntry(actor, action, message, meta) {
+        return {
+            at: new Date(),
+            actorId: new mongoose_2.Types.ObjectId(actor.id),
+            actorRole: actor.role,
+            action,
+            message,
+            meta,
+        };
     }
     async create(user, dto) {
         if (!dto.items?.length)
@@ -166,9 +201,7 @@ let OrdersService = class OrdersService {
         const page = query.page ?? 1;
         const limit = Math.min(query.limit ?? 20, 50);
         const skip = (page - 1) * limit;
-        const match = {};
-        if (query.status)
-            match.status = query.status;
+        const match = this.adminMatchFromQuery(query);
         const pipeline = [
             { $match: match },
             { $sort: { createdAt: -1 } },
@@ -187,6 +220,65 @@ let OrdersService = class OrdersService {
             meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
         };
     }
+    async exportAdminCsv(admin, query) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const match = this.adminMatchFromQuery(query);
+        const rows = await this.orderModel
+            .find(match)
+            .sort({ createdAt: -1 })
+            .limit(5000)
+            .select({
+            orderCode: 1,
+            status: 1,
+            total: 1,
+            receiverName: 1,
+            receiverPhone: 1,
+            receiverEmail: 1,
+            shippingAddress: 1,
+            trackingCode: 1,
+            createdAt: 1,
+            userId: 1,
+        })
+            .lean()
+            .exec();
+        const esc = (v) => {
+            const s = v === undefined || v === null
+                ? ''
+                : v instanceof Date
+                    ? v.toISOString()
+                    : String(v);
+            if (/[",\n\r]/.test(s))
+                return `"${s.replace(/"/g, '""')}"`;
+            return s;
+        };
+        const header = [
+            'orderCode',
+            'status',
+            'total',
+            'receiverName',
+            'receiverPhone',
+            'receiverEmail',
+            'shippingAddress',
+            'trackingCode',
+            'createdAt',
+            'userId',
+        ].join(',');
+        const lines = rows.map((r) => [
+            esc(r.orderCode),
+            esc(r.status),
+            esc(r.total),
+            esc(r.receiverName),
+            esc(r.receiverPhone),
+            esc(r.receiverEmail),
+            esc(r.shippingAddress),
+            esc(r.trackingCode),
+            esc(r.createdAt),
+            esc(r.userId),
+        ].join(','));
+        const csv = `\uFEFF${header}\n${lines.join('\n')}\n`;
+        return Buffer.from(csv, 'utf8');
+    }
     async adminUpdateStatus(admin, orderRef, input) {
         if (admin.role !== 'admin')
             throw new common_1.ForbiddenException('Forbidden');
@@ -200,10 +292,130 @@ let OrdersService = class OrdersService {
         if (input.trackingCode !== undefined)
             patch.trackingCode = input.trackingCode?.trim();
         const updated = await this.orderModel
-            .findByIdAndUpdate(order._id, { $set: patch }, { returnDocument: 'after' })
+            .findByIdAndUpdate(order._id, {
+            $set: patch,
+            $push: {
+                auditLog: this.auditEntry(admin, 'admin.status', undefined, {
+                    from: order.status,
+                    to: input.status,
+                    trackingCode: input.trackingCode,
+                }),
+            },
+        }, { returnDocument: 'after' })
             .exec();
         if (!updated)
             throw new common_1.NotFoundException('Order not found');
+        return updated;
+    }
+    async adminSetInternalNotes(admin, orderRef, dto) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const order = mongoose_2.Types.ObjectId.isValid(orderRef)
+            ? await this.orderModel.findById(orderRef).exec()
+            : await this.orderModel.findOne({ orderCode: orderRef }).exec();
+        if (!order)
+            throw new common_1.NotFoundException('Order not found');
+        const updated = await this.orderModel
+            .findByIdAndUpdate(order._id, {
+            $set: { internalNotes: dto.internalNotes?.trim() },
+            $push: {
+                auditLog: this.auditEntry(admin, 'admin.notes', undefined, {
+                    hasNotes: Boolean(dto.internalNotes?.trim()),
+                }),
+            },
+        }, { returnDocument: 'after' })
+            .exec();
+        if (!updated)
+            throw new common_1.NotFoundException('Order not found');
+        return updated;
+    }
+    async cancelMine(user, orderRef, reason) {
+        const order = mongoose_2.Types.ObjectId.isValid(orderRef)
+            ? await this.orderModel.findById(orderRef).exec()
+            : await this.orderModel.findOne({ orderCode: orderRef }).exec();
+        if (!order)
+            throw new common_1.NotFoundException('Order not found');
+        if (String(order.userId) !== user.id)
+            throw new common_1.ForbiddenException('Forbidden');
+        if (order.status !== 'pending_payment') {
+            throw new common_1.BadRequestException(`Cannot cancel order in status ${order.status}`);
+        }
+        const updated = await this.orderModel
+            .findOneAndUpdate({ _id: order._id, status: 'pending_payment' }, {
+            $set: {
+                status: 'cancelled',
+                cancelReason: reason?.trim(),
+                cancelledAt: new Date(),
+            },
+            $push: {
+                auditLog: this.auditEntry(user, 'user.cancel', reason?.trim()),
+            },
+        }, { returnDocument: 'after' })
+            .exec();
+        if (!updated)
+            throw new common_1.BadRequestException('Order is not cancellable');
+        await this.reservations.releasePendingReservationIfNeeded(updated._id);
+        return updated;
+    }
+    async adminCancel(admin, orderRef, dto) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const order = mongoose_2.Types.ObjectId.isValid(orderRef)
+            ? await this.orderModel.findById(orderRef).exec()
+            : await this.orderModel.findOne({ orderCode: orderRef }).exec();
+        if (!order)
+            throw new common_1.NotFoundException('Order not found');
+        if (order.status === 'cancelled' || order.status === 'cancelled_expired') {
+            return order;
+        }
+        if (order.status === 'pending_payment') {
+            const updated = await this.orderModel
+                .findOneAndUpdate({ _id: order._id, status: 'pending_payment' }, {
+                $set: {
+                    status: 'cancelled',
+                    cancelReason: dto.reason?.trim(),
+                    cancelledAt: new Date(),
+                },
+                $push: {
+                    auditLog: this.auditEntry(admin, 'admin.cancel', dto.reason?.trim(), {
+                        restoreStock: false,
+                    }),
+                },
+            }, { returnDocument: 'after' })
+                .exec();
+            if (!updated)
+                throw new common_1.BadRequestException('Order is not cancellable');
+            await this.reservations.releasePendingReservationIfNeeded(updated._id);
+            return updated;
+        }
+        const restore = dto.restoreStock === undefined ? true : Boolean(dto.restoreStock);
+        if (restore) {
+            if (!['paid', 'processing'].includes(order.status)) {
+                throw new common_1.BadRequestException(`restoreStock is only supported for paid/processing (status=${order.status})`);
+            }
+            if (!order.inventoryFinalized) {
+                throw new common_1.BadRequestException('Cannot restore stock: inventory not finalized');
+            }
+            await this.reservations.restoreStockFromOrderItems(order);
+        }
+        assertAllowedTransition(order.status, 'cancelled');
+        const updated = await this.orderModel
+            .findOneAndUpdate({ _id: order._id, status: order.status }, {
+            $set: {
+                status: 'cancelled',
+                cancelReason: dto.reason?.trim(),
+                cancelledAt: new Date(),
+            },
+            $push: {
+                auditLog: this.auditEntry(admin, 'admin.cancel', dto.reason?.trim(), {
+                    from: order.status,
+                    restoreStock: restore,
+                }),
+            },
+        }, { returnDocument: 'after' })
+            .exec();
+        if (!updated)
+            throw new common_1.BadRequestException('Failed to cancel order');
         return updated;
     }
     async getMine(user, orderId) {
@@ -263,7 +475,7 @@ exports.OrdersService = OrdersService = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(product_model_1.ProductModelName)),
     __param(2, (0, mongoose_1.InjectModel)(product_variant_model_1.ProductVariantModelName)),
     __param(3, (0, mongoose_1.InjectModel)(order_counter_model_1.OrderCounterModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, Function])
+    __metadata("design:paramtypes", [Function, Function, Function, Function, order_reservations_service_1.OrderReservationsService])
 ], OrdersService);
 function assertAllowedTransition(from, to) {
     if (from === to)
@@ -282,6 +494,9 @@ function assertAllowedTransition(from, to) {
     if (!next.includes(to)) {
         throw new common_1.BadRequestException(`Invalid status transition: ${from} -> ${to}`);
     }
+}
+function escapeRegex(input) {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 function formatDayKey(d) {
     const y = d.getFullYear();

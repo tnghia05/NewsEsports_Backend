@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OrderSchema = exports.Order = exports.OrderPaymentSnapshot = exports.OrderItemSnapshot = exports.OrderModelName = void 0;
+exports.OrderSchema = exports.Order = exports.OrderAuditEntry = exports.OrderPaymentSnapshot = exports.OrderItemSnapshot = exports.OrderModelName = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const user_model_1 = require("./user.model");
@@ -121,6 +121,39 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)
 ], OrderPaymentSnapshot.prototype, "paidAt", void 0);
+class OrderAuditEntry {
+    at;
+    actorId;
+    actorRole;
+    action;
+    message;
+    meta;
+}
+exports.OrderAuditEntry = OrderAuditEntry;
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, required: true, default: () => new Date() }),
+    __metadata("design:type", Date)
+], OrderAuditEntry.prototype, "at", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, required: true }),
+    __metadata("design:type", mongoose_2.Types.ObjectId)
+], OrderAuditEntry.prototype, "actorId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, required: true }),
+    __metadata("design:type", String)
+], OrderAuditEntry.prototype, "actorRole", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, required: true }),
+    __metadata("design:type", String)
+], OrderAuditEntry.prototype, "action", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], OrderAuditEntry.prototype, "message", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Object }),
+    __metadata("design:type", Object)
+], OrderAuditEntry.prototype, "meta", void 0);
 let Order = class Order {
     userId;
     orderCode;
@@ -131,6 +164,12 @@ let Order = class Order {
     shippingAddress;
     shippingMethod;
     trackingCode;
+    reservationReleased;
+    inventoryFinalized;
+    cancelReason;
+    cancelledAt;
+    internalNotes;
+    auditLog;
     reservedUntil;
     subtotal;
     shippingFee;
@@ -180,6 +219,30 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)
 ], Order.prototype, "trackingCode", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Boolean, default: false, index: true }),
+    __metadata("design:type", Boolean)
+], Order.prototype, "reservationReleased", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Boolean, default: false, index: true }),
+    __metadata("design:type", Boolean)
+], Order.prototype, "inventoryFinalized", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Order.prototype, "cancelReason", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date }),
+    __metadata("design:type", Date)
+], Order.prototype, "cancelledAt", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, maxlength: 4000 }),
+    __metadata("design:type", String)
+], Order.prototype, "internalNotes", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: [OrderAuditEntry], default: [] }),
+    __metadata("design:type", Array)
+], Order.prototype, "auditLog", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date, index: true }),
     __metadata("design:type", Date)

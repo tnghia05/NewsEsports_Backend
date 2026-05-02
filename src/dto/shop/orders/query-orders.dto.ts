@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class QueryOrdersDto {
   @IsOptional()
@@ -34,4 +34,8 @@ export class QueryOrdersDto {
     | 'cancelled'
     | 'cancelled_expired'
     | 'refunded';
+
+  @IsOptional()
+  @IsString()
+  q?: string;
 }

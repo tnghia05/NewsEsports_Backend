@@ -34,6 +34,7 @@ import { RssSourcesService } from '../services/rss-sources.service';
 import { ProductsService } from '../services/products.service';
 import { OrdersService } from '../services/orders.service';
 import { PaymentsService } from '../services/payments.service';
+import { OrderReservationsService } from '../services/order-reservations.service';
 import { OrderReservationsWorkerService } from '../services/order-reservations-worker.service';
 import { UserModelName, UserSchema } from '../models/user.model';
 import {
@@ -158,6 +159,7 @@ import { R2Service } from '../infra/r2/r2.service';
     ProductsService,
     OrdersService,
     PaymentsService,
+    OrderReservationsService,
     OrderReservationsWorkerService,
     AiService,
     CommentModerationWorkerService,

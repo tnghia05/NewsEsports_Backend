@@ -85,6 +85,26 @@ export class OrderPaymentSnapshot {
   paidAt?: string;
 }
 
+export class OrderAuditEntry {
+  @Prop({ type: Date, required: true, default: () => new Date() })
+  at!: Date;
+
+  @Prop({ type: Types.ObjectId, required: true })
+  actorId!: Types.ObjectId;
+
+  @Prop({ type: String, required: true })
+  actorRole!: string;
+
+  @Prop({ type: String, required: true })
+  action!: string;
+
+  @Prop({ type: String })
+  message?: string;
+
+  @Prop({ type: Object })
+  meta?: Record<string, unknown>;
+}
+
 @Schema({ timestamps: true })
 export class Order {
   @Prop({
@@ -118,6 +138,24 @@ export class Order {
 
   @Prop({ type: String })
   trackingCode?: string;
+
+  @Prop({ type: Boolean, default: false, index: true })
+  reservationReleased!: boolean;
+
+  @Prop({ type: Boolean, default: false, index: true })
+  inventoryFinalized!: boolean;
+
+  @Prop({ type: String })
+  cancelReason?: string;
+
+  @Prop({ type: Date })
+  cancelledAt?: Date;
+
+  @Prop({ type: String, maxlength: 4000 })
+  internalNotes?: string;
+
+  @Prop({ type: [OrderAuditEntry], default: [] })
+  auditLog!: OrderAuditEntry[];
 
   @Prop({ type: Date, index: true })
   reservedUntil?: Date;
