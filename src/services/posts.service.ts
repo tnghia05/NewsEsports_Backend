@@ -6,6 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model, PipelineStage, QueryFilter } from 'mongoose';
 import { PostModelName, type PostDocument } from '../models/post.model';
+import { UserModelName, type UserDocument } from '../models/user.model';
 import {
   PostLikeModelName,
   type PostLikeDocument,
@@ -30,6 +31,7 @@ import { assertCanReadPost } from '../utils/assert-can-read-post';
 export class PostsService {
   constructor(
     @InjectModel(PostModelName) private readonly postModel: Model<PostDocument>,
+    @InjectModel(UserModelName) private readonly userModel: Model<UserDocument>,
     @InjectModel(PostLikeModelName)
     private readonly postLikeModel: Model<PostLikeDocument>,
     @InjectModel(PostSaveModelName)
@@ -38,6 +40,31 @@ export class PostsService {
     private readonly commentModel: Model<CommentDocument>,
     private readonly followsService: FollowsService,
   ) {}
+
+  private async attachAuthors<T extends any>(items: T[]) {
+    const authorIds = Array.from(
+      new Set(items.map((p: any) => String(p.authorId ?? '')).filter(Boolean)),
+    );
+    if (authorIds.length === 0) return items;
+
+    const users = await this.userModel
+      .find({ _id: { $in: authorIds } })
+      .select({ displayName: 1, avatarUrl: 1 })
+      .lean()
+      .exec();
+
+    const byId = new Map(
+      users.map((u: any) => [
+        String(u._id),
+        { id: String(u._id), displayName: u.displayName, avatarUrl: u.avatarUrl },
+      ]),
+    );
+
+    return items.map((p: any) => ({
+      ...(typeof p.toObject === 'function' ? p.toObject() : p),
+      author: byId.get(String(p.authorId)) ?? { id: String(p.authorId) },
+    }));
+  }
 
   async create(author: JwtUser, dto: CreatePostDto) {
     const tags = normalizeTags(dto.tags);
@@ -111,7 +138,10 @@ export class PostsService {
           )
           .exec()) ?? post);
 
-    if (!author) return refreshed;
+    if (!author) {
+      const [withAuthor] = await this.attachAuthors([refreshed as any]);
+      return withAuthor;
+    }
 
     const pid = String(refreshed._id);
     const [liked, saved] = await Promise.all([
@@ -122,7 +152,8 @@ export class PostsService {
       typeof refreshed.toObject === 'function'
         ? refreshed.toObject()
         : refreshed;
-    return Object.assign(obj, {
+    const [withAuthor] = await this.attachAuthors([obj as any]);
+    return Object.assign(withAuthor, {
       likedByMe: Boolean(liked),
       savedByMe: Boolean(saved),
     });
@@ -179,13 +210,14 @@ export class PostsService {
         likedByMe: likedIds.has(String(p._id)),
         savedByMe: true,
       }));
+      const outWithAuthors = await this.attachAuthors(out as any[]);
 
       return {
-        items: out,
+        items: outWithAuthors,
         page,
         limit,
         total,
-        hasMore: skip + out.length < total,
+        hasMore: skip + outWithAuthors.length < total,
       };
     }
 
@@ -213,7 +245,7 @@ export class PostsService {
         this.postModel.countDocuments(filter).exec(),
       ]);
 
-      return attachLikeSaveFlags(
+      const res = await attachLikeSaveFlags(
         this.postLikeModel,
         this.postSaveModel,
         author,
@@ -223,6 +255,8 @@ export class PostsService {
         total,
         skip,
       );
+      res.items = await this.attachAuthors(res.items as any[]);
+      return res;
     }
 
     const baseFilter: QueryFilter<PostDocument> = {};
@@ -253,7 +287,7 @@ export class PostsService {
         this.postModel.aggregate(pipeline).exec(),
         this.postModel.countDocuments(baseFilter).exec(),
       ]);
-      return attachLikeSaveFlags(
+      const res = await attachLikeSaveFlags(
         this.postLikeModel,
         this.postSaveModel,
         author,
@@ -263,6 +297,8 @@ export class PostsService {
         total,
         skip,
       );
+      res.items = await this.attachAuthors(res.items as any[]);
+      return res;
     }
 
     // latest
@@ -276,7 +312,7 @@ export class PostsService {
       this.postModel.countDocuments(baseFilter).exec(),
     ]);
 
-    return attachLikeSaveFlags(
+    const res = await attachLikeSaveFlags(
       this.postLikeModel,
       this.postSaveModel,
       author,
@@ -286,6 +322,8 @@ export class PostsService {
       total,
       skip,
     );
+    res.items = await this.attachAuthors(res.items as any[]);
+    return res;
   }
 
   async listByUser(
@@ -325,7 +363,7 @@ export class PostsService {
       this.postModel.countDocuments(filter).exec(),
     ]);
 
-    return attachLikeSaveFlags(
+    const res = await attachLikeSaveFlags(
       this.postLikeModel,
       this.postSaveModel,
       viewer,
@@ -335,6 +373,8 @@ export class PostsService {
       total,
       skip,
     );
+    res.items = await this.attachAuthors(res.items as any[]);
+    return res;
   }
 
   async listLikes(postId: string, opts: { page: number; limit: number }) {

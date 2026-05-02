@@ -17,32 +17,7 @@ export declare class PostsController {
         page: number;
         limit: number;
     }>;
-    getById(user: JwtUser | undefined, id: string): Promise<(import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
-        _id: import("mongoose").Types.ObjectId;
-    } & {
-        __v: number;
-    } & {
-        id: string;
-    }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
-        _id: import("mongoose").Types.ObjectId;
-    } & {
-        __v: number;
-    } & {
-        id: string;
-    } & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }>) | (import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
-        _id: import("mongoose").Types.ObjectId;
-    } & {
-        __v: number;
-    } & {
-        id: string;
-    } & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        likedByMe: boolean;
-        savedByMe: boolean;
-    })>;
+    getById(user: JwtUser | undefined, id: string): Promise<any>;
     create(user: JwtUser, body: CreatePostDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
         _id: import("mongoose").Types.ObjectId;
     } & {

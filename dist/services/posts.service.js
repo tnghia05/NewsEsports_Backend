@@ -16,6 +16,7 @@ exports.PostsService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const post_model_1 = require("../models/post.model");
+const user_model_1 = require("../models/user.model");
 const post_like_model_1 = require("../models/post-like.model");
 const post_save_model_1 = require("../models/post-save.model");
 const comment_model_1 = require("../models/comment.model");
@@ -23,16 +24,36 @@ const follows_service_1 = require("./follows.service");
 const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let PostsService = class PostsService {
     postModel;
+    userModel;
     postLikeModel;
     postSaveModel;
     commentModel;
     followsService;
-    constructor(postModel, postLikeModel, postSaveModel, commentModel, followsService) {
+    constructor(postModel, userModel, postLikeModel, postSaveModel, commentModel, followsService) {
         this.postModel = postModel;
+        this.userModel = userModel;
         this.postLikeModel = postLikeModel;
         this.postSaveModel = postSaveModel;
         this.commentModel = commentModel;
         this.followsService = followsService;
+    }
+    async attachAuthors(items) {
+        const authorIds = Array.from(new Set(items.map((p) => String(p.authorId ?? '')).filter(Boolean)));
+        if (authorIds.length === 0)
+            return items;
+        const users = await this.userModel
+            .find({ _id: { $in: authorIds } })
+            .select({ displayName: 1, avatarUrl: 1 })
+            .lean()
+            .exec();
+        const byId = new Map(users.map((u) => [
+            String(u._id),
+            { id: String(u._id), displayName: u.displayName, avatarUrl: u.avatarUrl },
+        ]));
+        return items.map((p) => ({
+            ...(typeof p.toObject === 'function' ? p.toObject() : p),
+            author: byId.get(String(p.authorId)) ?? { id: String(p.authorId) },
+        }));
     }
     async create(author, dto) {
         const tags = normalizeTags(dto.tags);
@@ -97,8 +118,10 @@ let PostsService = class PostsService {
             : ((await this.postModel
                 .findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } }, { returnDocument: 'after' })
                 .exec()) ?? post);
-        if (!author)
-            return refreshed;
+        if (!author) {
+            const [withAuthor] = await this.attachAuthors([refreshed]);
+            return withAuthor;
+        }
         const pid = String(refreshed._id);
         const [liked, saved] = await Promise.all([
             this.postLikeModel.exists({ postId: pid, userId: author.id }),
@@ -107,7 +130,8 @@ let PostsService = class PostsService {
         const obj = typeof refreshed.toObject === 'function'
             ? refreshed.toObject()
             : refreshed;
-        return Object.assign(obj, {
+        const [withAuthor] = await this.attachAuthors([obj]);
+        return Object.assign(withAuthor, {
             likedByMe: Boolean(liked),
             savedByMe: Boolean(saved),
         });
@@ -151,12 +175,13 @@ let PostsService = class PostsService {
                 likedByMe: likedIds.has(String(p._id)),
                 savedByMe: true,
             }));
+            const outWithAuthors = await this.attachAuthors(out);
             return {
-                items: out,
+                items: outWithAuthors,
                 page,
                 limit,
                 total,
-                hasMore: skip + out.length < total,
+                hasMore: skip + outWithAuthors.length < total,
             };
         }
         if (query.tab === 'following') {
@@ -180,7 +205,9 @@ let PostsService = class PostsService {
                     .exec(),
                 this.postModel.countDocuments(filter).exec(),
             ]);
-            return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
+            const res = await attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
+            res.items = await this.attachAuthors(res.items);
+            return res;
         }
         const baseFilter = {};
         applyVisibility(baseFilter, author);
@@ -208,7 +235,9 @@ let PostsService = class PostsService {
                 this.postModel.aggregate(pipeline).exec(),
                 this.postModel.countDocuments(baseFilter).exec(),
             ]);
-            return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, rawItems, page, limit, total, skip);
+            const res = await attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, rawItems, page, limit, total, skip);
+            res.items = await this.attachAuthors(res.items);
+            return res;
         }
         const [items, total] = await Promise.all([
             this.postModel
@@ -219,7 +248,9 @@ let PostsService = class PostsService {
                 .exec(),
             this.postModel.countDocuments(baseFilter).exec(),
         ]);
-        return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
+        const res = await attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, author, items, page, limit, total, skip);
+        res.items = await this.attachAuthors(res.items);
+        return res;
     }
     async listByUser(viewer, userId, query) {
         const page = query.page;
@@ -255,7 +286,9 @@ let PostsService = class PostsService {
                 .exec(),
             this.postModel.countDocuments(filter).exec(),
         ]);
-        return attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, viewer, items, page, limit, total, skip);
+        const res = await attachLikeSaveFlags(this.postLikeModel, this.postSaveModel, viewer, items, page, limit, total, skip);
+        res.items = await this.attachAuthors(res.items);
+        return res;
     }
     async listLikes(postId, opts) {
         const post = await this.requirePost(postId);
@@ -312,10 +345,11 @@ exports.PostsService = PostsService;
 exports.PostsService = PostsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __param(1, (0, mongoose_1.InjectModel)(post_like_model_1.PostLikeModelName)),
-    __param(2, (0, mongoose_1.InjectModel)(post_save_model_1.PostSaveModelName)),
-    __param(3, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, Function, follows_service_1.FollowsService])
+    __param(1, (0, mongoose_1.InjectModel)(user_model_1.UserModelName)),
+    __param(2, (0, mongoose_1.InjectModel)(post_like_model_1.PostLikeModelName)),
+    __param(3, (0, mongoose_1.InjectModel)(post_save_model_1.PostSaveModelName)),
+    __param(4, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
+    __metadata("design:paramtypes", [Function, Function, Function, Function, Function, follows_service_1.FollowsService])
 ], PostsService);
 async function attachLikeSaveFlags(postLikeModel, postSaveModel, viewer, items, page, limit, total, skip) {
     const hasMore = total != null && skip != null ? skip + items.length < total : undefined;
