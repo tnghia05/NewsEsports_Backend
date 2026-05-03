@@ -5,6 +5,7 @@ import { NewsCrawlWorkerService } from '../services/news-crawl-worker.service';
 import { CreateNewsDto } from '../dto/news/create-news.dto';
 import { UpdateNewsDto } from '../dto/news/update-news.dto';
 import { QueryNewsDto } from '../dto/news/query-news.dto';
+import { BulkDeleteNewsDto } from '../dto/news/bulk-delete-news.dto';
 export declare class NewsController {
     private readonly newsService;
     private readonly newsImportWorkerService;
@@ -114,6 +115,10 @@ export declare class NewsController {
     }>>;
     remove(admin: JwtUser, id: string): Promise<{
         ok: boolean;
+    }>;
+    bulkRemove(admin: JwtUser, dto: BulkDeleteNewsDto): Promise<{
+        ok: boolean;
+        deleted: number;
     }>;
     importRss(): Promise<{
         ok: boolean;

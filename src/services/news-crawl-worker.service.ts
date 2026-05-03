@@ -118,6 +118,7 @@ export class NewsCrawlWorkerService implements OnModuleInit, OnModuleDestroy {
         return;
       if (abs.endsWith('.jpg') || abs.endsWith('.png') || abs.endsWith('.webp'))
         return;
+      if (!keepListingLinkCandidate(listingUrl, abs)) return;
       out.add(abs);
     });
 
@@ -258,6 +259,54 @@ function toAbsUrl(base: string, href: string) {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Trang listing (vd esports-c180) thường render full menu → rất nhiều <a> cùng host
+ * nhưng là chuyên mục / tiện ích, không phải bài viết. Lọc theo host để tránh crawl “loạn”.
+ */
+function keepListingLinkCandidate(listingUrl: string, abs: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(abs);
+  } catch {
+    return false;
+  }
+
+  const listingHost = safeHost(listingUrl);
+  if (!listingHost || u.hostname !== listingHost) return true;
+
+  if (u.hostname.endsWith('thethao247.vn')) {
+    return keepThethao247ArticleLink(u);
+  }
+
+  return true;
+}
+
+function keepThethao247ArticleLink(u: URL): boolean {
+  const p = u.pathname.toLowerCase();
+
+  if (!p.endsWith('.html')) return false;
+
+  const file = p.split('/').filter(Boolean).pop() ?? '';
+  const junk = new Set([
+    'bao-gia.html',
+    'gioi-thieu.html',
+    'lien-he.html',
+    'chinh-sach-bao-mat.html',
+    'dieu-khoan-su-dung.html',
+    'dmca.html',
+  ]);
+  if (junk.has(file)) return false;
+
+  // Chuyên mục dạng /bong-da-viet-nam-c1/ hoặc /esports-c180/ (không phải file .html)
+  if (/-c\d+\//i.test(`${p}/`)) return false;
+
+  // Bài thường có id số cuối slug: ...-649981.html hoặc ...-301-649981.html
+  if (/-\d+-\d+\.html$/i.test(p)) return true;
+  if (/-\d{4,}\.html$/i.test(p)) return true;
+
+  return false;
 }
 
 function safeHost(url: string) {

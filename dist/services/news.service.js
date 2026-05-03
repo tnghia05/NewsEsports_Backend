@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NewsService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
 const news_model_1 = require("../models/news.model");
 let NewsService = class NewsService {
     newsModel;
@@ -98,6 +99,18 @@ let NewsService = class NewsService {
         const news = await this.requireNews(id);
         await news.deleteOne();
         return { ok: true };
+    }
+    async removeMany(admin, ids) {
+        if (admin.role !== 'admin')
+            throw new common_1.ForbiddenException('Forbidden');
+        const uniq = [...new Set(ids.map(id => id.trim()).filter(Boolean))];
+        const oids = uniq
+            .filter(id => mongoose_2.Types.ObjectId.isValid(id))
+            .map(id => new mongoose_2.Types.ObjectId(id));
+        if (!oids.length)
+            throw new common_1.BadRequestException('No valid ids');
+        const res = await this.newsModel.deleteMany({ _id: { $in: oids } }).exec();
+        return { ok: true, deleted: res.deletedCount ?? 0 };
     }
     async getPublicBySlug(slug) {
         const s = normalizeSlug(slug);

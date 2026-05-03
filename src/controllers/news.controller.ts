@@ -20,6 +20,7 @@ import { NewsCrawlWorkerService } from '../services/news-crawl-worker.service';
 import { CreateNewsDto } from '../dto/news/create-news.dto';
 import { UpdateNewsDto } from '../dto/news/update-news.dto';
 import { QueryNewsDto } from '../dto/news/query-news.dto';
+import { BulkDeleteNewsDto } from '../dto/news/bulk-delete-news.dto';
 
 @Controller('news')
 export class NewsController {
@@ -76,6 +77,13 @@ export class NewsController {
   @Roles('admin')
   remove(@CurrentUser() admin: JwtUser, @Param('id') id: string) {
     return this.newsService.remove(admin, id);
+  }
+
+  @Post('admin/bulk-delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  bulkRemove(@CurrentUser() admin: JwtUser, @Body() dto: BulkDeleteNewsDto) {
+    return this.newsService.removeMany(admin, dto.ids);
   }
 
   @Post('admin/import-rss')

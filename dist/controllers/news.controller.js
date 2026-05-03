@@ -24,6 +24,7 @@ const news_crawl_worker_service_1 = require("../services/news-crawl-worker.servi
 const create_news_dto_1 = require("../dto/news/create-news.dto");
 const update_news_dto_1 = require("../dto/news/update-news.dto");
 const query_news_dto_1 = require("../dto/news/query-news.dto");
+const bulk_delete_news_dto_1 = require("../dto/news/bulk-delete-news.dto");
 let NewsController = class NewsController {
     newsService;
     newsImportWorkerService;
@@ -53,6 +54,9 @@ let NewsController = class NewsController {
     }
     remove(admin, id) {
         return this.newsService.remove(admin, id);
+    }
+    bulkRemove(admin, dto) {
+        return this.newsService.removeMany(admin, dto.ids);
     }
     importRss() {
         return this.newsImportWorkerService.importNow();
@@ -124,6 +128,16 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], NewsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('admin/bulk-delete'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, bulk_delete_news_dto_1.BulkDeleteNewsDto]),
+    __metadata("design:returntype", void 0)
+], NewsController.prototype, "bulkRemove", null);
 __decorate([
     (0, common_1.Post)('admin/import-rss'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

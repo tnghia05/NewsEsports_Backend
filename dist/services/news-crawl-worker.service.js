@@ -115,6 +115,8 @@ let NewsCrawlWorkerService = NewsCrawlWorkerService_1 = class NewsCrawlWorkerSer
                 return;
             if (abs.endsWith('.jpg') || abs.endsWith('.png') || abs.endsWith('.webp'))
                 return;
+            if (!keepListingLinkCandidate(listingUrl, abs))
+                return;
             out.add(abs);
         });
         const host = safeHost(listingUrl);
@@ -233,6 +235,45 @@ function toAbsUrl(base, href) {
     catch {
         return undefined;
     }
+}
+function keepListingLinkCandidate(listingUrl, abs) {
+    let u;
+    try {
+        u = new URL(abs);
+    }
+    catch {
+        return false;
+    }
+    const listingHost = safeHost(listingUrl);
+    if (!listingHost || u.hostname !== listingHost)
+        return true;
+    if (u.hostname.endsWith('thethao247.vn')) {
+        return keepThethao247ArticleLink(u);
+    }
+    return true;
+}
+function keepThethao247ArticleLink(u) {
+    const p = u.pathname.toLowerCase();
+    if (!p.endsWith('.html'))
+        return false;
+    const file = p.split('/').filter(Boolean).pop() ?? '';
+    const junk = new Set([
+        'bao-gia.html',
+        'gioi-thieu.html',
+        'lien-he.html',
+        'chinh-sach-bao-mat.html',
+        'dieu-khoan-su-dung.html',
+        'dmca.html',
+    ]);
+    if (junk.has(file))
+        return false;
+    if (/-c\d+\//i.test(`${p}/`))
+        return false;
+    if (/-\d+-\d+\.html$/i.test(p))
+        return true;
+    if (/-\d{4,}\.html$/i.test(p))
+        return true;
+    return false;
 }
 function safeHost(url) {
     try {
