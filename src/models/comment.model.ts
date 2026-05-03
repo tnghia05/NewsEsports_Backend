@@ -10,8 +10,13 @@ export type CommentSentiment = 'positive' | 'neutral' | 'negative';
 
 @Schema({ timestamps: true })
 export class Comment {
-  @Prop({ type: String, required: true, index: true })
-  postId!: string;
+  /** Present when comment belongs to a feed post */
+  @Prop({ type: String, index: true })
+  postId?: string;
+
+  /** Present when comment belongs to a news article */
+  @Prop({ type: String, index: true })
+  newsId?: string;
 
   @Prop({ type: String, index: true })
   parentId?: string;
@@ -88,4 +93,6 @@ export const CommentSchema = SchemaFactory.createForClass(Comment);
 
 CommentSchema.index({ postId: 1, createdAt: 1 });
 CommentSchema.index({ postId: 1, parentId: 1, createdAt: 1 });
+CommentSchema.index({ newsId: 1, createdAt: 1 });
+CommentSchema.index({ newsId: 1, parentId: 1, createdAt: 1 });
 CommentSchema.index({ authorId: 1, createdAt: -1 });

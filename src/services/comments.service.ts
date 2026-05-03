@@ -11,6 +11,10 @@ import {
   type CommentDocument,
 } from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
+import {
+  NewsModelName,
+  type NewsDocument,
+} from '../models/news.model';
 import type { JwtUser } from '../types/auth';
 import type { QueryCommentsDto } from '../dto/comments/query-comments.dto';
 import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
@@ -31,6 +35,8 @@ export class CommentsService {
     private readonly commentModel: Model<CommentDocument>,
     @InjectModel(PostModelName)
     private readonly postModel: Model<PostDocument>,
+    @InjectModel(NewsModelName)
+    private readonly newsModel: Model<NewsDocument>,
     private readonly notificationsService: NotificationsService,
     @InjectModel(CommentModerationJobModelName)
     private readonly jobModel: Model<CommentModerationJobDocument>,
@@ -58,21 +64,9 @@ export class CommentsService {
       filter.parentId = { $exists: false };
     }
 
-    // Moderation visibility:
-    // - Public viewers see only approved.
-    // - Admin sees all.
-    // - Post owner sees all (to moderate community).
-    // - Comment owner sees their own pending/rejected + all approved..
-    if (!viewer) {
-      filter.moderationStatus = 'approved';
-    } else if (viewer.role === 'admin' || viewer.id === post.authorId) {
-      // no extra filter
-    } else {
-      filter['$or'] = [
-        { moderationStatus: 'approved' },
-        { authorId: viewer.id },
-      ];
-    }
+    this.applyModerationFilter(filter, viewer, {
+      ownerId: post.authorId,
+    });
 
     const sort =
       query.sort === 'newest'
@@ -92,17 +86,88 @@ export class CommentsService {
     return { items, page, limit, total, hasMore };
   }
 
+  async listForNews(
+    viewer: JwtUser | undefined,
+    newsId: string,
+    query: QueryCommentsDto,
+  ) {
+    const news = await this.requirePublishedNews(newsId);
+
+    const page = query.page;
+    const limit = query.limit;
+    const skip = (page - 1) * limit;
+
+    const filter: QueryFilter<CommentDocument> = {
+      newsId,
+      isDeleted: { $ne: true },
+    };
+    if (query.parentId) {
+      filter.parentId = query.parentId;
+    } else if (query.topLevelOnly) {
+      filter.parentId = { $exists: false };
+    }
+
+    this.applyModerationFilter(filter, viewer, {
+      ownerId: news.authorId,
+    });
+
+    const sort =
+      query.sort === 'newest'
+        ? ({ createdAt: -1 as const } as const)
+        : ({ createdAt: 1 as const } as const);
+
+    const items = await this.commentModel
+      .find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    const total = await this.commentModel.countDocuments(filter).exec();
+    const hasMore = skip + items.length < total;
+
+    return { items, page, limit, total, hasMore };
+  }
+
+  private applyModerationFilter(
+    filter: QueryFilter<CommentDocument>,
+    viewer: JwtUser | undefined,
+    opts: { ownerId?: string },
+  ) {
+    if (!viewer) {
+      filter.moderationStatus = 'approved';
+    } else if (
+      viewer.role === 'admin' ||
+      (opts.ownerId && viewer.id === opts.ownerId)
+    ) {
+      // no extra filter
+    } else {
+      filter['$or'] = [
+        { moderationStatus: 'approved' },
+        { authorId: viewer.id },
+      ];
+    }
+  }
+
   async listReplies(
     viewer: JwtUser | undefined,
     commentId: string,
     query: QueryCommentsDto,
   ) {
     const parent = await this.requireComment(commentId);
-    const post = await this.requirePost(parent.postId);
+
+    if (parent.newsId) {
+      return this.listForNews(viewer, String(parent.newsId), {
+        ...query,
+        parentId: String(parent._id),
+        topLevelOnly: false,
+      });
+    }
+
+    const post = await this.requirePost(String(parent.postId));
     assertCanReadPost(viewer, post);
 
-    // Force parentId filter, ignore any conflicting query.parentId/topLevelOnly
-    return this.listForPost(viewer, parent.postId, {
+    return this.listForPost(viewer, String(parent.postId), {
       ...query,
       parentId: String(parent._id),
       topLevelOnly: false,
@@ -121,16 +186,14 @@ export class CommentsService {
       `createForPost start postId=${postId} viewerId=${viewer.id} len=${String(dto.content ?? '').length} preview="${contentPreview}"`,
     );
 
-    let parentAuthorId: string | undefined;
     if (dto.parentId) {
       const parent = await this.requireComment(dto.parentId);
-      if (parent.postId !== postId) {
+      if (String(parent.postId ?? '') !== String(postId)) {
         throw new ForbiddenException('Parent comment mismatch');
       }
       if (parent.isDeleted) {
         throw new ForbiddenException('Cannot reply to deleted comment');
       }
-      parentAuthorId = parent.authorId;
     }
 
     const created = await this.commentModel.create({
@@ -146,12 +209,54 @@ export class CommentsService {
       `createForPost created commentId=${String(created._id)} status=${created.moderationStatus} parentId=${dto.parentId ?? 'null'}`,
     );
 
-    // Do NOT increment commentCount yet; only increment when approved by AI.
+    await this.enqueueModerationJob(String(created._id));
+    return created;
+  }
+
+  async createForNews(viewer: JwtUser, newsId: string, dto: CreateCommentDto) {
+    await this.requirePublishedNews(newsId);
+
+    const contentPreview = String(dto.content ?? '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 80);
+    this.logger.log(
+      `createForNews start newsId=${newsId} viewerId=${viewer.id} len=${String(dto.content ?? '').length} preview="${contentPreview}"`,
+    );
+
+    if (dto.parentId) {
+      const parent = await this.requireComment(dto.parentId);
+      if (String(parent.newsId ?? '') !== String(newsId)) {
+        throw new ForbiddenException('Parent comment mismatch');
+      }
+      if (parent.isDeleted) {
+        throw new ForbiddenException('Cannot reply to deleted comment');
+      }
+    }
+
+    const created = await this.commentModel.create({
+      newsId,
+      parentId: dto.parentId,
+      authorId: viewer.id,
+      content: dto.content,
+      isDeleted: false,
+      moderationStatus: 'pending',
+    });
+
+    this.logger.log(
+      `createForNews created commentId=${String(created._id)} status=${created.moderationStatus} parentId=${dto.parentId ?? 'null'}`,
+    );
+
+    await this.enqueueModerationJob(String(created._id));
+    return created;
+  }
+
+  private async enqueueModerationJob(commentId: string) {
     const jobRes = await this.jobModel.updateOne(
-      { commentId: String(created._id) },
+      { commentId },
       {
         $setOnInsert: {
-          commentId: String(created._id),
+          commentId,
           status: 'pending',
           attempts: 0,
         },
@@ -160,10 +265,8 @@ export class CommentsService {
     );
 
     this.logger.log(
-      `createForPost moderationJob upserted commentId=${String(created._id)} matched=${(jobRes as any)?.matchedCount ?? '?'} upserted=${(jobRes as any)?.upsertedCount ?? '?'} acknowledged=${(jobRes as any)?.acknowledged ?? '?'}`,
+      `moderationJob upserted commentId=${commentId} matched=${(jobRes as any)?.matchedCount ?? '?'} upserted=${(jobRes as any)?.upsertedCount ?? '?'} acknowledged=${(jobRes as any)?.acknowledged ?? '?'}`,
     );
-
-    return created;
   }
 
   async update(viewer: JwtUser, commentId: string, dto: UpdateCommentDto) {
@@ -194,19 +297,8 @@ export class CommentsService {
       (patch as any).aiVersion = undefined;
       (patch as any).aiError = undefined;
 
-      // If comment was previously approved, decrement post commentCount.
       if (comment.moderationStatus === 'approved') {
-        await this.postModel
-          .updateOne({ _id: comment.postId }, [
-            {
-              $set: {
-                commentCount: {
-                  $max: [0, { $subtract: ['$commentCount', 1] }],
-                },
-              },
-            },
-          ])
-          .exec();
+        await this.decrementApprovedCommentTarget(comment);
       }
     }
 
@@ -220,7 +312,6 @@ export class CommentsService {
     if (!updated) throw new NotFoundException('Comment not found');
 
     if (contentChanged) {
-      // Create a new moderation job for the edited content.
       const jobRes = await this.jobModel.updateOne(
         { commentId: String(comment._id) },
         {
@@ -261,8 +352,14 @@ export class CommentsService {
       )
       .exec();
 
-    // Only decrement commentCount if the comment was approved/visible.
     if (comment.moderationStatus === 'approved') {
+      await this.decrementApprovedCommentTarget(comment);
+    }
+    return { ok: true };
+  }
+
+  private async decrementApprovedCommentTarget(comment: CommentDocument) {
+    if (comment.postId) {
       await this.postModel
         .updateOne({ _id: comment.postId }, [
           {
@@ -274,8 +371,19 @@ export class CommentsService {
           },
         ])
         .exec();
+    } else if (comment.newsId) {
+      await this.newsModel
+        .updateOne({ _id: comment.newsId }, [
+          {
+            $set: {
+              commentCount: {
+                $max: [0, { $subtract: ['$commentCount', 1] }],
+              },
+            },
+          },
+        ])
+        .exec();
     }
-    return { ok: true };
   }
 
   private async requireComment(commentId: string) {
@@ -288,6 +396,13 @@ export class CommentsService {
     const post = await this.postModel.findById(postId).exec();
     if (!post) throw new NotFoundException('Post not found');
     return post;
+  }
+
+  private async requirePublishedNews(id: string) {
+    const news = await this.newsModel.findById(id).exec();
+    if (!news || news.status !== 'published')
+      throw new NotFoundException('News not found');
+    return news;
   }
 }
 

@@ -4,7 +4,8 @@ export declare const CommentModelName = "Comment";
 export type CommentModerationStatus = 'pending' | 'approved' | 'rejected';
 export type CommentSentiment = 'positive' | 'neutral' | 'negative';
 export declare class Comment {
-    postId: string;
+    postId?: string;
+    newsId?: string;
     parentId?: string;
     authorId: string;
     content: string;
@@ -35,7 +36,16 @@ export declare const CommentSchema: import("mongoose").Schema<Comment, import("m
 }, "id"> & {
     id: string;
 }, {
-    postId?: import("mongoose").SchemaDefinitionProperty<string, Comment, import("mongoose").Document<unknown, {}, Comment, {
+    postId?: import("mongoose").SchemaDefinitionProperty<string | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    newsId?: import("mongoose").SchemaDefinitionProperty<string | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
         _id: import("mongoose").Types.ObjectId;

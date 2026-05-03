@@ -14,6 +14,7 @@ import {
   type CommentDocument,
 } from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
+import { NewsModelName, type NewsDocument } from '../models/news.model';
 import type { JwtUser } from '../types/auth';
 import { assertCanReadPost } from '../utils/assert-can-read-post';
 
@@ -26,6 +27,8 @@ export class CommentLikesService {
     private readonly commentModel: Model<CommentDocument>,
     @InjectModel(PostModelName)
     private readonly postModel: Model<PostDocument>,
+    @InjectModel(NewsModelName)
+    private readonly newsModel: Model<NewsDocument>,
   ) {}
 
   async toggleLike(
@@ -36,9 +39,17 @@ export class CommentLikesService {
     if (!comment) throw new NotFoundException('Comment not found');
     if (comment.isDeleted) throw new ForbiddenException('Comment deleted');
 
-    const post = await this.postModel.findById(comment.postId).exec();
-    if (!post) throw new NotFoundException('Post not found');
-    assertCanReadPost(viewer, post);
+    if (comment.postId) {
+      const post = await this.postModel.findById(comment.postId).exec();
+      if (!post) throw new NotFoundException('Post not found');
+      assertCanReadPost(viewer, post);
+    } else if (comment.newsId) {
+      const news = await this.newsModel.findById(comment.newsId).exec();
+      if (!news || news.status !== 'published')
+        throw new NotFoundException('News not found');
+    } else {
+      throw new NotFoundException('Comment target not found');
+    }
 
     const existing = await this.commentLikeModel
       .findOne({ commentId, userId: viewer.id })

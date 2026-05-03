@@ -26,6 +26,7 @@ let News = class News {
     sourceUrl;
     externalUrl;
     externalId;
+    commentCount;
 };
 exports.News = News;
 __decorate([
@@ -90,6 +91,10 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String, index: true }),
     __metadata("design:type", String)
 ], News.prototype, "externalId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0 }),
+    __metadata("design:type", Number)
+], News.prototype, "commentCount", void 0);
 exports.News = News = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], News);

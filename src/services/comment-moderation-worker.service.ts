@@ -15,6 +15,7 @@ import {
   type CommentDocument,
 } from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
+import { NewsModelName, type NewsDocument } from '../models/news.model';
 import { AiService } from '../infra/ai/ai.service';
 import { NotificationsService } from './notifications.service';
 
@@ -33,6 +34,8 @@ export class CommentModerationWorkerService
     private readonly commentModel: Model<CommentDocument>,
     @InjectModel(PostModelName)
     private readonly postModel: Model<PostDocument>,
+    @InjectModel(NewsModelName)
+    private readonly newsModel: Model<NewsDocument>,
     private readonly aiService: AiService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -106,8 +109,13 @@ export class CommentModerationWorkerService
       return;
     }
 
-    const post = await this.postModel.findById(comment.postId).exec();
-    if (!post) {
+    const post = comment.postId
+      ? await this.postModel.findById(comment.postId).exec()
+      : null;
+    const news = comment.newsId
+      ? await this.newsModel.findById(comment.newsId).exec()
+      : null;
+    if (!post && !news) {
       await this.jobModel
         .updateOne({ _id: job._id }, { $set: { status: 'done' } })
         .exec();
@@ -120,7 +128,7 @@ export class CommentModerationWorkerService
         .replace(/\s+/g, ' ')
         .slice(0, 80);
       this.logger.log(
-        `processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId} len=${String(comment.content ?? '').length} preview="${preview}"`,
+        `processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId ?? 'n/a'} newsId=${comment.newsId ?? 'n/a'} len=${String(comment.content ?? '').length} preview="${preview}"`,
       );
       const ai = await this.aiService.analyzeComment(comment.content);
       const rejected = ai.toxicity.isToxic;
@@ -151,33 +159,38 @@ export class CommentModerationWorkerService
       );
 
       if (!rejected) {
-        // Increase commentCount only when approved
-        await this.postModel
-          .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
-          .exec();
-
-        // Notifications only on approved comments (skip self-notifications).
-        if (comment.parentId) {
-          const parent = await this.commentModel
-            .findById(comment.parentId)
+        if (post) {
+          await this.postModel
+            .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
             .exec();
-          if (parent && parent.authorId !== comment.authorId) {
+
+          if (comment.parentId) {
+            const parent = await this.commentModel
+              .findById(comment.parentId)
+              .exec();
+            if (parent && parent.authorId !== comment.authorId) {
+              await this.notificationsService.create({
+                userId: parent.authorId,
+                actorId: comment.authorId,
+                type: 'reply',
+                postId: String(post._id),
+                commentId: String(comment._id),
+              });
+            }
+          } else if (post.authorId !== comment.authorId) {
             await this.notificationsService.create({
-              userId: parent.authorId,
+              userId: post.authorId,
               actorId: comment.authorId,
-              type: 'reply',
+              type: 'comment',
               postId: String(post._id),
               commentId: String(comment._id),
             });
           }
-        } else if (post.authorId !== comment.authorId) {
-          await this.notificationsService.create({
-            userId: post.authorId,
-            actorId: comment.authorId,
-            type: 'comment',
-            postId: String(post._id),
-            commentId: String(comment._id),
-          });
+        } else if (news) {
+          await this.newsModel
+            .updateOne({ _id: news._id }, { $inc: { commentCount: 1 } })
+            .exec();
+          // Notifications model is post-centric; skip push for news comments for now.
         }
       }
 

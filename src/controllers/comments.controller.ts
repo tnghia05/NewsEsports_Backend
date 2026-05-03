@@ -36,6 +36,16 @@ export class CommentsController {
     return this.commentsService.listForPost(user, postId, query);
   }
 
+  @Get('news/:newsId/comments')
+  @UseGuards(OptionalJwtAuthGuard)
+  listForNews(
+    @CurrentUser() user: JwtUser | undefined,
+    @Param('newsId') newsId: string,
+    @Query() query: QueryCommentsDto,
+  ) {
+    return this.commentsService.listForNews(user, newsId, query);
+  }
+
   @Get('comments/:id/replies')
   @UseGuards(OptionalJwtAuthGuard)
   listReplies(
@@ -54,6 +64,16 @@ export class CommentsController {
     @Body() body: CreateCommentDto,
   ) {
     return this.commentsService.createForPost(user, postId, body);
+  }
+
+  @Post('news/:newsId/comments')
+  @UseGuards(JwtAuthGuard)
+  createForNews(
+    @CurrentUser() user: JwtUser,
+    @Param('newsId') newsId: string,
+    @Body() body: CreateCommentDto,
+  ) {
+    return this.commentsService.createForNews(user, newsId, body);
   }
 
   @Patch('comments/:id')

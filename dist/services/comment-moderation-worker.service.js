@@ -19,21 +19,24 @@ const mongoose_1 = require("@nestjs/mongoose");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
+const news_model_1 = require("../models/news.model");
 const ai_service_1 = require("../infra/ai/ai.service");
 const notifications_service_1 = require("./notifications.service");
 let CommentModerationWorkerService = CommentModerationWorkerService_1 = class CommentModerationWorkerService {
     jobModel;
     commentModel;
     postModel;
+    newsModel;
     aiService;
     notificationsService;
     logger = new common_1.Logger(CommentModerationWorkerService_1.name);
     timer;
     running = false;
-    constructor(jobModel, commentModel, postModel, aiService, notificationsService) {
+    constructor(jobModel, commentModel, postModel, newsModel, aiService, notificationsService) {
         this.jobModel = jobModel;
         this.commentModel = commentModel;
         this.postModel = postModel;
+        this.newsModel = newsModel;
         this.aiService = aiService;
         this.notificationsService = notificationsService;
     }
@@ -95,8 +98,13 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                 .exec();
             return;
         }
-        const post = await this.postModel.findById(comment.postId).exec();
-        if (!post) {
+        const post = comment.postId
+            ? await this.postModel.findById(comment.postId).exec()
+            : null;
+        const news = comment.newsId
+            ? await this.newsModel.findById(comment.newsId).exec()
+            : null;
+        if (!post && !news) {
             await this.jobModel
                 .updateOne({ _id: job._id }, { $set: { status: 'done' } })
                 .exec();
@@ -107,7 +115,7 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                 .trim()
                 .replace(/\s+/g, ' ')
                 .slice(0, 80);
-            this.logger.log(`processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId} len=${String(comment.content ?? '').length} preview="${preview}"`);
+            this.logger.log(`processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId ?? 'n/a'} newsId=${comment.newsId ?? 'n/a'} len=${String(comment.content ?? '').length} preview="${preview}"`);
             const ai = await this.aiService.analyzeComment(comment.content);
             const rejected = ai.toxicity.isToxic;
             await this.commentModel
@@ -129,31 +137,38 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                 .exec();
             this.logger.log(`processJob updated commentId=${String(comment._id)} status=${rejected ? 'rejected' : 'approved'} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score}`);
             if (!rejected) {
-                await this.postModel
-                    .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
-                    .exec();
-                if (comment.parentId) {
-                    const parent = await this.commentModel
-                        .findById(comment.parentId)
+                if (post) {
+                    await this.postModel
+                        .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
                         .exec();
-                    if (parent && parent.authorId !== comment.authorId) {
+                    if (comment.parentId) {
+                        const parent = await this.commentModel
+                            .findById(comment.parentId)
+                            .exec();
+                        if (parent && parent.authorId !== comment.authorId) {
+                            await this.notificationsService.create({
+                                userId: parent.authorId,
+                                actorId: comment.authorId,
+                                type: 'reply',
+                                postId: String(post._id),
+                                commentId: String(comment._id),
+                            });
+                        }
+                    }
+                    else if (post.authorId !== comment.authorId) {
                         await this.notificationsService.create({
-                            userId: parent.authorId,
+                            userId: post.authorId,
                             actorId: comment.authorId,
-                            type: 'reply',
+                            type: 'comment',
                             postId: String(post._id),
                             commentId: String(comment._id),
                         });
                     }
                 }
-                else if (post.authorId !== comment.authorId) {
-                    await this.notificationsService.create({
-                        userId: post.authorId,
-                        actorId: comment.authorId,
-                        type: 'comment',
-                        postId: String(post._id),
-                        commentId: String(comment._id),
-                    });
+                else if (news) {
+                    await this.newsModel
+                        .updateOne({ _id: news._id }, { $inc: { commentCount: 1 } })
+                        .exec();
                 }
             }
             await this.jobModel
@@ -185,7 +200,8 @@ exports.CommentModerationWorkerService = CommentModerationWorkerService = Commen
     __param(0, (0, mongoose_1.InjectModel)(comment_moderation_job_model_1.CommentModerationJobModelName)),
     __param(1, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(2, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, ai_service_1.AiService,
+    __param(3, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
+    __metadata("design:paramtypes", [Function, Function, Function, Function, ai_service_1.AiService,
         notifications_service_1.NotificationsService])
 ], CommentModerationWorkerService);
 //# sourceMappingURL=comment-moderation-worker.service.js.map

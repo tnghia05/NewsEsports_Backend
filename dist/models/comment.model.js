@@ -14,6 +14,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 exports.CommentModelName = 'Comment';
 let Comment = class Comment {
     postId;
+    newsId;
     parentId;
     authorId;
     content;
@@ -34,9 +35,13 @@ let Comment = class Comment {
 };
 exports.Comment = Comment;
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, required: true, index: true }),
+    (0, mongoose_1.Prop)({ type: String, index: true }),
     __metadata("design:type", String)
 ], Comment.prototype, "postId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, index: true }),
+    __metadata("design:type", String)
+], Comment.prototype, "newsId", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: String, index: true }),
     __metadata("design:type", String)
@@ -130,5 +135,7 @@ exports.Comment = Comment = __decorate([
 exports.CommentSchema = mongoose_1.SchemaFactory.createForClass(Comment);
 exports.CommentSchema.index({ postId: 1, createdAt: 1 });
 exports.CommentSchema.index({ postId: 1, parentId: 1, createdAt: 1 });
+exports.CommentSchema.index({ newsId: 1, createdAt: 1 });
+exports.CommentSchema.index({ newsId: 1, parentId: 1, createdAt: 1 });
 exports.CommentSchema.index({ authorId: 1, createdAt: -1 });
 //# sourceMappingURL=comment.model.js.map

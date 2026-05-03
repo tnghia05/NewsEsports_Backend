@@ -60,6 +60,9 @@ export class News {
 
   @Prop({ type: String, index: true })
   externalId?: string; // guid or hash for dedup
+
+  @Prop({ type: Number, default: 0 })
+  commentCount!: number;
 }
 
 export const NewsSchema = SchemaFactory.createForClass(News);

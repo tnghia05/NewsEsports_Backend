@@ -18,15 +18,18 @@ const mongoose_1 = require("@nestjs/mongoose");
 const comment_like_model_1 = require("../models/comment-like.model");
 const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
+const news_model_1 = require("../models/news.model");
 const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let CommentLikesService = class CommentLikesService {
     commentLikeModel;
     commentModel;
     postModel;
-    constructor(commentLikeModel, commentModel, postModel) {
+    newsModel;
+    constructor(commentLikeModel, commentModel, postModel, newsModel) {
         this.commentLikeModel = commentLikeModel;
         this.commentModel = commentModel;
         this.postModel = postModel;
+        this.newsModel = newsModel;
     }
     async toggleLike(viewer, commentId) {
         const comment = await this.commentModel.findById(commentId).exec();
@@ -34,10 +37,20 @@ let CommentLikesService = class CommentLikesService {
             throw new common_1.NotFoundException('Comment not found');
         if (comment.isDeleted)
             throw new common_1.ForbiddenException('Comment deleted');
-        const post = await this.postModel.findById(comment.postId).exec();
-        if (!post)
-            throw new common_1.NotFoundException('Post not found');
-        (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
+        if (comment.postId) {
+            const post = await this.postModel.findById(comment.postId).exec();
+            if (!post)
+                throw new common_1.NotFoundException('Post not found');
+            (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
+        }
+        else if (comment.newsId) {
+            const news = await this.newsModel.findById(comment.newsId).exec();
+            if (!news || news.status !== 'published')
+                throw new common_1.NotFoundException('News not found');
+        }
+        else {
+            throw new common_1.NotFoundException('Comment target not found');
+        }
         const existing = await this.commentLikeModel
             .findOne({ commentId, userId: viewer.id })
             .exec();
@@ -72,6 +85,7 @@ exports.CommentLikesService = CommentLikesService = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(comment_like_model_1.CommentLikeModelName)),
     __param(1, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(2, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function])
+    __param(3, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
+    __metadata("design:paramtypes", [Function, Function, Function, Function])
 ], CommentLikesService);
 //# sourceMappingURL=comment-likes.service.js.map

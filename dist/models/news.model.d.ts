@@ -17,6 +17,7 @@ export declare class News {
     sourceUrl?: string;
     externalUrl?: string;
     externalId?: string;
+    commentCount: number;
 }
 export declare const NewsSchema: import("mongoose").Schema<News, import("mongoose").Model<News, any, any, any, any, any, News>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, News, import("mongoose").Document<unknown, {}, News, {
     id: string;
@@ -136,6 +137,15 @@ export declare const NewsSchema: import("mongoose").Schema<News, import("mongoos
         id: string;
     }> | undefined;
     externalId?: import("mongoose").SchemaDefinitionProperty<string | undefined, News, import("mongoose").Document<unknown, {}, News, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<News & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    commentCount?: import("mongoose").SchemaDefinitionProperty<number, News, import("mongoose").Document<unknown, {}, News, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<News & {
         _id: import("mongoose").Types.ObjectId;
