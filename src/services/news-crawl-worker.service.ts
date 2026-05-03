@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import * as cheerio from 'cheerio';
+import { load } from 'cheerio';
 import { NewsModelName, type NewsDocument } from '../models/news.model';
 import { CrawlSourcesService } from './crawl-sources.service';
 
@@ -105,7 +105,7 @@ export class NewsCrawlWorkerService implements OnModuleInit, OnModuleDestroy {
       `crawl listing ok ms=${Date.now() - started} url=${listingUrl} bytes=${html.length}`,
     );
 
-    const $ = cheerio.load(html);
+    const $ = load(html);
     const out = new Set<string>();
 
     $('a[href]').each((_, el) => {
