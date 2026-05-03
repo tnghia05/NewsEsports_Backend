@@ -269,6 +269,8 @@ function keepThethao247ArticleLink(u) {
         return false;
     if (/-c\d+\//i.test(`${p}/`))
         return false;
+    if (/-d\d+\.html$/i.test(p))
+        return true;
     if (/-\d+-\d+\.html$/i.test(p))
         return true;
     if (/-\d{4,}\.html$/i.test(p))

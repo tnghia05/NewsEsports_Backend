@@ -302,7 +302,8 @@ function keepThethao247ArticleLink(u: URL): boolean {
   // Chuyên mục dạng /bong-da-viet-nam-c1/ hoặc /esports-c180/ (không phải file .html)
   if (/-c\d+\//i.test(`${p}/`)) return false;
 
-  // Bài thường có id số cuối slug: ...-649981.html hoặc ...-301-649981.html
+  // Bài: ...-301-649981.html / ...-649981.html / ...-d418889.html (id sau chữ d — xem status bar trình duyệt)
+  if (/-d\d+\.html$/i.test(p)) return true;
   if (/-\d+-\d+\.html$/i.test(p)) return true;
   if (/-\d{4,}\.html$/i.test(p)) return true;
 
