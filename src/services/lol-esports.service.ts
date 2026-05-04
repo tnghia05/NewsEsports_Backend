@@ -52,10 +52,17 @@ export class LoLEsportsService {
     }
   }
 
+  private getDelayedStartingTime(offsetSeconds = 200): string {
+    const t = new Date(Date.now() - offsetSeconds * 1000);
+    const s = t.getUTCSeconds();
+    t.setUTCSeconds(s - (s % 10), 0);
+    return t.toISOString().replace(/\.\d{3}Z$/, '.000Z');
+  }
+
   async getLiveStats(gameId: string, startingTime?: string) {
     try {
-      let url = `${LIVE_STATS_API}/window/${gameId}`;
-      if (startingTime) url += `?startingTime=${encodeURIComponent(startingTime)}`;
+      const st = startingTime ?? this.getDelayedStartingTime();
+      const url = `${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`;
       const data = await this.fetchJson<any>(url, false);
       return data;
     } catch (err) {
@@ -66,8 +73,8 @@ export class LoLEsportsService {
 
   async getLiveStatsDetails(gameId: string, startingTime?: string) {
     try {
-      let url = `${LIVE_STATS_API}/details/${gameId}`;
-      if (startingTime) url += `?startingTime=${encodeURIComponent(startingTime)}`;
+      const st = startingTime ?? this.getDelayedStartingTime();
+      const url = `${LIVE_STATS_API}/details/${gameId}?startingTime=${encodeURIComponent(st)}`;
       const data = await this.fetchJson<any>(url, false);
       return data;
     } catch (err) {
