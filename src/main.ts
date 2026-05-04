@@ -18,7 +18,11 @@ async function bootstrap() {
         origin === 'http://localhost:5173' ||
         origin === 'http://localhost:3000' ||
         origin === 'http://127.0.0.1:5173' ||
-        origin === 'http://127.0.0.1:3000'
+        origin === 'http://127.0.0.1:56231' ||
+        origin === 'http://localhost:5623' ||
+        origin === 'http://localhost:5000' 
+
+
       ) {
         return callback(null, true);
       }
