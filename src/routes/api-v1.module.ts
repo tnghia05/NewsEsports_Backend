@@ -17,6 +17,7 @@ import { OrdersController } from '../controllers/orders.controller';
 import { PaymentsController } from '../controllers/payments.controller';
 import { UploadsController } from '../controllers/uploads.controller';
 import { MatchesController } from '../controllers/matches.controller';
+import { LoLEsportsController } from '../controllers/lol-esports.controller';
 import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
@@ -101,6 +102,7 @@ import { R2Service } from '../infra/r2/r2.service';
 import { MatchesService } from '../services/matches.service';
 import { MatchSyncWorkerService } from '../services/match-sync-worker.service';
 import { PandaScoreService } from '../infra/pandascore/pandascore.service';
+import { LoLEsportsService } from '../services/lol-esports.service';
 import { MatchModelName, MatchSchema } from '../models/match.model';
 
 @Module({
@@ -152,6 +154,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
     PaymentsController,
     UploadsController,
     MatchesController,
+    LoLEsportsController,
   ],
   providers: [
     HealthService,
@@ -184,6 +187,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
     MatchesService,
     MatchSyncWorkerService,
     PandaScoreService,
+    LoLEsportsService,
     JwtStrategy,
     R2Service,
   ],
