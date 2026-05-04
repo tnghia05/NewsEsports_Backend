@@ -48,6 +48,14 @@ const EnvSchema = z.object({
   R2_BUCKET: z.string().min(1).optional(),
   R2_PUBLIC_BASE_URL: z.string().url().optional(),
 
+  // Matches (Milestone 10)
+  MATCH_DATA_PROVIDER: z
+    .enum(['pandascore', 'mock'])
+    .optional()
+    .default('pandascore'),
+  PANDASCORE_TOKEN: z.string().min(1).optional(),
+  MATCH_SYNC_INTERVAL_MS: z.coerce.number().int().positive().optional(),
+
   // Cloudinary (optional, when doing uploads)
   CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
   CLOUDINARY_API_KEY: z.string().min(1).optional(),

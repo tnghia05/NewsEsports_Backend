@@ -16,6 +16,7 @@ import { ProductsController } from '../controllers/products.controller';
 import { OrdersController } from '../controllers/orders.controller';
 import { PaymentsController } from '../controllers/payments.controller';
 import { UploadsController } from '../controllers/uploads.controller';
+import { MatchesController } from '../controllers/matches.controller';
 import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
@@ -97,6 +98,10 @@ import { RssService } from '../infra/rss/rss.service';
 import { HotKeywordsWorkerService } from '../services/hot-keywords-worker.service';
 import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
 import { R2Service } from '../infra/r2/r2.service';
+import { MatchesService } from '../services/matches.service';
+import { MatchSyncWorkerService } from '../services/match-sync-worker.service';
+import { PandaScoreService } from '../infra/pandascore/pandascore.service';
+import { MatchModelName, MatchSchema } from '../models/match.model';
 
 @Module({
   imports: [
@@ -126,6 +131,7 @@ import { R2Service } from '../infra/r2/r2.service';
       { name: OrderModelName, schema: OrderSchema },
       { name: PaymentModelName, schema: PaymentSchema },
       { name: OrderCounterModelName, schema: OrderCounterSchema },
+      { name: MatchModelName, schema: MatchSchema },
     ]),
   ],
   controllers: [
@@ -145,6 +151,7 @@ import { R2Service } from '../infra/r2/r2.service';
     OrdersController,
     PaymentsController,
     UploadsController,
+    MatchesController,
   ],
   providers: [
     HealthService,
@@ -174,6 +181,9 @@ import { R2Service } from '../infra/r2/r2.service';
     OrderReservationsWorkerService,
     AiService,
     CommentModerationWorkerService,
+    MatchesService,
+    MatchSyncWorkerService,
+    PandaScoreService,
     JwtStrategy,
     R2Service,
   ],

@@ -711,3 +711,88 @@ FE upload file trực tiếp lên `uploadUrl` bằng `PUT`, sau đó lưu `publi
 
 ### DELETE `https://backend36.dev/api/v1/admin/rss-sources/:id` — Xóa nguồn RSS
 
+---
+
+## Trận đấu (Matches) — Milestone 10
+
+Dữ liệu được đồng bộ tự động từ PandaScore (hoặc mock) qua cron worker mỗi 5 phút (cấu hình `MATCH_SYNC_INTERVAL_MS`).
+
+### GET `/api/v1/matches` — Danh sách trận đấu
+
+**Query params:**
+
+| Tên | Kiểu | Mặc định | Mô tả |
+|-----|------|---------|-------|
+| `tab` | `live\|upcoming\|finished\|all` | `all` | Lọc theo trạng thái |
+| `game` | string | — | Lọc theo game: `lol`, `csgo`, `dota2`, `valorant`, `ow2`, `rl`, … |
+| `region` | string | — | Lọc theo league slug: `lck`, `lcs`, `lec`, `vcs`, … (case-insensitive) |
+| `page` | number | `1` | Trang |
+| `limit` | number | `20` | Số item mỗi trang (tối đa 100) |
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "_id": "...",
+      "externalId": "12345",
+      "game": "lol",
+      "region": "lck",
+      "status": "not_started",
+      "startsAt": "2025-05-10T13:00:00.000Z",
+      "teams": [
+        { "name": "T1", "acronym": "T1", "imageUrl": "...", "score": null, "externalId": 1 },
+        { "name": "Gen.G", "acronym": "GEN", "imageUrl": "...", "score": null, "externalId": 2 }
+      ],
+      "matchName": "T1 vs Gen.G",
+      "tournamentName": "LCK Spring 2025 Playoffs",
+      "leagueName": "LCK",
+      "serieName": "Spring 2025",
+      "numberOfGames": 5,
+      "syncedAt": "2025-05-10T12:55:00.000Z"
+    }
+  ],
+  "page": 1,
+  "limit": 20,
+  "total": 42,
+  "hasMore": true
+}
+```
+
+**Status values:** `live` | `not_started` | `finished`
+
+---
+
+### GET `/api/v1/matches/stats` — Số lượng theo trạng thái
+
+**Response:**
+```json
+{ "live": 3, "upcoming": 18, "finished": 45, "total": 66 }
+```
+
+---
+
+### GET `/api/v1/matches/:id` — Chi tiết trận đấu
+
+---
+
+### POST `/api/v1/matches/admin/sync-now` — Kích hoạt sync thủ công (chỉ admin)
+
+Yêu cầu `Authorization: Bearer <admin_token>`.
+
+**Response:**
+```json
+{ "ok": true, "upserted": 27, "provider": "pandascore" }
+```
+
+---
+
+## Cấu hình môi trường — Matches
+
+| Biến | Mặc định | Mô tả |
+|------|---------|-------|
+| `MATCH_DATA_PROVIDER` | `pandascore` | `pandascore` hoặc `mock` (dùng mock khi dev chưa có token) |
+| `PANDASCORE_TOKEN` | — | Token API từ [pandascore.co](https://pandascore.co) |
+| `MATCH_SYNC_INTERVAL_MS` | `300000` | Chu kỳ sync (ms), mặc định 5 phút |
+
+
