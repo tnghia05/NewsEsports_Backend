@@ -52,19 +52,41 @@ export class LoLEsportsService {
     }
   }
 
-  private getDelayedStartingTime(offsetSeconds = 200): string {
+  private getDelayedStartingTime(offsetSeconds = 175): string {
     const t = new Date(Date.now() - offsetSeconds * 1000);
     const s = t.getUTCSeconds();
     t.setUTCSeconds(s - (s % 10), 0);
     return t.toISOString().replace(/\.\d{3}Z$/, '.000Z');
   }
 
+  private async fetchWithRetry(baseUrl: string, gameId: string, offsets: number[]): Promise<any> {
+    for (const offset of offsets) {
+      const st = this.getDelayedStartingTime(offset);
+      const url = `${baseUrl}/${gameId}?startingTime=${encodeURIComponent(st)}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const text = await res.text();
+        if (!text || text.trim() === '') return null;
+        return JSON.parse(text);
+      }
+      const body = await res.text().catch(() => '');
+      if (!body.includes('ahead of broadcast')) {
+        this.logger.warn(`fetchWithRetry ${offset}s: ${res.status} ${body.slice(0, 100)}`);
+        return null;
+      }
+    }
+    return null;
+  }
+
   async getLiveStats(gameId: string, startingTime?: string) {
     try {
-      const st = startingTime ?? this.getDelayedStartingTime();
-      const url = `${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`;
-      const data = await this.fetchJson<any>(url, false);
-      return data;
+      if (startingTime) {
+        return await this.fetchJson<any>(
+          `${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(startingTime)}`,
+          false,
+        );
+      }
+      return await this.fetchWithRetry(`${LIVE_STATS_API}/window`, gameId, [175, 185, 200, 220]);
     } catch (err) {
       this.logger.warn(`getLiveStats failed for ${gameId}: ${err}`);
       return null;
@@ -73,10 +95,13 @@ export class LoLEsportsService {
 
   async getLiveStatsDetails(gameId: string, startingTime?: string) {
     try {
-      const st = startingTime ?? this.getDelayedStartingTime();
-      const url = `${LIVE_STATS_API}/details/${gameId}?startingTime=${encodeURIComponent(st)}`;
-      const data = await this.fetchJson<any>(url, false);
-      return data;
+      if (startingTime) {
+        return await this.fetchJson<any>(
+          `${LIVE_STATS_API}/details/${gameId}?startingTime=${encodeURIComponent(startingTime)}`,
+          false,
+        );
+      }
+      return await this.fetchWithRetry(`${LIVE_STATS_API}/details`, gameId, [175, 185, 200, 220]);
     } catch (err) {
       this.logger.warn(`getLiveStatsDetails failed for ${gameId}: ${err}`);
       return null;
