@@ -68,7 +68,7 @@ export class Match {
   endedAt?: Date; // populated from provider's end_at when status=finished
 
   @Prop({ type: String, index: true })
-  provider?: string; // 'pandascoree' | 'mock'
+  provider?: string; // 'pandascore' | 'mock'
 
   @Prop({ type: Date, required: true })
   syncedAt!: Date;
