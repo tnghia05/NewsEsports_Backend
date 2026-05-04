@@ -108,6 +108,105 @@ export class LoLEsportsService {
     }
   }
 
+  private roundToTenSeconds(date: Date): string {
+    const s = date.getUTCSeconds();
+    date.setUTCSeconds(s - (s % 10), 0);
+    return date.toISOString().replace(/\.\d{3}Z$/, '.000Z');
+  }
+
+  private async findFinishedFrame(gameId: string, firstFrameTime: string): Promise<any | null> {
+    const base = new Date(firstFrameTime).getTime();
+    for (let minOffset = 15; minOffset <= 60; minOffset += 5) {
+      const t = new Date(base + minOffset * 60 * 1000);
+      const st = this.roundToTenSeconds(t);
+      try {
+        const res = await fetch(`${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const frames: any[] = data?.frames ?? [];
+        const finishedFrame = frames.find((f: any) => f.gameState === 'finished');
+        if (finishedFrame) return { frame: finishedFrame, metadata: data.gameMetadata };
+        const lastFrame = frames[frames.length - 1];
+        if (lastFrame?.blueTeam?.totalGold > 0) {
+          const lastIdx = frames.length - 1;
+          for (let i = lastIdx; i >= 0; i--) {
+            if (frames[i].gameState === 'finished') return { frame: frames[i], metadata: data.gameMetadata };
+          }
+        }
+      } catch { continue; }
+    }
+    return null;
+  }
+
+  async getPostgameStats(gameId: string, firstFrameTime?: string) {
+    try {
+      let result: { frame: any; metadata: any } | null = null;
+
+      if (firstFrameTime) {
+        result = await this.findFinishedFrame(gameId, firstFrameTime);
+      }
+
+      if (!result) {
+        const st = this.getDelayedStartingTime(175);
+        const res = await fetch(`${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const frames: any[] = data?.frames ?? [];
+          const finished = frames.find((f: any) => f.gameState === 'finished') ?? frames[frames.length - 1];
+          if (finished?.blueTeam?.totalGold > 0) result = { frame: finished, metadata: data.gameMetadata };
+        }
+      }
+
+      if (!result) return null;
+
+      const { frame, metadata } = result;
+      const blueParticipantsMeta: any[] = metadata?.blueTeamMetadata?.participantMetadata ?? [];
+      const redParticipantsMeta: any[] = metadata?.redTeamMetadata?.participantMetadata ?? [];
+
+      const mapParticipants = (participants: any[], metaList: any[]) =>
+        participants.map((p: any) => {
+          const meta = metaList.find((m: any) => m.participantId === p.participantId) ?? {};
+          return {
+            participantId: p.participantId,
+            summonerName: meta.summonerName ?? '',
+            championId: meta.championId ?? '',
+            role: meta.role ?? '',
+            kills: p.kills,
+            deaths: p.deaths,
+            assists: p.assists,
+            totalGold: p.totalGold,
+            creepScore: p.creepScore,
+            level: p.level,
+          };
+        });
+
+      return {
+        gameState: frame.gameState,
+        blueTeam: {
+          totalGold: frame.blueTeam.totalGold,
+          totalKills: frame.blueTeam.totalKills,
+          towers: frame.blueTeam.towers,
+          inhibitors: frame.blueTeam.inhibitors,
+          barons: frame.blueTeam.barons,
+          dragons: frame.blueTeam.dragons,
+          participants: mapParticipants(frame.blueTeam.participants ?? [], blueParticipantsMeta),
+        },
+        redTeam: {
+          totalGold: frame.redTeam.totalGold,
+          totalKills: frame.redTeam.totalKills,
+          towers: frame.redTeam.towers,
+          inhibitors: frame.redTeam.inhibitors,
+          barons: frame.redTeam.barons,
+          dragons: frame.redTeam.dragons,
+          participants: mapParticipants(frame.redTeam.participants ?? [], redParticipantsMeta),
+        },
+      };
+    } catch (err) {
+      this.logger.warn(`getPostgameStats failed for ${gameId}: ${err}`);
+      return null;
+    }
+  }
+
   async getEventDetails(matchId: string, hl = 'vi-VN') {
     try {
       const data = await this.fetchJson<any>(

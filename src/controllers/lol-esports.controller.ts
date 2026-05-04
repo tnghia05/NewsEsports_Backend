@@ -41,4 +41,12 @@ export class LoLEsportsController {
   ) {
     return this.lolesports.getLiveStatsDetails(gameId, startingTime);
   }
+
+  @Get('postgame/:gameId')
+  getPostgameStats(
+    @Param('gameId') gameId: string,
+    @Query('firstFrameTime') firstFrameTime?: string,
+  ) {
+    return this.lolesports.getPostgameStats(gameId, firstFrameTime);
+  }
 }
