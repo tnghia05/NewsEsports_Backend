@@ -78,15 +78,40 @@ export class LoLEsportsService {
     return null;
   }
 
+  private async injectGameTime(gameId: string, data: any): Promise<any> {
+    if (!data?.frames?.length) return data;
+    if (!data.gameMetadata) data.gameMetadata = {};
+    try {
+      const startRes = await fetch(`${LIVE_STATS_API}/window/${gameId}`);
+      if (startRes.ok) {
+        const startData = await startRes.json();
+        const gameStartTs = startData?.frames?.[0]?.rfc460Timestamp;
+        if (gameStartTs) {
+          const lastTs = new Date(data.frames[data.frames.length - 1].rfc460Timestamp).getTime();
+          data.gameMetadata.gameTime = Math.floor((lastTs - new Date(gameStartTs).getTime()) / 1000);
+          return data;
+        }
+      }
+    } catch { /* fall through */ }
+    const frames: any[] = data.frames;
+    const lastTs = new Date(frames[frames.length - 1].rfc460Timestamp).getTime();
+    const firstTs = new Date(frames[0].rfc460Timestamp).getTime();
+    data.gameMetadata.gameTime = Math.floor((lastTs - firstTs) / 1000);
+    return data;
+  }
+
   async getLiveStats(gameId: string, startingTime?: string) {
     try {
+      let data: any;
       if (startingTime) {
-        return await this.fetchJson<any>(
+        data = await this.fetchJson<any>(
           `${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(startingTime)}`,
           false,
         );
+      } else {
+        data = await this.fetchWithRetry(`${LIVE_STATS_API}/window`, gameId, [175, 185, 200, 220]);
       }
-      return await this.fetchWithRetry(`${LIVE_STATS_API}/window`, gameId, [175, 185, 200, 220]);
+      return this.injectGameTime(gameId, data);
     } catch (err) {
       this.logger.warn(`getLiveStats failed for ${gameId}: ${err}`);
       return null;
