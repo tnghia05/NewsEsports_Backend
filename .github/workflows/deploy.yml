@@ -61,7 +61,11 @@ jobs:
             R2_BUCKET=${{ secrets.R2_BUCKET }}
             R2_PUBLIC_BASE_URL=${{ secrets.R2_PUBLIC_BASE_URL }}
 
-            
+            # Matches (Milestone 10)
+            MATCH_DATA_PROVIDER=${{ secrets.MATCH_DATA_PROVIDER }}
+            PANDASCORE_TOKEN=${{ secrets.PANDASCORE_TOKEN }}
+            MATCH_SYNC_INTERVAL_MS=${{ secrets.MATCH_SYNC_INTERVAL_MS }}
+
             EOF
 
             # Cài deps + build
