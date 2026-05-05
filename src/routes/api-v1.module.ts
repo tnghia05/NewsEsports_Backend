@@ -103,6 +103,8 @@ import { MatchesService } from '../services/matches.service';
 import { MatchSyncWorkerService } from '../services/match-sync-worker.service';
 import { PandaScoreService } from '../infra/pandascore/pandascore.service';
 import { LoLEsportsService } from '../services/lol-esports.service';
+import { GridController } from '../controllers/grid.controller';
+import { GridService } from '../services/grid.service';
 import { MatchModelName, MatchSchema } from '../models/match.model';
 
 @Module({
@@ -155,6 +157,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
     UploadsController,
     MatchesController,
     LoLEsportsController,
+    GridController,
   ],
   providers: [
     HealthService,
@@ -188,6 +191,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
     MatchSyncWorkerService,
     PandaScoreService,
     LoLEsportsService,
+    GridService,
     JwtStrategy,
     R2Service,
   ],
