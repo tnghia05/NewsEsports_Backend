@@ -44,7 +44,7 @@ export class GridService {
               format { nameShortened }
               tournament { id nameShortened }
               title { id name }
-              teams { baseInfo { id name shortName logoUrl } }
+              teams { baseInfo { id name } }
             }
           }
         }
@@ -69,7 +69,7 @@ export class GridService {
               format { nameShortened }
               tournament { id nameShortened }
               title { id name }
-              teams { baseInfo { id name shortName logoUrl } }
+              teams { baseInfo { id name } }
             }
           }
         }
@@ -148,7 +148,7 @@ export class GridService {
           format { nameShortened }
           tournament { id nameShortened }
           title { id name }
-          teams { baseInfo { id name shortName logoUrl } }
+          teams { baseInfo { id name } }
         }
       }
     `, { id: seriesId });
