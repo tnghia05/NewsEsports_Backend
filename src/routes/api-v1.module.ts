@@ -18,6 +18,7 @@ import { PaymentsController } from '../controllers/payments.controller';
 import { UploadsController } from '../controllers/uploads.controller';
 import { MatchesController } from '../controllers/matches.controller';
 import { LoLEsportsController } from '../controllers/lol-esports.controller';
+import { PandaScoreController } from '../controllers/pandascore.controller';
 import { HealthService } from '../services/health.service';
 import { UsersService } from '../services/users.service';
 import { AuthService } from '../services/auth.service';
@@ -156,6 +157,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
     PaymentsController,
     UploadsController,
     MatchesController,
+    PandaScoreController,
     LoLEsportsController,
     GridController,
   ],

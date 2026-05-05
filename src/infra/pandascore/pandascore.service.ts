@@ -64,6 +64,24 @@ export class PandaScoreService {
     });
   }
 
+  /**
+   * Fetch a single match (raw PandaScore response) by ID or slug.
+   * This is intended for "match detail" pages where you need all fields
+   * PandaScore exposes (games, results, streams, etc.).
+   */
+  async fetchMatchDetail(matchIdOrSlug: string): Promise<unknown | null> {
+    const safe = encodeURIComponent(matchIdOrSlug);
+    return this.fetchJson(`/matches/${safe}`);
+  }
+
+  /**
+   * Fetch a match's opponents (raw PandaScore response) by match ID or slug.
+   */
+  async fetchMatchOpponents(matchIdOrSlug: string): Promise<unknown | null> {
+    const safe = encodeURIComponent(matchIdOrSlug);
+    return this.fetchJson(`/matches/${safe}/opponents`);
+  }
+
   private async fetchPage(
     path: string,
     params: Record<string, string | number>,
@@ -104,6 +122,43 @@ export class PandaScoreService {
         this.logger.warn(`PandaScore ${path} fetch error: ${String(e?.message ?? e)}`);
       }
       return [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async fetchJson(path: string): Promise<unknown | null> {
+    if (!this.token) return null;
+
+    const url = `${this.baseUrl}${path}`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        this.logger.warn(
+          `PandaScore ${path} => HTTP ${res.status}: ${body.slice(0, 200)}`,
+        );
+        return null;
+      }
+
+      return (await res.json()) as unknown;
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        this.logger.warn(`PandaScore ${path} timed out after ${this.timeoutMs}ms`);
+      } else {
+        this.logger.warn(`PandaScore ${path} fetch error: ${String(e?.message ?? e)}`);
+      }
+      return null;
     } finally {
       clearTimeout(timeout);
     }
