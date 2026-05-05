@@ -90,7 +90,7 @@ export class GridService {
           duration
           startedAt
           updatedAt
-          title { id name }
+          title { name }
           teams {
             id
             name
