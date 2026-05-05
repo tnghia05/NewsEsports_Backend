@@ -32,5 +32,30 @@ export class PandaScoreController {
     if (!data) throw new BadGatewayException('Failed to fetch match opponents');
     return data;
   }
+
+  @Get('lol/games/:gameId')
+  async getLoLGame(@Param('gameId') gameId: string) {
+    if (!this.pandaScore.isConfigured) {
+      throw new ServiceUnavailableException('PANDASCORE_TOKEN not configured');
+    }
+
+    const data = await this.pandaScore.fetchLoLGame(gameId);
+    if (!data) throw new BadGatewayException('Failed to fetch LoL game detail');
+    return data;
+  }
+
+  @Get(':gameSlug/games/:gameId')
+  async getGameDetail(
+    @Param('gameSlug') gameSlug: string,
+    @Param('gameId') gameId: string,
+  ) {
+    if (!this.pandaScore.isConfigured) {
+      throw new ServiceUnavailableException('PANDASCORE_TOKEN not configured');
+    }
+
+    const data = await this.pandaScore.fetchGameDetail(gameSlug, gameId);
+    if (!data) throw new BadGatewayException('Failed to fetch game detail');
+    return data;
+  }
 }
 

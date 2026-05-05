@@ -82,6 +82,23 @@ export class PandaScoreService {
     return this.fetchJson(`/matches/${safe}/opponents`);
   }
 
+  /**
+   * LoL detailed game stats (KDA/gold/damage...). Requires PandaScore plan support.
+   */
+  async fetchLoLGame(gameId: string): Promise<unknown | null> {
+    const safe = encodeURIComponent(gameId);
+    return this.fetchJson(`/lol/games/${safe}`);
+  }
+
+  async fetchGameDetail(gameSlug: string, gameId: string): Promise<unknown | null> {
+    // Defensive: only allow simple slugs to avoid path tricks.
+    // Examples: lol, csgo, dota2, valorant, ow2, rl, mlbb, cod-mw...
+    if (!/^[a-z0-9-]+$/i.test(gameSlug)) return null;
+    const safeSlug = gameSlug.toLowerCase();
+    const safeId = encodeURIComponent(gameId);
+    return this.fetchJson(`/${safeSlug}/games/${safeId}`);
+  }
+
   private async fetchPage(
     path: string,
     params: Record<string, string | number>,
