@@ -154,6 +154,32 @@ export class GridService {
     return data?.series ?? null;
   }
 
+  async getScheduleWithScores(titleIds: string[] = ['28', '2'], dateFrom?: string, dateTo?: string) {
+    const series = await this.getSchedule(titleIds, dateFrom, dateTo);
+    if (!series.length) return series;
+    // Only batch-fetch states for past series (up to 20)
+    const now = Date.now();
+    const past = series.filter((s: any) => new Date(s.startTimeScheduled).getTime() < now - 3600_000);
+    const stateResults = await Promise.allSettled(
+      past.slice(0, 20).map((s: any) => this.getSeriesState(s.id))
+    );
+    const stateMap = new Map<string, any>();
+    past.slice(0, 20).forEach((s: any, i: number) => {
+      const r = stateResults[i];
+      if (r.status === 'fulfilled' && r.value) stateMap.set(s.id, r.value);
+    });
+    return series.map((s: any) => {
+      const st = stateMap.get(s.id);
+      if (!st) return s;
+      return {
+        ...s,
+        seriesScore: { a: st.teams?.[0]?.score ?? 0, b: st.teams?.[1]?.score ?? 0 },
+        finished: st.finished,
+        started: st.started,
+      };
+    });
+  }
+
   async getTitles() {
     const data = await this.gql<any>('/central-data/graphql', `{ titles { id name } }`);
     return data?.titles ?? [];
