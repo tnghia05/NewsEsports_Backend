@@ -36,7 +36,6 @@ export class GridService {
         allSeries(
           filter: { titleIds: { in: $titleIds }, startTimeScheduled: { gte: $from, lte: $to } }
           first: 50
-          orderBy: { field: startTimeScheduled, order: ASC }
         ) {
           edges {
             node {
