@@ -44,7 +44,7 @@ export class GridService {
               format { nameShortened }
               tournament { id nameShortened }
               title { id name }
-              teams { baseInfo { id name } }
+              teams { baseInfo { id name } scoreAdvantage }
             }
           }
         }
@@ -69,7 +69,7 @@ export class GridService {
               format { nameShortened }
               tournament { id nameShortened }
               title { id name }
-              teams { baseInfo { id name } }
+              teams { baseInfo { id name } scoreAdvantage }
             }
           }
         }
