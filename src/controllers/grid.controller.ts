@@ -21,14 +21,14 @@ export class GridController {
     return this.grid.getLiveSeries(ids);
   }
 
-  @Get('series/:id')
-  getSeriesInfo(@Param('id') id: string) {
-    return this.grid.getSeriesInfo(id);
-  }
-
   @Get('series/:id/state')
   getSeriesState(@Param('id') id: string) {
     return this.grid.getSeriesState(id);
+  }
+
+  @Get('series/:id')
+  getSeriesInfo(@Param('id') id: string) {
+    return this.grid.getSeriesInfo(id);
   }
 
   @Get('titles')
