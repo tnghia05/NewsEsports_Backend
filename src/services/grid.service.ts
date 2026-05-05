@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 const GRID_API = 'https://api-op.grid.gg';
-const GRID_KEY = 'p4EAhc88U9nO2nXz9sGhs30XCJOaIDpYS5gbo8SO';
+const GRID_KEY = process.env.GRID_API_KEY ?? 'p4EAhc88U9nO2nXz9sGhs30XCJOaIDpYS5gbo8SO';
 
 export const GRID_TITLE = { CS2: '28', DOTA2: '2' } as const;
 

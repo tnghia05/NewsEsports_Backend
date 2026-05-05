@@ -66,6 +66,9 @@ jobs:
             PANDASCORE_TOKEN=${{ secrets.PANDASCORE_TOKEN }}
             MATCH_SYNC_INTERVAL_MS=${{ secrets.MATCH_SYNC_INTERVAL_MS }}
 
+            # GRID esports API
+            GRID_API_KEY=${{ secrets.GRID_API_KEY }}
+
             EOF
 
             # Cài deps + build
