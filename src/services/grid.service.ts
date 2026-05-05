@@ -32,7 +32,7 @@ export class GridService {
     const from = dateFrom ?? new Date(Date.now() - 3 * 24 * 3600_000).toISOString();
     const to = dateTo ?? new Date(Date.now() + 7 * 24 * 3600_000).toISOString();
     const data = await this.gql<any>('/central-data/graphql', `
-      query GetSchedule($from: String!, $to: String!, $titleIds: [String!]!) {
+      query GetSchedule($from: String!, $to: String!, $titleIds: [ID!]!) {
         allSeries(
           filter: { titleIds: { in: $titleIds }, startTimeScheduled: { gte: $from, lte: $to } }
           first: 50
@@ -58,7 +58,7 @@ export class GridService {
     const from = new Date(Date.now() - 12 * 3600_000).toISOString();
     const to = new Date(Date.now() + 1 * 3600_000).toISOString();
     const data = await this.gql<any>('/central-data/graphql', `
-      query GetLive($from: String!, $to: String!, $titleIds: [String!]!) {
+      query GetLive($from: String!, $to: String!, $titleIds: [ID!]!) {
         allSeries(
           filter: { titleIds: { in: $titleIds }, startTimeScheduled: { gte: $from, lte: $to } }
           first: 20
