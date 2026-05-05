@@ -102,7 +102,7 @@ export class GridService {
               deaths
               killAssistsGiven
               firstKill
-              multikills { count amount }
+              multikills { count numberOfKills }
             }
           }
           games {
@@ -128,7 +128,7 @@ export class GridService {
                 netWorth
                 loadoutValue
                 firstKill
-                multikills { count amount }
+                multikills { count numberOfKills }
               }
             }
           }
