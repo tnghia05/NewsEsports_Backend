@@ -101,8 +101,6 @@ export class GridService {
               kills
               deaths
               killAssistsGiven
-              money
-              netWorth
               firstKill
               multikills { count amount }
             }
@@ -118,6 +116,8 @@ export class GridService {
               score
               won
               side
+              money
+              netWorth
               players {
                 id
                 name
