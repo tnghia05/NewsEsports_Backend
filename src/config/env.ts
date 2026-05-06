@@ -21,12 +21,24 @@ const EnvSchema = z.object({
   // Support both key names:
   // - AI_MODERATION_URL / AI_MODERATION_TIMEOUT_MS (preferred)
   // - AI_SERVICE_URL / AI_TIMEOUT_MS (legacy)
-  AI_MODERATION_URL: z.string().url().optional(),
-  AI_MODERATION_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
-  AI_SERVICE_URL: z.string().url().optional(),
-  AI_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
-  AI_TOXIC_THRESHOLD: z.coerce.number().optional(),
-  AI_VERSION: z.string().optional(),
+  AI_MODERATION_URL: z.preprocess(
+    emptyStringToUndefined,
+    z.string().url().optional(),
+  ),
+  AI_MODERATION_TIMEOUT_MS: z.preprocess(
+    emptyStringToUndefined,
+    z.coerce.number().int().positive().optional(),
+  ),
+  AI_SERVICE_URL: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
+  AI_TIMEOUT_MS: z.preprocess(
+    emptyStringToUndefined,
+    z.coerce.number().int().positive().optional(),
+  ),
+  AI_TOXIC_THRESHOLD: z.preprocess(
+    emptyStringToUndefined,
+    z.coerce.number().positive().optional(),
+  ),
+  AI_VERSION: z.preprocess(emptyStringToUndefined, z.string().optional()),
 
   // Google login (Milestone 1)
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),

@@ -6,12 +6,12 @@ declare const EnvSchema: z.ZodObject<{
     JWT_SECRET: z.ZodString;
     JWT_EXPIRES_IN: z.ZodString;
     JWT_REFRESH_EXPIRES_IN: z.ZodOptional<z.ZodString>;
-    AI_MODERATION_URL: z.ZodOptional<z.ZodString>;
-    AI_MODERATION_TIMEOUT_MS: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
-    AI_SERVICE_URL: z.ZodOptional<z.ZodString>;
-    AI_TIMEOUT_MS: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
-    AI_TOXIC_THRESHOLD: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
-    AI_VERSION: z.ZodOptional<z.ZodString>;
+    AI_MODERATION_URL: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
+    AI_MODERATION_TIMEOUT_MS: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+    AI_SERVICE_URL: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
+    AI_TIMEOUT_MS: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+    AI_TOXIC_THRESHOLD: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
+    AI_VERSION: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
     GOOGLE_CLIENT_ID: z.ZodString;
     RSS_SOURCES: z.ZodOptional<z.ZodString>;
     VNPAY_TMN_CODE: z.ZodOptional<z.ZodString>;

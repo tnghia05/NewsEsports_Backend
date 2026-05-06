@@ -17,12 +17,12 @@ const EnvSchema = zod_1.z.object({
         .string()
         .min(1, 'JWT_REFRESH_EXPIRES_IN is required')
         .optional(),
-    AI_MODERATION_URL: zod_1.z.string().url().optional(),
-    AI_MODERATION_TIMEOUT_MS: zod_1.z.coerce.number().int().positive().optional(),
-    AI_SERVICE_URL: zod_1.z.string().url().optional(),
-    AI_TIMEOUT_MS: zod_1.z.coerce.number().int().positive().optional(),
-    AI_TOXIC_THRESHOLD: zod_1.z.coerce.number().optional(),
-    AI_VERSION: zod_1.z.string().optional(),
+    AI_MODERATION_URL: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z.string().url().optional()),
+    AI_MODERATION_TIMEOUT_MS: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z.coerce.number().int().positive().optional()),
+    AI_SERVICE_URL: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z.string().url().optional()),
+    AI_TIMEOUT_MS: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z.coerce.number().int().positive().optional()),
+    AI_TOXIC_THRESHOLD: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z.coerce.number().positive().optional()),
+    AI_VERSION: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z.string().optional()),
     GOOGLE_CLIENT_ID: zod_1.z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
     RSS_SOURCES: zod_1.z.string().min(1).optional(),
     VNPAY_TMN_CODE: zod_1.z.string().min(1).optional(),
