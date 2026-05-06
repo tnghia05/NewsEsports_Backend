@@ -39,9 +39,15 @@ export class AiService {
   private readonly version?: string;
 
   constructor(private readonly config: ConfigService) {
-    this.url = this.config.get<string>('AI_MODERATION_URL', { infer: true });
+    // Backward/forward compatible env keys:
+    // - Prefer AI_MODERATION_URL (new)
+    // - Fall back to AI_SERVICE_URL (older docs/.env.example)
+    this.url =
+      this.config.get<string>('AI_MODERATION_URL', { infer: true }) ??
+      this.config.get<string>('AI_SERVICE_URL', { infer: true });
     this.timeoutMs = Number(
       this.config.get<string>('AI_MODERATION_TIMEOUT_MS', { infer: true }) ??
+        this.config.get<string>('AI_TIMEOUT_MS', { infer: true }) ??
         4000,
     );
     this.toxicThreshold = Number(
