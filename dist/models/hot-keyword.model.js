@@ -17,6 +17,7 @@ let HotKeyword = class HotKeyword {
     window;
     score;
     trend;
+    trendUpdatedAt;
     updatedAt;
 };
 exports.HotKeyword = HotKeyword;
@@ -54,6 +55,10 @@ __decorate([
     }),
     __metadata("design:type", Object)
 ], HotKeyword.prototype, "trend", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, required: false, index: true, default: undefined }),
+    __metadata("design:type", Date)
+], HotKeyword.prototype, "trendUpdatedAt", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date, required: true, index: true }),
     __metadata("design:type", Date)

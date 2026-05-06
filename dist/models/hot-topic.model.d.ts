@@ -25,6 +25,7 @@ export declare class HotTopic {
     hotness: number;
     components: HotTopicComponents;
     trend?: HotTopicTrend;
+    trendUpdatedAt?: Date;
     updatedAt: Date;
 }
 export declare const HotTopicSchema: import("mongoose").Schema<HotTopic, import("mongoose").Model<HotTopic, any, any, any, any, any, HotTopic>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, HotTopic, import("mongoose").Document<unknown, {}, HotTopic, {
@@ -73,6 +74,15 @@ export declare const HotTopicSchema: import("mongoose").Schema<HotTopic, import(
         id: string;
     }> | undefined;
     trend?: import("mongoose").SchemaDefinitionProperty<HotTopicTrend | undefined, HotTopic, import("mongoose").Document<unknown, {}, HotTopic, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<HotTopic & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    trendUpdatedAt?: import("mongoose").SchemaDefinitionProperty<Date | undefined, HotTopic, import("mongoose").Document<unknown, {}, HotTopic, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<HotTopic & {
         _id: import("mongoose").Types.ObjectId;

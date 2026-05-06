@@ -35,6 +35,7 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
     intervalMs;
     topN;
     sampleN;
+    trendCooldownMs;
     constructor(config, aiService, postModel, commentModel, hashtagEventModel, hotTopicModel) {
         this.config = config;
         this.aiService = aiService;
@@ -45,6 +46,7 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
         this.intervalMs = Number(this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 60_000);
         this.topN = Number(this.config.get('HOT_TOPICS_TOP_N') ?? 30);
         this.sampleN = Number(this.config.get('HOT_TOPICS_SAMPLE_N') ?? 20);
+        this.trendCooldownMs = Number(this.config.get('HOT_TOPICS_TREND_COOLDOWN_MS') ?? 10 * 60_000);
     }
     onModuleInit() {
         this.timer = setInterval(() => void this.tick(), this.intervalMs);
@@ -252,11 +254,22 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
             const batch = topN.slice(i, i + TREND_CONCURRENCY);
             await Promise.allSettled(batch.map(async (s) => {
                 try {
+                    const existing = await this.hotTopicModel
+                        .findOne({ window, tag: s.tag })
+                        .select({ trendUpdatedAt: 1 })
+                        .lean()
+                        .exec();
+                    const lastTrendAt = existing?.trendUpdatedAt
+                        ? new Date(existing.trendUpdatedAt).getTime()
+                        : 0;
+                    if (lastTrendAt && Date.now() - lastTrendAt < this.trendCooldownMs) {
+                        return;
+                    }
                     const trend = await this.computeTrendForTag(s.tag, sinceDate);
                     if (!trend)
                         return;
                     await this.hotTopicModel
-                        .updateOne({ window, tag: s.tag }, { $set: { trend, updatedAt: now } })
+                        .updateOne({ window, tag: s.tag }, { $set: { trend, trendUpdatedAt: now, updatedAt: now } })
                         .exec();
                 }
                 catch (e) {

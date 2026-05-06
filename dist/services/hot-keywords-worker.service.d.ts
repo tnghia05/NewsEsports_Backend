@@ -21,6 +21,7 @@ export declare class HotKeywordsWorkerService implements OnModuleInit, OnModuleD
     private readonly intervalMs;
     private readonly trendTopN;
     private readonly trendSampleN;
+    private readonly trendCooldownMs;
     constructor(config: ConfigService, aiService: AiService, searchEventModel: Model<SearchEventDocument>, hotKeywordModel: Model<HotKeywordDocument>, postModel: Model<PostDocument>, commentModel: Model<CommentDocument>, newsModel: Model<NewsDocument>);
     onModuleInit(): void;
     onModuleDestroy(): void;

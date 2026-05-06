@@ -73,6 +73,13 @@ export class HotTopic {
   })
   trend?: HotTopicTrend;
 
+  /**
+   * When the AI trend breakdown was last computed.
+   * Separate from `updatedAt` which is used for hotness freshness.
+   */
+  @Prop({ type: Date, required: false, index: true, default: undefined })
+  trendUpdatedAt?: Date;
+
   @Prop({ type: Date, required: true, index: true })
   updatedAt!: Date;
 }

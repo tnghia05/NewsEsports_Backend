@@ -20,6 +20,7 @@ export declare class HotKeyword {
     window: HotKeywordWindow;
     score: number;
     trend?: HotKeywordTrend;
+    trendUpdatedAt?: Date;
     updatedAt: Date;
 }
 export declare const HotKeywordSchema: import("mongoose").Schema<HotKeyword, import("mongoose").Model<HotKeyword, any, any, any, any, any, HotKeyword>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, HotKeyword, import("mongoose").Document<unknown, {}, HotKeyword, {
@@ -59,6 +60,15 @@ export declare const HotKeywordSchema: import("mongoose").Schema<HotKeyword, imp
         id: string;
     }> | undefined;
     trend?: import("mongoose").SchemaDefinitionProperty<HotKeywordTrend | undefined, HotKeyword, import("mongoose").Document<unknown, {}, HotKeyword, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<HotKeyword & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    trendUpdatedAt?: import("mongoose").SchemaDefinitionProperty<Date | undefined, HotKeyword, import("mongoose").Document<unknown, {}, HotKeyword, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<HotKeyword & {
         _id: import("mongoose").Types.ObjectId;

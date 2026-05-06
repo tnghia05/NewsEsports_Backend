@@ -19,6 +19,7 @@ export declare class HotTopicsWorkerService implements OnModuleInit, OnModuleDes
     private readonly intervalMs;
     private readonly topN;
     private readonly sampleN;
+    private readonly trendCooldownMs;
     constructor(config: ConfigService, aiService: AiService, postModel: Model<PostDocument>, commentModel: Model<CommentDocument>, hashtagEventModel: Model<HashtagEventDocument>, hotTopicModel: Model<HotTopicDocument>);
     onModuleInit(): void;
     onModuleDestroy(): void;

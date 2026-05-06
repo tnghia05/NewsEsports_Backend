@@ -46,6 +46,21 @@ jobs:
             # AI service (Milestone 3)
             AI_SERVICE_URL=${{ secrets.AI_SERVICE_URL }}
             AI_TIMEOUT_MS=${{ secrets.AI_TIMEOUT_MS }}
+            # (Preferred keys) - optional, kept for forward-compatibility
+            AI_MODERATION_URL=${{ secrets.AI_MODERATION_URL }}
+            AI_MODERATION_TIMEOUT_MS=${{ secrets.AI_MODERATION_TIMEOUT_MS }}
+            AI_TOXIC_THRESHOLD=${{ vars.AI_TOXIC_THRESHOLD }}
+            AI_VERSION=${{ vars.AI_VERSION }}
+
+            # Hot keywords/topics workers (tuning)
+            HOT_KEYWORDS_INTERVAL_MS=60000
+            HOT_KEYWORDS_TREND_COOLDOWN_MS=1800000
+            HOT_KEYWORDS_TREND_TOP_N=10
+            HOT_KEYWORDS_TREND_SAMPLE_N=10
+            HOT_TOPICS_INTERVAL_MS=60000
+            HOT_TOPICS_TREND_COOLDOWN_MS=1800000
+            HOT_TOPICS_TOP_N=15
+            HOT_TOPICS_SAMPLE_N=10
 
             VNPAY_TEST_MODE=${{ secrets.VNPAY_TEST_MODE }}
             VNPAY_HOST=${{ secrets.VNPAY_HOST }}

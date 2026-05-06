@@ -18,6 +18,7 @@ let HotTopic = class HotTopic {
     hotness;
     components;
     trend;
+    trendUpdatedAt;
     updatedAt;
 };
 exports.HotTopic = HotTopic;
@@ -66,6 +67,10 @@ __decorate([
     }),
     __metadata("design:type", Object)
 ], HotTopic.prototype, "trend", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, required: false, index: true, default: undefined }),
+    __metadata("design:type", Date)
+], HotTopic.prototype, "trendUpdatedAt", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date, required: true, index: true }),
     __metadata("design:type", Date)

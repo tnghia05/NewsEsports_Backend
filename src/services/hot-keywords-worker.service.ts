@@ -34,6 +34,7 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
   private readonly intervalMs: number;
   private readonly trendTopN: number;
   private readonly trendSampleN: number;
+  private readonly trendCooldownMs: number;
 
   constructor(
     private readonly config: ConfigService,
@@ -55,6 +56,11 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
     this.trendTopN = Number(this.config.get('HOT_KEYWORDS_TREND_TOP_N') ?? 20);
     this.trendSampleN = Number(
       this.config.get('HOT_KEYWORDS_TREND_SAMPLE_N') ?? 20,
+    );
+    // Avoid recomputing the same AI trend every tick when click samples didn't change.
+    // Default: 10 minutes.
+    this.trendCooldownMs = Number(
+      this.config.get('HOT_KEYWORDS_TREND_COOLDOWN_MS') ?? 10 * 60_000,
     );
   }
 
@@ -139,10 +145,25 @@ export class HotKeywordsWorkerService implements OnModuleInit, OnModuleDestroy {
     if (topKeywords.length) {
       const trendStarted = Date.now();
       for (const keyword of topKeywords) {
+        const existing = await this.hotKeywordModel
+          .findOne({ window, keyword })
+          .select({ trendUpdatedAt: 1 })
+          .lean()
+          .exec();
+        const lastTrendAt = (existing as any)?.trendUpdatedAt
+          ? new Date((existing as any).trendUpdatedAt).getTime()
+          : 0;
+        if (lastTrendAt && Date.now() - lastTrendAt < this.trendCooldownMs) {
+          continue;
+        }
+
         const trend = await this.computeTrendForKeyword(keyword, sinceDate);
         if (!trend) continue;
         await this.hotKeywordModel
-          .updateOne({ window, keyword }, { $set: { trend, updatedAt: now } })
+          .updateOne(
+            { window, keyword },
+            { $set: { trend, trendUpdatedAt: now, updatedAt: now } },
+          )
           .exec();
       }
       this.logger.log(

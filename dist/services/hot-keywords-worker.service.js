@@ -37,6 +37,7 @@ let HotKeywordsWorkerService = HotKeywordsWorkerService_1 = class HotKeywordsWor
     intervalMs;
     trendTopN;
     trendSampleN;
+    trendCooldownMs;
     constructor(config, aiService, searchEventModel, hotKeywordModel, postModel, commentModel, newsModel) {
         this.config = config;
         this.aiService = aiService;
@@ -48,6 +49,7 @@ let HotKeywordsWorkerService = HotKeywordsWorkerService_1 = class HotKeywordsWor
         this.intervalMs = Number(this.config.get('HOT_KEYWORDS_INTERVAL_MS') ?? 60_000);
         this.trendTopN = Number(this.config.get('HOT_KEYWORDS_TREND_TOP_N') ?? 20);
         this.trendSampleN = Number(this.config.get('HOT_KEYWORDS_TREND_SAMPLE_N') ?? 20);
+        this.trendCooldownMs = Number(this.config.get('HOT_KEYWORDS_TREND_COOLDOWN_MS') ?? 10 * 60_000);
     }
     onModuleInit() {
         this.timer = setInterval(() => void this.tick(), this.intervalMs);
@@ -125,11 +127,22 @@ let HotKeywordsWorkerService = HotKeywordsWorkerService_1 = class HotKeywordsWor
         if (topKeywords.length) {
             const trendStarted = Date.now();
             for (const keyword of topKeywords) {
+                const existing = await this.hotKeywordModel
+                    .findOne({ window, keyword })
+                    .select({ trendUpdatedAt: 1 })
+                    .lean()
+                    .exec();
+                const lastTrendAt = existing?.trendUpdatedAt
+                    ? new Date(existing.trendUpdatedAt).getTime()
+                    : 0;
+                if (lastTrendAt && Date.now() - lastTrendAt < this.trendCooldownMs) {
+                    continue;
+                }
                 const trend = await this.computeTrendForKeyword(keyword, sinceDate);
                 if (!trend)
                     continue;
                 await this.hotKeywordModel
-                    .updateOne({ window, keyword }, { $set: { trend, updatedAt: now } })
+                    .updateOne({ window, keyword }, { $set: { trend, trendUpdatedAt: now, updatedAt: now } })
                     .exec();
             }
             this.logger.log(`trend window=${window} top=${topKeywords.length} sampleN=${this.trendSampleN} in ${Date.now() - trendStarted}ms`);

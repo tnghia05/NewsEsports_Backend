@@ -33,6 +33,7 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
   private readonly intervalMs: number;
   private readonly topN: number;
   private readonly sampleN: number;
+  private readonly trendCooldownMs: number;
 
   constructor(
     private readonly config: ConfigService,
@@ -50,6 +51,11 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     );
     this.topN = Number(this.config.get('HOT_TOPICS_TOP_N') ?? 30);
     this.sampleN = Number(this.config.get('HOT_TOPICS_SAMPLE_N') ?? 20);
+    // Avoid recomputing the same AI trend every tick.
+    // Default: 10 minutes.
+    this.trendCooldownMs = Number(
+      this.config.get('HOT_TOPICS_TREND_COOLDOWN_MS') ?? 10 * 60_000,
+    );
   }
 
   onModuleInit() {
@@ -300,12 +306,24 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       await Promise.allSettled(
         batch.map(async (s) => {
           try {
+            const existing = await this.hotTopicModel
+              .findOne({ window, tag: s.tag })
+              .select({ trendUpdatedAt: 1 })
+              .lean()
+              .exec();
+            const lastTrendAt = (existing as any)?.trendUpdatedAt
+              ? new Date((existing as any).trendUpdatedAt).getTime()
+              : 0;
+            if (lastTrendAt && Date.now() - lastTrendAt < this.trendCooldownMs) {
+              return;
+            }
+
             const trend = await this.computeTrendForTag(s.tag, sinceDate);
             if (!trend) return;
             await this.hotTopicModel
               .updateOne(
                 { window, tag: s.tag },
-                { $set: { trend, updatedAt: now } },
+                { $set: { trend, trendUpdatedAt: now, updatedAt: now } },
               )
               .exec();
           } catch (e: any) {
