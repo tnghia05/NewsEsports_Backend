@@ -27,6 +27,12 @@ export type AiModerationResult = {
   intentScores?: Partial<Record<IntentLabel, number>>;
   aspectScores?: Partial<Record<AspectLabel, number>>;
 
+  // max softmax probability of the winning sentiment4 class (0..1)
+  confidence?: number;
+
+  // NER entities extracted from text
+  entities?: { text: string; type: string }[];
+
   aiVersion?: string;
 };
 
@@ -203,6 +209,9 @@ function normalizeAiResponse(
     (typeof data?.version === 'string' ? data.version : undefined) ??
     fallbackVersion;
 
+  const confidence = parseConfidence(data);
+  const entities = parseEntities(data);
+
   return {
     sentiment,
     toxicity: { isToxic, score },
@@ -212,6 +221,8 @@ function normalizeAiResponse(
     sentiment4Scores,
     intentScores,
     aspectScores,
+    confidence,
+    entities: entities.length ? entities : undefined,
     aiVersion,
   };
 }
@@ -381,4 +392,37 @@ function parseAspects(data: any): AspectLabel[] {
 
   // unique
   return Array.from(new Set(out));
+}
+
+function parseConfidence(data: any): number | undefined {
+  // Prefer direct field, fallback to max of debug.sentiment4 scores
+  if (typeof data?.confidence === 'number') {
+    return clamp01(data.confidence);
+  }
+  const scores = data?.debug?.sentiment4;
+  if (!scores || typeof scores !== 'object') return undefined;
+  const vals = Object.values(scores)
+    .map(Number)
+    .filter((v) => !Number.isNaN(v));
+  if (!vals.length) return undefined;
+  return clamp01(Math.max(...vals));
+}
+
+function parseEntities(
+  data: any,
+): { text: string; type: string }[] {
+  const raw = data?.entities;
+  if (!Array.isArray(raw)) return [];
+  const out: { text: string; type: string }[] = [];
+  for (const item of raw) {
+    if (
+      item &&
+      typeof item.text === 'string' &&
+      typeof item.type === 'string' &&
+      item.text.length > 0
+    ) {
+      out.push({ text: item.text, type: item.type });
+    }
+  }
+  return out;
 }

@@ -8,6 +8,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { AiService, type AiModerationResult } from '../infra/ai/ai.service';
+import {
+  AdminAlertModelName,
+  type AdminAlertDocument,
+} from '../models/admin-alert.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import {
   CommentModelName,
@@ -45,9 +49,11 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly hashtagEventModel: Model<HashtagEventDocument>,
     @InjectModel(HotTopicModelName)
     private readonly hotTopicModel: Model<HotTopicDocument>,
+    @InjectModel(AdminAlertModelName)
+    private readonly adminAlertModel: Model<AdminAlertDocument>,
   ) {
     this.intervalMs = Number(
-      this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 60_000,
+      this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 300_000,
     );
     this.topN = Number(this.config.get('HOT_TOPICS_TOP_N') ?? 30);
     this.sampleN = Number(this.config.get('HOT_TOPICS_SAMPLE_N') ?? 20);
@@ -74,10 +80,72 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       await this.recompute('3h');
       await this.recompute('24h');
       await this.recompute('7d');
+      await this.detectToxicitySpikes();
     } catch (e: any) {
       this.logger.warn(`recompute failed: ${String(e?.message ?? e)}`);
     } finally {
       this.running = false;
+    }
+  }
+
+  // #9 Toxicity spike: compare 3h toxic ratio vs 24h toxic ratio per tag.
+  // If 3h ratio > 2x 24h ratio AND 3h has enough samples → create alert.
+  private async detectToxicitySpikes() {
+    const [topics3h, topics24h] = await Promise.all([
+      this.hotTopicModel
+        .find({ window: '3h', 'trend.sampleCount': { $gt: 0 } })
+        .select({ tag: 1, trend: 1 })
+        .lean()
+        .exec(),
+      this.hotTopicModel
+        .find({ window: '24h', 'trend.sampleCount': { $gt: 0 } })
+        .select({ tag: 1, trend: 1 })
+        .lean()
+        .exec(),
+    ]);
+
+    const ratio24hMap = new Map<string, number>();
+    for (const t of topics24h as any[]) {
+      const trend = t.trend;
+      if (trend?.sampleCount > 0) {
+        ratio24hMap.set(String(t.tag), (trend.toxicCount ?? 0) / trend.sampleCount);
+      }
+    }
+
+    const MIN_SAMPLES = 5;
+    const SPIKE_MULTIPLIER = 2;
+
+    for (const t of topics3h as any[]) {
+      const trend = t.trend;
+      if (!trend || trend.sampleCount < MIN_SAMPLES) continue;
+
+      const ratio3h = (trend.toxicCount ?? 0) / trend.sampleCount;
+      const ratio24h = ratio24hMap.get(String(t.tag)) ?? 0;
+
+      if (ratio3h > SPIKE_MULTIPLIER * ratio24h && ratio3h > 0.1) {
+        await this.adminAlertModel
+          .findOneAndUpdate(
+            {
+              type: 'toxicity_spike',
+              tag: String(t.tag),
+              createdAt: { $gte: new Date(Date.now() - 60 * 60_000) },
+            },
+            {
+              $setOnInsert: {
+                type: 'toxicity_spike',
+                tag: String(t.tag),
+                ratio3h: Math.round(ratio3h * 1000) / 1000,
+                ratio24h: Math.round(ratio24h * 1000) / 1000,
+                isRead: false,
+              },
+            },
+            { upsert: true },
+          )
+          .exec();
+        this.logger.warn(
+          `toxicity_spike tag=${t.tag} ratio3h=${ratio3h.toFixed(3)} ratio24h=${ratio24h.toFixed(3)}`,
+        );
+      }
     }
   }
 

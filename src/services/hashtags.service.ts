@@ -77,51 +77,27 @@ export class HashtagsService {
   }
 
   async trending(window: '24h' | '7d') {
-    const sinceMs =
-      window === '7d' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    const since = new Date(Date.now() - sinceMs);
+    // Delegate to the pre-computed HotTopic collection instead of running
+    // an expensive real-time aggregation on every request.
+    // Maps to the old response shape { window, items: [{tag, postCount, engagement, score}] }
+    // so existing clients remain compatible.
+    const items = await this.hotTopicModel
+      .find({ window })
+      .sort({ hotness: -1 })
+      .limit(30)
+      .lean()
+      .exec();
 
-    const pipeline: PipelineStage[] = [
-      { $match: { status: 'published', createdAt: { $gte: since } } },
-      { $unwind: '$tags' },
-      {
-        $addFields: {
-          engagement: {
-            $add: [
-              { $multiply: ['$likeCount', 3] },
-              { $multiply: ['$commentCount', 5] },
-              { $multiply: ['$viewCount', 1] },
-            ],
-          },
-        },
-      },
-      {
-        $group: {
-          _id: '$tags',
-          postCount: { $sum: 1 },
-          engagement: { $sum: '$engagement' },
-        },
-      },
-      {
-        $addFields: {
-          score: { $add: ['$postCount', '$engagement'] },
-        },
-      },
-      { $sort: { score: -1 } },
-      { $limit: 30 },
-      {
-        $project: {
-          _id: 0,
-          tag: '$_id',
-          postCount: 1,
-          engagement: 1,
-          score: 1,
-        },
-      },
-    ];
-
-    const items = await this.postModel.aggregate(pipeline).exec();
-    return { window, items };
+    return {
+      window,
+      items: items.map((r: any) => ({
+        tag: r.tag,
+        postCount: r.components?.discuss ?? 0,
+        engagement: r.components?.read ?? 0,
+        score: r.hotness,
+        trend: r.trend ?? undefined,
+      })),
+    };
   }
 
   async createEvent(user: JwtUser | undefined, dto: CreateHashtagEventDto) {

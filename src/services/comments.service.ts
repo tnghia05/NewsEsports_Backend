@@ -296,6 +296,8 @@ export class CommentsService {
       (patch as any).aspectScores = undefined;
       (patch as any).aiVersion = undefined;
       (patch as any).aiError = undefined;
+      (patch as any).qualityScore = undefined;
+      (patch as any).aiEntities = undefined;
 
       if (comment.moderationStatus === 'approved') {
         await this.decrementApprovedCommentTarget(comment);

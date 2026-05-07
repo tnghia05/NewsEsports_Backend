@@ -5,6 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import type { Model } from 'mongoose';
 import {
   CommentModerationJobModelName,
@@ -16,7 +17,7 @@ import {
 } from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import { NewsModelName, type NewsDocument } from '../models/news.model';
-import { AiService } from '../infra/ai/ai.service';
+import { AiService, type AiModerationResult } from '../infra/ai/ai.service';
 import { NotificationsService } from './notifications.service';
 
 @Injectable()
@@ -26,8 +27,10 @@ export class CommentModerationWorkerService
   private readonly logger = new Logger(CommentModerationWorkerService.name);
   private timer?: NodeJS.Timeout;
   private running = false;
+  private readonly confidenceThreshold: number;
 
   constructor(
+    private readonly config: ConfigService,
     @InjectModel(CommentModerationJobModelName)
     private readonly jobModel: Model<CommentModerationJobDocument>,
     @InjectModel(CommentModelName)
@@ -38,7 +41,11 @@ export class CommentModerationWorkerService
     private readonly newsModel: Model<NewsDocument>,
     private readonly aiService: AiService,
     private readonly notificationsService: NotificationsService,
-  ) {}
+  ) {
+    this.confidenceThreshold = Number(
+      this.config.get<string>('AI_CONFIDENCE_THRESHOLD', { infer: true }) ?? 0.6,
+    );
+  }
 
   onModuleInit() {
     // Lightweight polling worker. In production you'd likely use BullMQ/Redis.
@@ -130,8 +137,38 @@ export class CommentModerationWorkerService
       this.logger.log(
         `processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId ?? 'n/a'} newsId=${comment.newsId ?? 'n/a'} len=${String(comment.content ?? '').length} preview="${preview}"`,
       );
-      const ai = await this.aiService.analyzeComment(comment.content);
+
+      // #12 Context-aware: prepend parent comment content when replying
+      let textToAnalyze = comment.content;
+      if (comment.parentId) {
+        const parent = await this.commentModel
+          .findById(comment.parentId)
+          .select({ content: 1 })
+          .lean()
+          .exec();
+        if (parent?.content) {
+          const parentSnippet = String(parent.content)
+            .trim()
+            .replace(/\s+/g, ' ')
+            .slice(0, 200);
+          textToAnalyze = `${parentSnippet} [SEP] ${comment.content}`;
+        }
+      }
+
+      const ai = await this.aiService.analyzeComment(textToAnalyze);
+
+      // #13 Confidence-based routing
+      const lowConfidence =
+        ai.confidence !== undefined && ai.confidence < this.confidenceThreshold;
       const rejected = ai.toxicity.isToxic;
+      const moderationStatus = rejected
+        ? 'rejected'
+        : lowConfidence
+          ? 'under_review'
+          : 'approved';
+
+      // #10 Quality score: soft-probability weighted formula
+      const qualityScore = computeQualityScore(ai);
 
       await this.commentModel
         .updateOne(
@@ -148,17 +185,19 @@ export class CommentModerationWorkerService
               aspectScores: ai.aspectScores,
               aiVersion: ai.aiVersion,
               aiError: undefined,
-              moderationStatus: rejected ? 'rejected' : 'approved',
+              qualityScore,
+              aiEntities: ai.entities,
+              moderationStatus,
             },
           },
         )
         .exec();
 
       this.logger.log(
-        `processJob updated commentId=${String(comment._id)} status=${rejected ? 'rejected' : 'approved'} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score}`,
+        `processJob updated commentId=${String(comment._id)} status=${moderationStatus} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score} conf=${ai.confidence?.toFixed(3) ?? 'n/a'} quality=${qualityScore.toFixed(3)}`,
       );
 
-      if (!rejected) {
+      if (moderationStatus === 'approved') {
         if (post) {
           await this.postModel
             .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
@@ -224,4 +263,19 @@ export class CommentModerationWorkerService
         .exec();
     }
   }
+}
+
+// #10 Quality score: uses soft intent probabilities for nuanced scoring.
+// Range: -1.0 (worst) .. +1.0 (best).
+function computeQualityScore(ai: AiModerationResult): number {
+  const s = ai.intentScores ?? {};
+  const praise = Number(s['praise'] ?? 0);
+  const question = Number(s['question'] ?? 0);
+  const other = Number(s['other'] ?? 0);
+  const complain = Number(s['complain'] ?? 0);
+  const toxicPenalty = ai.toxicity.score;
+
+  const raw =
+    praise * 1.0 + question * 0.7 + other * 0.3 - complain * 0.2 - toxicPenalty * 1.0;
+  return Math.max(-1, Math.min(1, raw));
 }

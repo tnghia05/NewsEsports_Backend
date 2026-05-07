@@ -105,8 +105,14 @@ import { MatchSyncWorkerService } from '../services/match-sync-worker.service';
 import { PandaScoreService } from '../infra/pandascore/pandascore.service';
 import { LoLEsportsService } from '../services/lol-esports.service';
 import { GridController } from '../controllers/grid.controller';
+import { AdminController } from '../controllers/admin.controller';
 import { GridService } from '../services/grid.service';
+import { AiStatsService } from '../services/ai-stats.service';
 import { MatchModelName, MatchSchema } from '../models/match.model';
+import {
+  AdminAlertModelName,
+  AdminAlertSchema,
+} from '../models/admin-alert.model';
 
 @Module({
   imports: [
@@ -137,6 +143,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
       { name: PaymentModelName, schema: PaymentSchema },
       { name: OrderCounterModelName, schema: OrderCounterSchema },
       { name: MatchModelName, schema: MatchSchema },
+      { name: AdminAlertModelName, schema: AdminAlertSchema },
     ]),
   ],
   controllers: [
@@ -160,6 +167,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
     PandaScoreController,
     LoLEsportsController,
     GridController,
+    AdminController,
   ],
   providers: [
     HealthService,
@@ -194,6 +202,7 @@ import { MatchModelName, MatchSchema } from '../models/match.model';
     PandaScoreService,
     LoLEsportsService,
     GridService,
+    AiStatsService,
     JwtStrategy,
     R2Service,
   ],
