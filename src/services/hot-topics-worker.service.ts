@@ -32,6 +32,14 @@ import {
   type HotTopicTrend,
   type HotTopicWindow,
 } from '../models/hot-topic.model';
+import {
+  PostLikeModelName,
+  type PostLikeDocument,
+} from '../models/post-like.model';
+import {
+  HotKeywordModelName,
+  type HotKeywordDocument,
+} from '../models/hot-keyword.model';
 
 @Injectable()
 export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -60,6 +68,10 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly adminAlertModel: Model<AdminAlertDocument>,
     @InjectModel(EntityTrendModelName)
     private readonly entityTrendModel: Model<EntityTrendDocument>,
+    @InjectModel(PostLikeModelName)
+    private readonly postLikeModel: Model<PostLikeDocument>,
+    @InjectModel(HotKeywordModelName)
+    private readonly hotKeywordModel: Model<HotKeywordDocument>,
   ) {
     this.intervalMs = Number(
       this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 300_000,
@@ -291,10 +303,35 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     const recentCutoff = new Date(Date.now() - wMs / 3); // last 1/3 of window for recency boost
     const started = Date.now();
 
+    // #1 Velocity: snapshot previous hotness before overwriting
+    const prevDocs = await this.hotTopicModel
+      .find({ window })
+      .select({ tag: 1, hotness: 1 })
+      .lean()
+      .exec();
+    const prevHotnessMap = new Map<string, number>();
+    for (const d of prevDocs) prevHotnessMap.set(String(d.tag), Number(d.hotness) || 0);
+
+    // Find postIds that have new comments in the window (so commenting on an old post counts).
+    const commentPostIds = await this.commentModel
+      .distinct('postId', { createdAt: { $gte: sinceDate } })
+      .exec();
+
     // Single aggregation: per-tag stats + postIds (avoids scanning posts twice).
+    // Include posts created in window OR posts that received comments in window.
     const rows = await this.postModel
       .aggregate([
-        { $match: { status: 'published', createdAt: { $gte: sinceDate } } },
+        {
+          $match: {
+            status: 'published',
+            $or: [
+              { createdAt: { $gte: sinceDate } },
+              ...(commentPostIds.length > 0
+                ? [{ _id: { $in: commentPostIds } }]
+                : []),
+            ],
+          },
+        },
         { $unwind: '$tags' },
         {
           $group: {
@@ -444,13 +481,42 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       readMap.set(String(r._id), Number(r.read) || 0);
     }
 
+    // #2 Like signal: likes on active posts within window
+    const likeRows = uniquePostIds.length > 0
+      ? await this.postLikeModel
+          .aggregate([
+            { $match: { postId: { $in: uniquePostIds }, createdAt: { $gte: sinceDate } } },
+            { $group: { _id: '$postId', count: { $sum: 1 } } },
+          ])
+          .exec()
+      : [];
+    const postLikeMap = new Map<string, number>();
+    for (const r of likeRows) postLikeMap.set(String(r._id), Number(r.count) || 0);
+
+    const tagLikeMap = new Map<string, number>();
+    for (const [tag, pids] of tagToPostIds) {
+      tagLikeMap.set(tag, pids.reduce((s, pid) => s + (postLikeMap.get(pid) ?? 0), 0));
+    }
+
+    // #4 Search volume: merge HotKeyword scores for matching tags
+    const kwWindow = window === '7d' ? '7d' : '24h';
+    const kwDocs = tagList.length > 0
+      ? await this.hotKeywordModel
+          .find({ window: kwWindow, keyword: { $in: tagList } })
+          .select({ keyword: 1, score: 1 })
+          .lean()
+          .exec()
+      : [];
+    const searchMap = new Map<string, number>();
+    for (const kw of kwDocs) searchMap.set(String(kw.keyword), Number(kw.score) || 0);
+
     const now = new Date();
     const bulk = this.hotTopicModel.collection.initializeUnorderedBulkOp();
 
     const scored: Array<{
       tag: string;
       hotness: number;
-      components: { read: number; discuss: number; originalUsers: number };
+      components: { read: number; discuss: number; originalUsers: number; likes: number; searchVolume: number; velocityScore: number };
     }> = [];
 
     for (const r of rows) {
@@ -459,32 +525,51 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       const originalUsers = mergedUsersMap.get(tag) ?? 0;
       const commentCount = commentMap.get(tag) ?? 0;
       const read = readMap.get(tag) ?? 0;
+      const likes = tagLikeMap.get(tag) ?? 0;
+      const searchVolume = searchMap.get(tag) ?? 0;
+
+      // #3 Minimum quality threshold: skip singleton topics (1 user only)
+      if (originalUsers < 2) continue;
 
       const discuss = postCount + commentCount;
 
-      // Normalize with log1p, then weighted sum (Weibo-like 0.3/0.3/0.4).
+      // 5-signal weighted formula (Weibo-inspired)
       const readScore = Math.log1p(read);
       const discussScore = Math.log1p(discuss);
       const originalScore = Math.log1p(originalUsers);
+      const likeScore = Math.log1p(likes);
+      const searchScore = Math.log1p(searchVolume);
 
-      const raw = 0.3 * readScore + 0.3 * discussScore + 0.4 * originalScore;
+      const raw =
+        0.20 * readScore +
+        0.20 * discussScore +
+        0.25 * originalScore +
+        0.15 * likeScore +
+        0.20 * searchScore;
 
-      // Time decay: boost topics with recent activity (last 1/3 of window).
+      // #5 Score decay: topics with no recent activity are penalized
+      // decayFactor range: 0.4 (all old activity) → 1.6 (all recent)
       const recentPosts = tagRecentPosts.get(tag) ?? 0;
       const recentComments = recentCommentMap.get(tag) ?? 0;
       const totalActivity = postCount + commentCount;
       const recentActivity = recentPosts + recentComments;
-      const recencyRatio =
-        totalActivity > 0 ? recentActivity / totalActivity : 0;
-      const recencyBoost = 1 + 0.5 * recencyRatio; // 1.0 .. 1.5
+      const recencyRatio = totalActivity > 0 ? recentActivity / totalActivity : 0;
+      const decayFactor = 0.4 + 1.2 * recencyRatio; // 0.4 .. 1.6
 
-      // Map to 0..10 for UI (smooth mapping with recency boost).
-      const hotness = clamp01((raw * recencyBoost) / 4.5) * 10;
+      const baseHotness = clamp01((raw * decayFactor) / 4.5) * 10;
+
+      // #1 Velocity: compare vs previous tick hotness
+      const prevH = prevHotnessMap.get(tag) ?? 0;
+      const velocity = prevH > 0 ? baseHotness / (prevH + 0.1) : 1.0;
+      // velocityBoost: 0.85 (shrinking) → 1.0 (stable) → 1.35 (3× spike)
+      const velocityBoost = 0.85 + 0.15 * clamp01(Math.log1p(velocity) / Math.log1p(3));
+
+      const hotness = clamp01((baseHotness * velocityBoost) / 10) * 10;
 
       scored.push({
         tag,
         hotness,
-        components: { read, discuss, originalUsers },
+        components: { read, discuss, originalUsers, likes, searchVolume, velocityScore: round2(velocity) },
       });
     }
 

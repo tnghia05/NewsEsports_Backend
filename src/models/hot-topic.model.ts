@@ -15,7 +15,10 @@ export type HotTopicWindow = '3h' | '24h' | '7d';
 export type HotTopicComponents = {
   read: number; // unique viewers (approx)
   discuss: number; // posts + comments
-  originalUsers: number; // unique authors (posts)
+  originalUsers: number; // unique authors (posts + comments)
+  likes: number; // post likes in window
+  searchVolume: number; // search score from HotKeyword
+  velocityScore: number; // ratio vs previous tick (1.0 = no change)
 };
 
 export type HotTopicTrend = {
@@ -52,6 +55,9 @@ export class HotTopic {
       read: { type: Number, required: true },
       discuss: { type: Number, required: true },
       originalUsers: { type: Number, required: true },
+      likes: { type: Number, default: 0 },
+      searchVolume: { type: Number, default: 0 },
+      velocityScore: { type: Number, default: 1 },
     },
     required: true,
   })
