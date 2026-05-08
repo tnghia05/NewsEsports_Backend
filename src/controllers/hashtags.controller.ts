@@ -43,4 +43,19 @@ export class HashtagsController {
   hotTopics(@Query() query: HotTopicsDto) {
     return this.hashtagsService.hotTopics(query);
   }
+
+  // Entity trending: top mentioned players/teams/tournaments with sentiment breakdown
+  // GET /hashtags/entity-trends?window=24h&limit=10&type=PLAYER
+  @Get('entity-trends')
+  entityTrends(
+    @Query('window') window?: string,
+    @Query('limit') limit?: string,
+    @Query('type') type?: string,
+  ) {
+    return this.hashtagsService.getEntityTrends({
+      window: window ?? '24h',
+      limit: limit ? Number(limit) : 10,
+      type,
+    });
+  }
 }

@@ -113,6 +113,10 @@ import {
   AdminAlertModelName,
   AdminAlertSchema,
 } from '../models/admin-alert.model';
+import {
+  EntityTrendModelName,
+  EntityTrendSchema,
+} from '../models/entity-trend.model';
 
 @Module({
   imports: [
@@ -144,6 +148,7 @@ import {
       { name: OrderCounterModelName, schema: OrderCounterSchema },
       { name: MatchModelName, schema: MatchSchema },
       { name: AdminAlertModelName, schema: AdminAlertSchema },
+      { name: EntityTrendModelName, schema: EntityTrendSchema },
     ]),
   ],
   controllers: [

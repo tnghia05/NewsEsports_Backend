@@ -12,6 +12,11 @@ import {
   AdminAlertModelName,
   type AdminAlertDocument,
 } from '../models/admin-alert.model';
+import {
+  EntityTrendModelName,
+  type EntityTrendDocument,
+  type EntityTrendWindow,
+} from '../models/entity-trend.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import {
   CommentModelName,
@@ -51,6 +56,8 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly hotTopicModel: Model<HotTopicDocument>,
     @InjectModel(AdminAlertModelName)
     private readonly adminAlertModel: Model<AdminAlertDocument>,
+    @InjectModel(EntityTrendModelName)
+    private readonly entityTrendModel: Model<EntityTrendDocument>,
   ) {
     this.intervalMs = Number(
       this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 300_000,
@@ -81,11 +88,108 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       await this.recompute('24h');
       await this.recompute('7d');
       await this.detectToxicitySpikes();
+      await this.recomputeEntityTrends('3h');
+      await this.recomputeEntityTrends('24h');
+      await this.recomputeEntityTrends('7d');
     } catch (e: any) {
       this.logger.warn(`recompute failed: ${String(e?.message ?? e)}`);
     } finally {
       this.running = false;
     }
+  }
+
+  // Entity trending: aggregate mentions + sentiment per NER entity per window.
+  private async recomputeEntityTrends(window: EntityTrendWindow) {
+    const since = new Date(Date.now() - windowMs(window));
+    const now = new Date();
+
+    const rows = await this.commentModel
+      .aggregate([
+        {
+          $match: {
+            createdAt: { $gte: since },
+            aiEntities: { $exists: true, $not: { $size: 0 } },
+          },
+        },
+        { $unwind: '$aiEntities' },
+        {
+          $group: {
+            _id: { entity: '$aiEntities.text', type: '$aiEntities.type' },
+            mentionCount: { $sum: 1 },
+            positiveCount: {
+              $sum: { $cond: [{ $eq: ['$sentiment4', 'positive'] }, 1, 0] },
+            },
+            negativeCount: {
+              $sum: { $cond: [{ $eq: ['$sentiment4', 'negative'] }, 1, 0] },
+            },
+            neutralCount: {
+              $sum: { $cond: [{ $eq: ['$sentiment4', 'neutral'] }, 1, 0] },
+            },
+            toxicCount: {
+              $sum: { $cond: [{ $eq: ['$sentiment4', 'toxic'] }, 1, 0] },
+            },
+            praiseCount: {
+              $sum: { $cond: [{ $eq: ['$intent', 'praise'] }, 1, 0] },
+            },
+            complainCount: {
+              $sum: { $cond: [{ $eq: ['$intent', 'complain'] }, 1, 0] },
+            },
+            questionCount: {
+              $sum: { $cond: [{ $eq: ['$intent', 'question'] }, 1, 0] },
+            },
+            otherCount: {
+              $sum: { $cond: [{ $eq: ['$intent', 'other'] }, 1, 0] },
+            },
+          },
+        },
+        { $sort: { mentionCount: -1 } },
+        { $limit: 100 },
+      ])
+      .exec();
+
+    if (!rows.length) return;
+
+    const bulk =
+      this.entityTrendModel.collection.initializeUnorderedBulkOp();
+
+    for (const r of rows) {
+      const total = Number(r.mentionCount) || 1;
+      bulk
+        .find({ entity: r._id.entity, entityType: r._id.type, window })
+        .upsert()
+        .updateOne({
+          $set: {
+            mentionCount: total,
+            sentiment: {
+              positive: Number(r.positiveCount),
+              negative: Number(r.negativeCount),
+              neutral: Number(r.neutralCount),
+              toxic: Number(r.toxicCount),
+            },
+            toxicRate: round4(Number(r.toxicCount) / total),
+            intent: {
+              praise: Number(r.praiseCount),
+              complain: Number(r.complainCount),
+              question: Number(r.questionCount),
+              other: Number(r.otherCount),
+            },
+            updatedAt: now,
+          },
+        });
+    }
+
+    if (bulk.length > 0) await bulk.execute();
+
+    await this.entityTrendModel
+      .deleteMany({
+        window,
+        updatedAt: { $lt: new Date(Date.now() - windowMs(window)) },
+      })
+      .exec();
+
+    this.logger.log(
+      `entityTrends window=${window} entities=${rows.length}`,
+    );
   }
 
   // #9 Toxicity spike: compare 3h toxic ratio vs 24h toxic ratio per tag.

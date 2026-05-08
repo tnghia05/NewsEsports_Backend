@@ -15,6 +15,10 @@ import {
   type HotTopicDocument,
   type HotTopicWindow,
 } from '../models/hot-topic.model';
+import {
+  EntityTrendModelName,
+  type EntityTrendDocument,
+} from '../models/entity-trend.model';
 import type { JwtUser } from '../types/auth';
 import type { CreateHashtagEventDto } from '../dto/hashtags/create-hashtag-event.dto';
 import type { HotTopicsDto } from '../dto/hashtags/hot-topics.dto';
@@ -30,6 +34,8 @@ export class HashtagsService {
     private readonly hashtagEventModel: Model<HashtagEventDocument>,
     @InjectModel(HotTopicModelName)
     private readonly hotTopicModel: Model<HotTopicDocument>,
+    @InjectModel(EntityTrendModelName)
+    private readonly entityTrendModel: Model<EntityTrendDocument>,
   ) {}
 
   async listPostsByTag(
@@ -110,6 +116,37 @@ export class HashtagsService {
       action: 'view',
     });
     return { ok: true };
+  }
+
+  async getEntityTrends(opts: {
+    window: string;
+    limit: number;
+    type?: string;
+  }) {
+    const window = normalizeHotTopicWindow(opts.window);
+    const limit = Math.min(50, Math.max(1, opts.limit));
+    const filter: Record<string, any> = { window };
+    if (opts.type) filter['entityType'] = String(opts.type).toUpperCase();
+
+    const items = await this.entityTrendModel
+      .find(filter)
+      .sort({ mentionCount: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+
+    return {
+      window,
+      items: items.map((r: any, idx: number) => ({
+        rank: idx + 1,
+        entity: r.entity,
+        type: r.entityType,
+        mentionCount: r.mentionCount,
+        sentiment: r.sentiment,
+        toxicRate: r.toxicRate,
+        intent: r.intent,
+      })),
+    };
   }
 
   async hotTopics(query: HotTopicsDto) {
