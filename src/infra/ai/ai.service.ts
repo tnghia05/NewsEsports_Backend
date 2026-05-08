@@ -180,14 +180,19 @@ function normalizeAiResponse(
     data?.toxic_score ??
     0;
   const score = clamp01(Number(toxScoreRaw) || 0);
-  const isToxic =
+  // Combine all toxic signals — do not blindly trust API boolean alone.
+  // If the API says toxic, trust it. But also apply backend threshold as safety net.
+  const apiSaysToxic =
     typeof data?.toxicity?.isToxic === 'boolean'
       ? Boolean(data.toxicity.isToxic)
-      : score >= toxicThreshold ||
-        sentiment4 === 'toxic' ||
-        String(data?.label ?? '')
-          .toLowerCase()
-          .includes('toxic');
+      : false;
+  const isToxic =
+    apiSaysToxic ||
+    score >= toxicThreshold ||
+    sentiment4 === 'toxic' ||
+    String(data?.label ?? '')
+      .toLowerCase()
+      .includes('toxic');
 
   const intent = parseIntent(data);
   const aspects = parseAspects(data);

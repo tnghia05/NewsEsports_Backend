@@ -134,17 +134,26 @@ export class CommentsService {
     viewer: JwtUser | undefined,
     opts: { ownerId?: string },
   ) {
+    if (viewer?.role === 'admin') {
+      // Admin sees everything including rejected
+      return;
+    }
+
     if (!viewer) {
+      // Guest: approved only
       filter.moderationStatus = 'approved';
-    } else if (
-      viewer.role === 'admin' ||
-      (opts.ownerId && viewer.id === opts.ownerId)
-    ) {
-      // no extra filter
+    } else if (opts.ownerId && viewer.id === opts.ownerId) {
+      // Post/news owner: sees approved + pending + under_review from others,
+      // but rejected is silently hidden for everyone except admin
+      filter.moderationStatus = { $ne: 'rejected' } as any;
     } else {
+      // Regular user: approved comments + their own pending/under_review (not rejected)
       filter['$or'] = [
         { moderationStatus: 'approved' },
-        { authorId: viewer.id },
+        {
+          authorId: viewer.id,
+          moderationStatus: { $in: ['pending', 'under_review'] },
+        },
       ];
     }
   }

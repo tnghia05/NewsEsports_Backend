@@ -28,6 +28,7 @@ export class CommentModerationWorkerService
   private timer?: NodeJS.Timeout;
   private running = false;
   private readonly confidenceThreshold: number;
+  private readonly toxicReviewThreshold: number;
 
   constructor(
     private readonly config: ConfigService,
@@ -44,6 +45,9 @@ export class CommentModerationWorkerService
   ) {
     this.confidenceThreshold = Number(
       this.config.get<string>('AI_CONFIDENCE_THRESHOLD', { infer: true }) ?? 0.6,
+    );
+    this.toxicReviewThreshold = Number(
+      this.config.get<string>('AI_TOXIC_REVIEW_THRESHOLD', { infer: true }) ?? 0.4,
     );
   }
 
@@ -157,15 +161,25 @@ export class CommentModerationWorkerService
 
       const ai = await this.aiService.analyzeComment(textToAnalyze);
 
-      // #13 Confidence-based routing
-      const lowConfidence =
-        ai.confidence !== undefined && ai.confidence < this.confidenceThreshold;
+      // Routing logic (3 zones):
+      //   score >= AI_TOXIC_THRESHOLD (0.7)      → rejected
+      //   score >= AI_TOXIC_REVIEW_THRESHOLD (0.4) → under_review (admin check)
+      //   confidence < AI_CONFIDENCE_THRESHOLD (0.6) → under_review (model unsure)
+      //   otherwise                              → approved
       const rejected = ai.toxicity.isToxic;
-      const moderationStatus = rejected
-        ? 'rejected'
-        : lowConfidence
-          ? 'under_review'
-          : 'approved';
+      const inGrayZone =
+        !rejected && ai.toxicity.score >= this.toxicReviewThreshold;
+      const lowConfidence =
+        !rejected &&
+        !inGrayZone &&
+        ai.confidence !== undefined &&
+        ai.confidence < this.confidenceThreshold;
+      const moderationStatus =
+        rejected
+          ? 'rejected'
+          : inGrayZone || lowConfidence
+            ? 'under_review'
+            : 'approved';
 
       // #10 Quality score: soft-probability weighted formula
       const qualityScore = computeQualityScore(ai);
