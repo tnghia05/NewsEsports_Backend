@@ -323,10 +323,13 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       .exec();
 
     const tagList = rows.map((r) => String(r.tag)).filter(Boolean);
+    this.logger.log(
+      `recompute window=${window} found ${rows.length} tagged posts — tags=[${tagList.slice(0, 5).join(', ')}${tagList.length > 5 ? ', ...' : ''}]`,
+    );
     if (!tagList.length) {
       await this.hotTopicModel.deleteMany({ window }).exec();
       this.logger.log(
-        `recompute window=${window} empty in ${Date.now() - started}ms`,
+        `recompute window=${window} empty (no published posts with tags in last ${window}) in ${Date.now() - started}ms`,
       );
       return;
     }
@@ -487,6 +490,9 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
 
     scored.sort((a, b) => b.hotness - a.hotness);
     const topN = scored.slice(0, Math.min(Math.max(1, this.topN), 50));
+    this.logger.log(
+      `recompute window=${window} scored top3=[${topN.slice(0, 3).map((s) => `${s.tag}:${s.hotness.toFixed(2)}`).join(', ')}]`,
+    );
 
     for (const s of topN) {
       bulk
