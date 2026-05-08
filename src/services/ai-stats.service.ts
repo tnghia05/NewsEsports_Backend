@@ -7,6 +7,7 @@ import {
   AdminAlertModelName,
   type AdminAlertDocument,
 } from '../models/admin-alert.model';
+import { UserModelName, type UserDocument } from '../models/user.model';
 
 @Injectable()
 export class AiStatsService {
@@ -17,7 +18,58 @@ export class AiStatsService {
     private readonly postModel: Model<PostDocument>,
     @InjectModel(AdminAlertModelName)
     private readonly alertModel: Model<AdminAlertDocument>,
+    @InjectModel(UserModelName)
+    private readonly userModel: Model<UserDocument>,
   ) {}
+
+  // Dashboard overview: real-time KPIs + 7-day activity chart
+  async getDashboardOverview() {
+    const now = Date.now();
+    const since24h = new Date(now - 24 * 60 * 60_000);
+    const since7d = new Date(now - 7 * 24 * 60 * 60_000);
+
+    const [totalUsers, todayUsers, totalPosts, todayPosts, totalComments, todayComments, pendingReview, moderationQueue, postChart, commentChart] =
+      await Promise.all([
+        this.userModel.countDocuments().exec(),
+        this.userModel.countDocuments({ createdAt: { $gte: since24h } }).exec(),
+        this.postModel.countDocuments({ status: 'published' }).exec(),
+        this.postModel.countDocuments({ status: 'published', createdAt: { $gte: since24h } }).exec(),
+        this.commentModel.countDocuments({ isDeleted: { $ne: true } }).exec(),
+        this.commentModel.countDocuments({ isDeleted: { $ne: true }, createdAt: { $gte: since24h } }).exec(),
+        this.commentModel.countDocuments({ moderationStatus: 'under_review', isDeleted: { $ne: true } }).exec(),
+        this.commentModel.countDocuments({ moderationStatus: 'pending', isDeleted: { $ne: true } }).exec(),
+        this.postModel.aggregate([
+          { $match: { status: 'published', createdAt: { $gte: since7d } } },
+          { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ]).exec(),
+        this.commentModel.aggregate([
+          { $match: { isDeleted: { $ne: true }, createdAt: { $gte: since7d } } },
+          { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ]).exec(),
+      ]);
+
+    // Merge post+comment per day into unified chart
+    const chartMap = new Map<string, { posts: number; comments: number }>();
+    for (const r of postChart) chartMap.set(r._id, { posts: Number(r.count), comments: 0 });
+    for (const r of commentChart) {
+      const entry = chartMap.get(r._id) ?? { posts: 0, comments: 0 };
+      entry.comments = Number(r.count);
+      chartMap.set(r._id, entry);
+    }
+    const activity7d = [...chartMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date, posts: v.posts, comments: v.comments }));
+
+    return {
+      users: { total: totalUsers, today: todayUsers },
+      posts: { total: totalPosts, today: todayPosts },
+      comments: { total: totalComments, today: todayComments },
+      moderation: { pendingReview, queue: moderationQueue },
+      activity7d,
+    };
+  }
 
   // #11 Per-day comment moderation breakdown (last N days)
   async getModerationStats(days = 7) {

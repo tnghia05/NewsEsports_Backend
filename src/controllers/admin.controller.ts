@@ -20,6 +20,12 @@ import { AiStatsService } from '../services/ai-stats.service';
 export class AdminController {
   constructor(private readonly aiStatsService: AiStatsService) {}
 
+  // Dashboard overview KPIs
+  @Get('overview')
+  getOverview() {
+    return this.aiStatsService.getDashboardOverview();
+  }
+
   // #11 Per-day moderation breakdown
   @Get('stats')
   getModerationStats(
