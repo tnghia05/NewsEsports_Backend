@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { HashtagsService } from '../services/hashtags.service';
+import { HotTopicsWorkerService } from '../services/hot-topics-worker.service';
 import { QueryHashtagPostsDto } from '../dto/hashtags/query-hashtag-posts.dto';
 import { TrendingHashtagsDto } from '../dto/hashtags/trending-hashtags.dto';
 import { HotTopicsDto } from '../dto/hashtags/hot-topics.dto';
@@ -18,7 +19,10 @@ import type { JwtUser } from '../types/auth';
 
 @Controller('hashtags')
 export class HashtagsController {
-  constructor(private readonly hashtagsService: HashtagsService) {}
+  constructor(
+    private readonly hashtagsService: HashtagsService,
+    private readonly hotTopicsWorker: HotTopicsWorkerService,
+  ) {}
 
   @Get(':tag/posts')
   listPosts(@Param('tag') tag: string, @Query() query: QueryHashtagPostsDto) {
@@ -42,6 +46,11 @@ export class HashtagsController {
   @Get('hot-topics')
   hotTopics(@Query() query: HotTopicsDto) {
     return this.hashtagsService.hotTopics(query);
+  }
+
+  @Post('hot-topics/refresh')
+  refreshHotTopics() {
+    return this.hotTopicsWorker.triggerRecompute();
   }
 
   // Entity trending: top mentioned players/teams/tournaments with sentiment breakdown

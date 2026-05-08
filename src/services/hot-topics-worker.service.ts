@@ -38,6 +38,8 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(HotTopicsWorkerService.name);
   private timer?: NodeJS.Timeout;
   private running = false;
+  private lastManualTriggerAt = 0;
+  private readonly MANUAL_DEBOUNCE_MS = 30_000;
 
   private readonly intervalMs: number;
   private readonly topN: number;
@@ -78,6 +80,24 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy() {
     if (this.timer) clearInterval(this.timer);
+  }
+
+  /** Manual trigger — rate-limited to once per 30s. Returns false if debounced. */
+  async triggerRecompute(): Promise<{ triggered: boolean; message: string }> {
+    const now = Date.now();
+    const remaining = this.MANUAL_DEBOUNCE_MS - (now - this.lastManualTriggerAt);
+    if (remaining > 0) {
+      return {
+        triggered: false,
+        message: `Vui lòng chờ ${Math.ceil(remaining / 1000)}s trước khi làm mới lại.`,
+      };
+    }
+    if (this.running) {
+      return { triggered: false, message: 'Đang recompute, vui lòng chờ.' };
+    }
+    this.lastManualTriggerAt = now;
+    this.tick().catch(() => {});
+    return { triggered: true, message: 'Đã kích hoạt recompute.' };
   }
 
   private async tick() {
