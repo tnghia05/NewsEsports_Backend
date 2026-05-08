@@ -87,32 +87,44 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     const now = Date.now();
     const remaining = this.MANUAL_DEBOUNCE_MS - (now - this.lastManualTriggerAt);
     if (remaining > 0) {
+      this.logger.log(`[manual-refresh] debounced — ${Math.ceil(remaining / 1000)}s remaining`);
       return {
         triggered: false,
         message: `Vui lòng chờ ${Math.ceil(remaining / 1000)}s trước khi làm mới lại.`,
       };
     }
     if (this.running) {
+      this.logger.log('[manual-refresh] already running, skipped');
       return { triggered: false, message: 'Đang recompute, vui lòng chờ.' };
     }
     this.lastManualTriggerAt = now;
-    this.tick().catch(() => {});
+    this.logger.log('[manual-refresh] triggered by user — starting recompute');
+    this.tick().catch((e: any) =>
+      this.logger.error(`[manual-refresh] tick error: ${String(e?.message ?? e)}`),
+    );
     return { triggered: true, message: 'Đã kích hoạt recompute.' };
   }
 
   private async tick() {
     if (this.running) return;
     this.running = true;
+    const t0 = Date.now();
+    this.logger.log('[tick] start recompute — 3h / 24h / 7d');
     try {
       await this.recompute('3h');
+      this.logger.log('[tick] 3h done');
       await this.recompute('24h');
+      this.logger.log('[tick] 24h done');
       await this.recompute('7d');
+      this.logger.log('[tick] 7d done');
       await this.detectToxicitySpikes();
+      this.logger.log('[tick] toxicity spikes checked');
       await this.recomputeEntityTrends('3h');
       await this.recomputeEntityTrends('24h');
       await this.recomputeEntityTrends('7d');
+      this.logger.log(`[tick] entity trends done — total ${Date.now() - t0}ms`);
     } catch (e: any) {
-      this.logger.warn(`recompute failed: ${String(e?.message ?? e)}`);
+      this.logger.warn(`[tick] failed: ${String(e?.message ?? e)}`);
     } finally {
       this.running = false;
     }
