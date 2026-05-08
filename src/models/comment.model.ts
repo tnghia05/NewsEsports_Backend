@@ -82,7 +82,7 @@ export class Comment {
   @Prop({ type: Number })
   qualityScore?: number;
 
-  @Prop({ type: [{ text: String, type: String }] })
+  @Prop({ type: [{ text: { type: String }, type: { type: String }, _id: false }] })
   aiEntities?: { text: string; type: string }[];
 
   @Prop({ type: Number, default: 0 })
