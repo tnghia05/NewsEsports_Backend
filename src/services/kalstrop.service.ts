@@ -188,7 +188,7 @@ export class KalstropService {
       return cached;
     }
 
-    const data = await this.fetchApi<any>(`/sports/${sport}/${type}`);
+    const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=10`);
     if (!data) return [];
 
     const nodes: any[] = data?.sportsFixtures?.nodes ?? [];
