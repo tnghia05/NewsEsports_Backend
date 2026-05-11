@@ -24,6 +24,8 @@ export interface KalstropFixture {
   category: string;
   teams: [KalstropTeam, KalstropTeam];
   preMatchWidgetUrl?: string;
+  tournamentSlug?: string;
+  categorySlug?: string;
 }
 
 interface CacheEntry<T> {
@@ -225,10 +227,8 @@ export class KalstropService {
     }
 
     if (nodes.length > 0) {
-      const nodeKeys = Object.keys(nodes[0]);
-      this.logger.debug(`Kalstrop node keys: ${nodeKeys.join(', ')}`);
-      if (nodes[0]?.defaultMarketsInfo) {
-        this.logger.debug(`Kalstrop defaultMarketsInfo sample: ${JSON.stringify(nodes[0].defaultMarketsInfo).slice(0, 500)}`);
+      if (nodes[0]?.competition) {
+        this.logger.debug(`Kalstrop competition field: ${JSON.stringify(nodes[0].competition).slice(0, 400)}`);
       }
     }
 
@@ -260,6 +260,8 @@ export class KalstropService {
         competitionSlug: f._competitionSlug || (f.tournament?.slug ?? f.competition?.slug ?? ''),
         category: f._category || (f.category?.slug ?? sport),
         preMatchWidgetUrl: f.preMatchWidget?.url ?? undefined,
+        tournamentSlug: f.competition?.slug ?? f.tournament?.slug ?? undefined,
+        categorySlug: f.competition?.category?.slug ?? f.competition?.sport?.slug ?? undefined,
         teams: [
           {
             id: cA.id ?? '',
@@ -315,7 +317,15 @@ export class KalstropService {
   }
 
   async getFixtureSsrGroups(sport: string, category: string, tournament: string, fixture: string): Promise<any> {
+    const cacheKey = `ssr-${sport}-${fixture}`;
+    const cached = this.getCached<any>(cacheKey);
+    if (cached) return cached;
     const params = new URLSearchParams({ sport, category, tournament, fixture });
-    return this.fetchApi(`/fixture/ssr/groups?${params}`);
+    const data = await this.fetchApi<any>(`/fixture/ssr/groups?${params}`);
+    if (data) {
+      this.logger.debug(`Kalstrop SSR keys [${fixture}]: ${Object.keys(data).join(', ')}`);
+      this.setCache(cacheKey, data, 300_000); // 5min cache
+    }
+    return data;
   }
 }
