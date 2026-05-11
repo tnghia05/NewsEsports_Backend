@@ -41,6 +41,8 @@ const CACHE_TTL: Record<string, number> = {
 export class KalstropService {
   private readonly logger = new Logger(KalstropService.name);
   private readonly cache = new Map<string, CacheEntry<any>>();
+  private lastApiCallAt = 0;
+  private readonly minCallGapMs = 600;  // 600ms between any two API calls
 
   private getCached<T>(key: string): T | null {
     const entry = this.cache.get(key);
@@ -73,7 +75,15 @@ export class KalstropService {
     };
   }
 
+  private async throttle(): Promise<void> {
+    const now = Date.now();
+    const wait = this.minCallGapMs - (now - this.lastApiCallAt);
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    this.lastApiCallAt = Date.now();
+  }
+
   private async fetchApi<T>(path: string): Promise<T | null> {
+    await this.throttle();
     try {
       const res = await fetch(`${KALSTROP_BASE}${path}`, {
         headers: this.getHeaders(),
@@ -210,7 +220,9 @@ export class KalstropService {
     }
 
     if (nodes.length > 0) {
-      this.logger.debug(`Kalstrop node sample: ${JSON.stringify(nodes[0]).slice(0, 800)}`);
+      this.logger.debug(`Kalstrop node sample: ${JSON.stringify(nodes[0]).slice(0, 2000)}`);
+      const nodeKeys = Object.keys(nodes[0]);
+      this.logger.debug(`Kalstrop node keys: ${nodeKeys.join(', ')}`);
     }
 
     const now = new Date();
