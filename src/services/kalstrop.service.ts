@@ -155,15 +155,15 @@ export class KalstropService {
     return fixtures;
   }
 
-  async getLolFixtures(type: 'live' | 'upcoming' | 'popular'): Promise<KalstropFixture[]> {
-    const cacheKey = `lol-${type}`;
+  async getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular'): Promise<KalstropFixture[]> {
+    const cacheKey = `${sport}-${type}`;
     const cached = this.getCached<KalstropFixture[]>(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit: ${cacheKey}`);
       return cached;
     }
 
-    const data = await this.fetchApi<any>(`/sports/lol/${type}`);
+    const data = await this.fetchApi<any>(`/sports/${sport}/${type}`);
     if (!data) return [];
 
     const competitions: any[] =
@@ -179,7 +179,7 @@ export class KalstropService {
     }
 
     this.setCache(cacheKey, result, CACHE_TTL[type] ?? 60_000);
-    this.logger.debug(`Kalstrop API call: lol/${type} → ${result.length} fixtures cached`);
+    this.logger.debug(`Kalstrop API call: ${sport}/${type} → ${result.length} fixtures cached`);
     return result;
   }
 
