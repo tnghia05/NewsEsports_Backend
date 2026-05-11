@@ -105,8 +105,10 @@ import { MatchSyncWorkerService } from '../services/match-sync-worker.service';
 import { PandaScoreService } from '../infra/pandascore/pandascore.service';
 import { LoLEsportsService } from '../services/lol-esports.service';
 import { GridController } from '../controllers/grid.controller';
+import { KalstropController } from '../controllers/kalstrop.controller';
 import { AdminController } from '../controllers/admin.controller';
 import { GridService } from '../services/grid.service';
+import { KalstropService } from '../services/kalstrop.service';
 import { AiStatsService } from '../services/ai-stats.service';
 import { MatchModelName, MatchSchema } from '../models/match.model';
 import {
@@ -172,6 +174,7 @@ import {
     PandaScoreController,
     LoLEsportsController,
     GridController,
+    KalstropController,
     AdminController,
   ],
   providers: [
@@ -207,6 +210,7 @@ import {
     PandaScoreService,
     LoLEsportsService,
     GridService,
+    KalstropService,
     AiStatsService,
     JwtStrategy,
     R2Service,
