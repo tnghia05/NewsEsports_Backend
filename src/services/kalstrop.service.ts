@@ -100,6 +100,26 @@ export class KalstropService {
     return Math.round(((n / d) + 1) * 100) / 100;
   }
 
+  private extractOddsFromCompetitor(competitor: any, fixture: any): { decimal?: number; probability?: number } {
+    // Try competitor-level odds fields
+    if (competitor.odds !== undefined) return { decimal: parseFloat(competitor.odds), probability: competitor.probability };
+    if (competitor.winOdds !== undefined) return { decimal: parseFloat(competitor.winOdds) };
+    if (competitor.decimalOdds !== undefined) return { decimal: parseFloat(competitor.decimalOdds), probability: competitor.probability };
+
+    // Try fixture-level defaultMarketsInfo
+    const defaultOdds: any[] = fixture?.defaultMarketsInfo?.defaultMarket?.odds ?? [];
+    const idx = (fixture?.competitors ?? []).indexOf(competitor);
+    if (idx >= 0 && defaultOdds[idx]) {
+      const o = defaultOdds[idx];
+      return {
+        decimal: this.parseDecimalOdds(o.oddsNumerator, o.oddsDenominator),
+        probability: o.probability ? parseFloat(o.probability) : undefined,
+      };
+    }
+
+    return {};
+  }
+
   private transformFixtures(data: any, competitionName: string, competitionSlug: string, category: string): KalstropFixture[] {
     const fixtures: KalstropFixture[] = [];
     const nodes: any[] = data?.fixtures?.nodes ?? data?.nodes ?? [];
@@ -171,20 +191,57 @@ export class KalstropService {
     const data = await this.fetchApi<any>(`/sports/${sport}/${type}`);
     if (!data) return [];
 
-    this.logger.debug(`Kalstrop raw keys: ${Object.keys(data).join(', ')}`);
-    this.logger.debug(`Kalstrop raw sample: ${JSON.stringify(data).slice(0, 500)}`);
+    const nodes: any[] = data?.sportsFixtures?.nodes ?? [];
 
-    const competitions: any[] =
-      data?.sportsCompetitions?.nodes ?? data?.nodes ?? data?.competitions ?? data?.data ?? [];
-
-    const result: KalstropFixture[] = [];
-    for (const comp of competitions) {
-      const compName: string = comp?.name ?? comp?.slug ?? 'Unknown';
-      const compSlug: string = comp?.slug ?? '';
-      const category: string = comp?.category?.slug ?? '';
-      const fixtures = this.transformFixtures(comp, compName, compSlug, category);
-      result.push(...fixtures);
+    if (nodes.length > 0) {
+      this.logger.debug(`Kalstrop node sample: ${JSON.stringify(nodes[0]).slice(0, 800)}`);
     }
+
+    const now = new Date();
+    const result: KalstropFixture[] = nodes.map((f: any) => {
+      const competitors: any[] = f.competitors ?? f.teams ?? [];
+      const cA = competitors[0] ?? {};
+      const cB = competitors[1] ?? {};
+
+      const startTime = new Date(f.startTime ?? f.start_time ?? '');
+      let status: 'LIVE' | 'PREMATCH' | 'FINISHED' = 'PREMATCH';
+      const rawStatus = (f.status ?? f.liveStatus ?? '').toUpperCase();
+      if (rawStatus === 'LIVE' || rawStatus === 'IN_PROGRESS' || f.inPlay === true) {
+        status = 'LIVE';
+      } else if (startTime < now && !isNaN(startTime.getTime())) {
+        status = 'FINISHED';
+      }
+
+      const oddsA = this.extractOddsFromCompetitor(cA, f);
+      const oddsB = this.extractOddsFromCompetitor(cB, f);
+
+      return {
+        id: f.id ?? f.slug,
+        slug: f.slug ?? f.id,
+        name: f.name ?? f.shortName ?? '',
+        startTime: f.startTime ?? f.start_time ?? '',
+        status,
+        competition: f.tournament?.name ?? f.competition?.name ?? f.sportCompetition?.name ?? sport.toUpperCase(),
+        competitionSlug: f.tournament?.slug ?? f.competition?.slug ?? '',
+        category: f.category?.slug ?? sport,
+        teams: [
+          {
+            id: cA.id ?? '',
+            name: cA.displayName ?? cA.name ?? 'TBD',
+            logoUrl: cA.iconPath ?? cA.logo ?? undefined,
+            oddsDecimal: oddsA.decimal,
+            probability: oddsA.probability,
+          },
+          {
+            id: cB.id ?? '',
+            name: cB.displayName ?? cB.name ?? 'TBD',
+            logoUrl: cB.iconPath ?? cB.logo ?? undefined,
+            oddsDecimal: oddsB.decimal,
+            probability: oddsB.probability,
+          },
+        ] as [KalstropTeam, KalstropTeam],
+      };
+    });
 
     this.setCache(cacheKey, result, CACHE_TTL[type] ?? 60_000);
     this.logger.debug(`Kalstrop API call: ${sport}/${type} → ${result.length} fixtures cached`);
