@@ -122,8 +122,10 @@ export class KalstropService {
     const idx = (fixture?.competitors ?? []).indexOf(competitor);
     if (idx >= 0 && defaultOdds[idx]) {
       const o = defaultOdds[idx];
+      const decimal = o.price ?? o.odds ?? o.decimalOdds
+        ?? (o.oddsNumerator ? this.parseDecimalOdds(o.oddsNumerator, o.oddsDenominator) : undefined);
       return {
-        decimal: this.parseDecimalOdds(o.oddsNumerator, o.oddsDenominator),
+        decimal: decimal ? parseFloat(decimal) : undefined,
         probability: o.probability ? parseFloat(o.probability) : undefined,
       };
     }
@@ -199,7 +201,7 @@ export class KalstropService {
       return cached;
     }
 
-    const pageSize = type === 'live' ? 10 : 50;
+    const pageSize = type === 'live' ? 10 : 30;
     const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}`);
     if (!data) return [];
 
@@ -220,9 +222,11 @@ export class KalstropService {
     }
 
     if (nodes.length > 0) {
-      this.logger.debug(`Kalstrop node sample: ${JSON.stringify(nodes[0]).slice(0, 2000)}`);
       const nodeKeys = Object.keys(nodes[0]);
       this.logger.debug(`Kalstrop node keys: ${nodeKeys.join(', ')}`);
+      if (nodes[0]?.defaultMarketsInfo) {
+        this.logger.debug(`Kalstrop defaultMarketsInfo sample: ${JSON.stringify(nodes[0].defaultMarketsInfo).slice(0, 500)}`);
+      }
     }
 
     const now = new Date();
