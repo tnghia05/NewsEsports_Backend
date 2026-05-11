@@ -243,13 +243,57 @@ export class KalstropService {
       };
     });
 
+    if (type === 'live' && result.length > 0) {
+      const toEnrich = result.slice(0, 5);
+      await Promise.all(
+        toEnrich.map(async (fixture, idx) => {
+          try {
+            const details = await this.getFixtureDetails(fixture.id);
+            if (!details) return;
+            const odds = this.extractWinnerOddsFromDetails(details);
+            if (odds) {
+              result[idx].teams[0].oddsDecimal = odds[0].decimal;
+              result[idx].teams[0].probability = odds[0].probability;
+              result[idx].teams[1].oddsDecimal = odds[1].decimal;
+              result[idx].teams[1].probability = odds[1].probability;
+            }
+          } catch {
+            /* ignore individual failures */
+          }
+        }),
+      );
+      this.logger.debug(`Kalstrop enriched ${toEnrich.length} live fixtures with odds`);
+    }
+
     this.setCache(cacheKey, result, CACHE_TTL[type] ?? 60_000);
     this.logger.debug(`Kalstrop API call: ${sport}/${type} → ${result.length} fixtures cached`);
     return result;
   }
 
   async getFixtureDetails(fixtureId: string, group = 'TOP_MARKETS'): Promise<any> {
-    return this.fetchApi(`/fixture/${fixtureId}/details?group=${encodeURIComponent(group)}`);
+    const cacheKey = `details-${fixtureId}-${group}`;
+    const cached = this.getCached<any>(cacheKey);
+    if (cached) return cached;
+    const data = await this.fetchApi<any>(`/fixture/${fixtureId}/details?group=${encodeURIComponent(group)}`);
+    if (data) {
+      this.logger.debug(`Kalstrop details sample [${fixtureId}]: ${JSON.stringify(data).slice(0, 600)}`);
+      this.setCache(cacheKey, data, 30_000);
+    }
+    return data;
+  }
+
+  private extractWinnerOddsFromDetails(details: any): [{ decimal?: number; probability?: number }, { decimal?: number; probability?: number }] | null {
+    const markets: any[] = details?.fixture?.defaultMarketsInfo?.defaultMarket?.odds
+      ?? details?.defaultMarket?.odds
+      ?? details?.markets?.nodes?.[0]?.odds
+      ?? details?.odds
+      ?? [];
+    if (markets.length < 2) return null;
+    const parse = (o: any) => ({
+      decimal: o?.oddsDecimal ?? (o?.oddsNumerator != null ? this.parseDecimalOdds(o.oddsNumerator, o.oddsDenominator) : undefined),
+      probability: o?.probability != null ? parseFloat(o.probability) : undefined,
+    });
+    return [parse(markets[0]), parse(markets[1])];
   }
 
   async getFixtureSsrGroups(sport: string, category: string, tournament: string, fixture: string): Promise<any> {
