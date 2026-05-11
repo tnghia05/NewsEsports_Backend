@@ -193,7 +193,9 @@ export class KalstropService {
 
     const nodes: any[] = data?.sportsFixtures?.nodes ?? [];
 
-    if (nodes.length > 0) {
+    if (nodes.length === 0) {
+      this.logger.debug(`Kalstrop ${sport}/${type} raw (empty): ${JSON.stringify(data).slice(0, 600)}`);
+    } else {
       this.logger.debug(`Kalstrop node sample: ${JSON.stringify(nodes[0]).slice(0, 800)}`);
     }
 
