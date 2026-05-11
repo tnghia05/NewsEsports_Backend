@@ -191,11 +191,23 @@ export class KalstropService {
     const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=10`);
     if (!data) return [];
 
-    const nodes: any[] = data?.sportsFixtures?.nodes ?? [];
+    // upcoming → sportsFixtures.nodes (flat list)
+    // live     → sportsCompetitions.nodes[].fixtures.nodes (grouped by competition)
+    let nodes: any[] = data?.sportsFixtures?.nodes ?? [];
+    if (nodes.length === 0 && data?.sportsCompetitions?.nodes) {
+      const comps: any[] = data.sportsCompetitions.nodes;
+      for (const comp of comps) {
+        const fixtureNodes: any[] = comp?.fixtures?.nodes ?? [];
+        nodes.push(...fixtureNodes.map((f: any) => ({
+          ...f,
+          _competition: comp?.name ?? '',
+          _competitionSlug: comp?.slug ?? '',
+          _category: comp?.category?.slug ?? comp?.category?.sports?.toLowerCase() ?? sport,
+        })));
+      }
+    }
 
-    if (nodes.length === 0) {
-      this.logger.debug(`Kalstrop ${sport}/${type} raw (empty): ${JSON.stringify(data).slice(0, 600)}`);
-    } else {
+    if (nodes.length > 0) {
       this.logger.debug(`Kalstrop node sample: ${JSON.stringify(nodes[0]).slice(0, 800)}`);
     }
 
@@ -223,9 +235,9 @@ export class KalstropService {
         name: f.name ?? f.shortName ?? '',
         startTime: f.startTime ?? f.start_time ?? '',
         status,
-        competition: f.tournament?.name ?? f.competition?.name ?? f.sportCompetition?.name ?? sport.toUpperCase(),
-        competitionSlug: f.tournament?.slug ?? f.competition?.slug ?? '',
-        category: f.category?.slug ?? sport,
+        competition: f._competition || (f.tournament?.name ?? f.competition?.name ?? f.sportCompetition?.name ?? sport.toUpperCase()),
+        competitionSlug: f._competitionSlug || (f.tournament?.slug ?? f.competition?.slug ?? ''),
+        category: f._category || (f.category?.slug ?? sport),
         teams: [
           {
             id: cA.id ?? '',
