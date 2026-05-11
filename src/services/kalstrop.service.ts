@@ -262,23 +262,22 @@ export class KalstropService {
 
     if (type === 'live' && result.length > 0) {
       const toEnrich = result.slice(0, 5);
-      await Promise.all(
-        toEnrich.map(async (fixture, idx) => {
-          try {
-            const details = await this.getFixtureDetails(fixture.id);
-            if (!details) return;
-            const odds = this.extractWinnerOddsFromDetails(details);
-            if (odds) {
-              result[idx].teams[0].oddsDecimal = odds[0].decimal;
-              result[idx].teams[0].probability = odds[0].probability;
-              result[idx].teams[1].oddsDecimal = odds[1].decimal;
-              result[idx].teams[1].probability = odds[1].probability;
-            }
-          } catch {
-            /* ignore individual failures */
+      for (let idx = 0; idx < toEnrich.length; idx++) {
+        try {
+          await new Promise(r => setTimeout(r, 400 * idx)); // stagger to avoid per-sec rate limit
+          const details = await this.getFixtureDetails(result[idx].id);
+          if (!details) continue;
+          const odds = this.extractWinnerOddsFromDetails(details);
+          if (odds) {
+            result[idx].teams[0].oddsDecimal = odds[0].decimal;
+            result[idx].teams[0].probability = odds[0].probability;
+            result[idx].teams[1].oddsDecimal = odds[1].decimal;
+            result[idx].teams[1].probability = odds[1].probability;
           }
-        }),
-      );
+        } catch {
+          /* ignore individual failures */
+        }
+      }
       this.logger.debug(`Kalstrop enriched ${toEnrich.length} live fixtures with odds`);
     }
 
@@ -293,10 +292,10 @@ export class KalstropService {
     if (cached) return cached;
     const data = await this.fetchApi<any>(`/fixture/${fixtureId}/details?group=${encodeURIComponent(group)}`);
     if (data) {
+      this.logger.debug(`Kalstrop details keys [${fixtureId}]: ${Object.keys(data).join(', ')}`);
       const firstSel = data?.top_markets?.display?.[0]?.selectionGroups?.[0]?.selections?.[0];
-      this.logger.debug(`Kalstrop details sample [${fixtureId}]: ${JSON.stringify(data).slice(0, 2500)}`);
       if (firstSel) this.logger.debug(`Kalstrop details first selection: ${JSON.stringify(firstSel)}`);
-      this.setCache(cacheKey, data, 30_000);
+      this.setCache(cacheKey, data, 60_000);
     }
     return data;
   }
