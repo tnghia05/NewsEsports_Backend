@@ -23,6 +23,7 @@ export interface KalstropFixture {
   competitionSlug: string;
   category: string;
   teams: [KalstropTeam, KalstropTeam];
+  preMatchWidgetUrl?: string;
 }
 
 interface CacheEntry<T> {
@@ -238,6 +239,7 @@ export class KalstropService {
         competition: f._competition || (f.tournament?.name ?? f.competition?.name ?? f.sportCompetition?.name ?? sport.toUpperCase()),
         competitionSlug: f._competitionSlug || (f.tournament?.slug ?? f.competition?.slug ?? ''),
         category: f._category || (f.category?.slug ?? sport),
+        preMatchWidgetUrl: f.preMatchWidget?.url ?? undefined,
         teams: [
           {
             id: cA.id ?? '',
@@ -290,7 +292,7 @@ export class KalstropService {
     if (cached) return cached;
     const data = await this.fetchApi<any>(`/fixture/${fixtureId}/details?group=${encodeURIComponent(group)}`);
     if (data) {
-      this.logger.debug(`Kalstrop details sample [${fixtureId}]: ${JSON.stringify(data).slice(0, 600)}`);
+      this.logger.debug(`Kalstrop details sample [${fixtureId}]: ${JSON.stringify(data).slice(0, 1500)}`);
       this.setCache(cacheKey, data, 30_000);
     }
     return data;
