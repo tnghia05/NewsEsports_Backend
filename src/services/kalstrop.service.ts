@@ -2,8 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 
 const KALSTROP_BASE = 'https://sportsapi.kalstropservice.com/odds_v1/v1';
-const CLIENT_ID = process.env.KALSTROP_CLIENT_ID ?? '';
-const SHARED_SECRET = process.env.KALSTROP_SHARED_SECRET ?? '';
 
 export interface KalstropTeam {
   id: string;
@@ -58,14 +56,16 @@ export class KalstropService {
   }
 
   private getHeaders(): Record<string, string> {
-    const hashedSecret = crypto.createHash('sha256').update(SHARED_SECRET).digest('hex');
+    const clientId = process.env.KALSTROP_CLIENT_ID ?? '';
+    const secret = process.env.KALSTROP_SHARED_SECRET ?? '';
     const timestamp = Math.floor(Date.now() / 1000).toString();
+    const hashedSecret = crypto.createHash('sha256').update(secret).digest('hex');
     const signature = crypto
       .createHmac('sha256', hashedSecret)
-      .update(`${CLIENT_ID}:${timestamp}`)
+      .update(`${clientId}:${timestamp}`)
       .digest('hex');
     return {
-      'X-Client-ID': CLIENT_ID,
+      'X-Client-ID': clientId,
       'X-Timestamp': timestamp,
       Authorization: `Bearer ${signature}`,
       'Content-Type': 'application/json',
@@ -78,7 +78,12 @@ export class KalstropService {
         headers: this.getHeaders(),
       });
       if (!res.ok) {
-        this.logger.warn(`Kalstrop ${path} → ${res.status}`);
+        const body = await res.text().catch(() => '');
+        this.logger.warn(`Kalstrop ${path} → ${res.status}: ${body.slice(0, 200)}`);
+        if (res.status === 401) {
+          const id = process.env.KALSTROP_CLIENT_ID;
+          this.logger.warn(`AUTH DEBUG: CLIENT_ID set=${!!id && id.length > 0}`);
+        }
         return null;
       }
       return (await res.json()) as T;
