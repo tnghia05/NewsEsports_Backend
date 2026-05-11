@@ -171,8 +171,11 @@ export class KalstropService {
     const data = await this.fetchApi<any>(`/sports/${sport}/${type}`);
     if (!data) return [];
 
+    this.logger.debug(`Kalstrop raw keys: ${Object.keys(data).join(', ')}`);
+    this.logger.debug(`Kalstrop raw sample: ${JSON.stringify(data).slice(0, 500)}`);
+
     const competitions: any[] =
-      data?.sportsCompetitions?.nodes ?? data?.nodes ?? [];
+      data?.sportsCompetitions?.nodes ?? data?.nodes ?? data?.competitions ?? data?.data ?? [];
 
     const result: KalstropFixture[] = [];
     for (const comp of competitions) {
