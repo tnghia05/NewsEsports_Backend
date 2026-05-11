@@ -189,7 +189,8 @@ export class KalstropService {
       return cached;
     }
 
-    const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=10`);
+    const pageSize = type === 'live' ? 10 : 50;
+    const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}`);
     if (!data) return [];
 
     // upcoming → sportsFixtures.nodes (flat list)
@@ -292,7 +293,9 @@ export class KalstropService {
     if (cached) return cached;
     const data = await this.fetchApi<any>(`/fixture/${fixtureId}/details?group=${encodeURIComponent(group)}`);
     if (data) {
-      this.logger.debug(`Kalstrop details sample [${fixtureId}]: ${JSON.stringify(data).slice(0, 1500)}`);
+      const firstSel = data?.top_markets?.display?.[0]?.selectionGroups?.[0]?.selections?.[0];
+      this.logger.debug(`Kalstrop details sample [${fixtureId}]: ${JSON.stringify(data).slice(0, 2500)}`);
+      if (firstSel) this.logger.debug(`Kalstrop details first selection: ${JSON.stringify(firstSel)}`);
       this.setCache(cacheKey, data, 30_000);
     }
     return data;
