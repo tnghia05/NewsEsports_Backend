@@ -78,7 +78,7 @@ export class MatchSyncWorkerService implements OnModuleInit, OnModuleDestroy {
           .findOneAndUpdate(
             { externalId: m.externalId },
             { $set: { ...m, syncedAt: new Date() } },
-            { upsert: true, new: true },
+            { upsert: true, returnDocument: 'after' },
           )
           .exec();
         upserted++;
