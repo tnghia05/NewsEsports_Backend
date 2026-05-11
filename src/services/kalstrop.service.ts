@@ -117,17 +117,20 @@ export class KalstropService {
     if (competitor.winOdds !== undefined) return { decimal: parseFloat(competitor.winOdds) };
     if (competitor.decimalOdds !== undefined) return { decimal: parseFloat(competitor.decimalOdds), probability: competitor.probability };
 
-    // Try fixture-level defaultMarketsInfo
-    const defaultOdds: any[] = fixture?.defaultMarketsInfo?.defaultMarket?.odds ?? [];
-    const idx = (fixture?.competitors ?? []).indexOf(competitor);
-    if (idx >= 0 && defaultOdds[idx]) {
-      const o = defaultOdds[idx];
-      const decimal = o.price ?? o.odds ?? o.decimalOdds
-        ?? (o.oddsNumerator ? this.parseDecimalOdds(o.oddsNumerator, o.oddsDenominator) : undefined);
-      return {
-        decimal: decimal ? parseFloat(decimal) : undefined,
-        probability: o.probability ? parseFloat(o.probability) : undefined,
-      };
+    // Try fixture-level defaultMarketsInfo → odds[0].selections[competitorIdx]
+    const defaultMarket = fixture?.defaultMarketsInfo?.defaultMarket?.odds?.[0];
+    if (defaultMarket) {
+      const sels: any[] = defaultMarket.selections ?? [];
+      const idx = (fixture?.competitors ?? []).indexOf(competitor);
+      const sel = idx >= 0 ? sels[idx] : null;
+      if (sel) {
+        const decimal = sel.price ?? sel.odds ?? sel.decimalOdds
+          ?? (sel.oddsNumerator ? this.parseDecimalOdds(sel.oddsNumerator, sel.oddsDenominator) : undefined);
+        return {
+          decimal: decimal != null ? parseFloat(String(decimal)) : undefined,
+          probability: sel.probability ? parseFloat(sel.probability) : undefined,
+        };
+      }
     }
 
     return {};
@@ -276,26 +279,7 @@ export class KalstropService {
       };
     });
 
-    if (type === 'live' && result.length > 0) {
-      const toEnrich = result.slice(0, 5);
-      for (let idx = 0; idx < toEnrich.length; idx++) {
-        try {
-          await new Promise(r => setTimeout(r, 400 * idx)); // stagger to avoid per-sec rate limit
-          const details = await this.getFixtureDetails(result[idx].id);
-          if (!details) continue;
-          const odds = this.extractWinnerOddsFromDetails(details);
-          if (odds) {
-            result[idx].teams[0].oddsDecimal = odds[0].decimal;
-            result[idx].teams[0].probability = odds[0].probability;
-            result[idx].teams[1].oddsDecimal = odds[1].decimal;
-            result[idx].teams[1].probability = odds[1].probability;
-          }
-        } catch {
-          /* ignore individual failures */
-        }
-      }
-      this.logger.debug(`Kalstrop enriched ${toEnrich.length} live fixtures with odds`);
-    }
+    // Odds are already embedded in defaultMarketsInfo — no extra API call needed
 
     this.setCache(cacheKey, result, CACHE_TTL[type] ?? 60_000);
     this.logger.debug(`Kalstrop API call: ${sport}/${type} → ${result.length} fixtures cached`);
