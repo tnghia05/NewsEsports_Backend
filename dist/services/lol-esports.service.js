@@ -264,7 +264,7 @@ let LoLEsportsService = LoLEsportsService_1 = class LoLEsportsService {
                     ? 'unstarted'
                     : e.state;
         return {
-            id: e.id,
+            id: e.id ?? e.match?.id ?? '',
             startTime: e.startTime,
             state: resolvedState,
             blockName: e.blockName,
