@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { KalstropService } from '../services/kalstrop.service';
 
-const ALLOWED_SPORTS = ['lol', 'cs2', 'dota2', 'r6', 'kog'];
+const ALLOWED_SPORTS = ['lol', 'cs2', 'dota2', 'r6', 'kog', 'valorant'];
 const ALLOWED_TYPES = ['live', 'upcoming', 'popular'];
 
 @Controller('kalstrop')

@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.KalstropController = void 0;
 const common_1 = require("@nestjs/common");
 const kalstrop_service_1 = require("../services/kalstrop.service");
-const ALLOWED_SPORTS = ['lol', 'cs2', 'dota2', 'r6', 'kog'];
+const ALLOWED_SPORTS = ['lol', 'cs2', 'dota2', 'r6', 'kog', 'valorant'];
 const ALLOWED_TYPES = ['live', 'upcoming', 'popular'];
 let KalstropController = class KalstropController {
     kalstrop;
