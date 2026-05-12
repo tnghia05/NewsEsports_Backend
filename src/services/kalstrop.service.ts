@@ -218,7 +218,7 @@ export class KalstropService {
       return cached;
     }
 
-    const pageSize = type === 'live' ? 10 : 30;
+    const pageSize = type === 'live' ? 10 : 100;
     const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}`);
     if (!data) return [];
 

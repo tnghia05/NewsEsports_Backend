@@ -210,7 +210,7 @@ let KalstropService = KalstropService_1 = class KalstropService {
             this.logger.debug(`Cache hit: ${cacheKey}`);
             return cached;
         }
-        const pageSize = type === 'live' ? 10 : 30;
+        const pageSize = type === 'live' ? 10 : 100;
         const data = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}`);
         if (!data)
             return [];
