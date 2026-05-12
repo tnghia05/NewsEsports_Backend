@@ -25,6 +25,7 @@ export interface KalstropFixture {
 export declare class KalstropService {
     private readonly logger;
     private readonly cache;
+    private readonly inFlight;
     private readonly minCallGapMs;
     private throttleQueue;
     private getCached;
@@ -36,6 +37,7 @@ export declare class KalstropService {
     private parseDecimalOdds;
     private extractOddsFromCompetitor;
     private transformFixtures;
+    private fetchFixturesUncached;
     getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular'): Promise<KalstropFixture[]>;
     getFixtureDetails(fixtureId: string, group?: string): Promise<any>;
     private extractWinnerOddsFromDetails;

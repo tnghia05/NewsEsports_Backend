@@ -45,13 +45,14 @@ const common_1 = require("@nestjs/common");
 const crypto = __importStar(require("crypto"));
 const KALSTROP_BASE = 'https://sportsapi.kalstropservice.com/odds_v1/v1';
 const CACHE_TTL = {
-    live: 30_000,
-    upcoming: 120_000,
-    popular: 120_000,
+    live: 300_000,
+    upcoming: 1_800_000,
+    popular: 1_800_000,
 };
 let KalstropService = KalstropService_1 = class KalstropService {
     logger = new common_1.Logger(KalstropService_1.name);
     cache = new Map();
+    inFlight = new Map();
     minCallGapMs = 1100;
     throttleQueue = Promise.resolve();
     getCached(key) {
@@ -203,13 +204,7 @@ let KalstropService = KalstropService_1 = class KalstropService {
         }
         return fixtures;
     }
-    async getFixtures(sport, type) {
-        const cacheKey = `${sport}-${type}`;
-        const cached = this.getCached(cacheKey);
-        if (cached) {
-            this.logger.debug(`Cache hit: ${cacheKey}`);
-            return cached;
-        }
+    async fetchFixturesUncached(sport, type, cacheKey) {
         const pageSize = type === 'live' ? 10 : 100;
         const data = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}`);
         if (!data)
@@ -281,6 +276,19 @@ let KalstropService = KalstropService_1 = class KalstropService {
         this.setCache(cacheKey, result, CACHE_TTL[type] ?? 60_000);
         this.logger.debug(`Kalstrop API call: ${sport}/${type} → ${result.length} fixtures cached`);
         return result;
+    }
+    async getFixtures(sport, type) {
+        const cacheKey = `${sport}-${type}`;
+        const cached = this.getCached(cacheKey);
+        if (cached)
+            return cached;
+        if (this.inFlight.has(cacheKey)) {
+            return this.inFlight.get(cacheKey);
+        }
+        const promise = this.fetchFixturesUncached(sport, type, cacheKey);
+        this.inFlight.set(cacheKey, promise);
+        promise.finally(() => this.inFlight.delete(cacheKey));
+        return promise;
     }
     async getFixtureDetails(fixtureId, group = 'TOP_MARKETS') {
         const cacheKey = `details-${fixtureId}-${group}`;

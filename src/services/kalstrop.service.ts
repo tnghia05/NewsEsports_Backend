@@ -35,15 +35,16 @@ interface CacheEntry<T> {
 }
 
 const CACHE_TTL: Record<string, number> = {
-  live: 30_000,       // 30s — live matches update frequently
-  upcoming: 120_000,  // 2min — upcoming matches rarely change
-  popular: 120_000,
+  live: 300_000,      // 5min — WS handles real-time updates, REST is initial data only
+  upcoming: 1_800_000, // 30min — upcoming fixtures change rarely
+  popular: 1_800_000,
 };
 
 @Injectable()
 export class KalstropService {
   private readonly logger = new Logger(KalstropService.name);
   private readonly cache = new Map<string, CacheEntry<any>>();
+  private readonly inFlight = new Map<string, Promise<KalstropFixture[]>>();
   private readonly minCallGapMs = 1100;  // 1.1s gap → safely under 1 req/sec limit
   private throttleQueue: Promise<void> = Promise.resolve();
 
@@ -210,14 +211,7 @@ export class KalstropService {
     return fixtures;
   }
 
-  async getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular'): Promise<KalstropFixture[]> {
-    const cacheKey = `${sport}-${type}`;
-    const cached = this.getCached<KalstropFixture[]>(cacheKey);
-    if (cached) {
-      this.logger.debug(`Cache hit: ${cacheKey}`);
-      return cached;
-    }
-
+  private async fetchFixturesUncached(sport: string, type: 'live' | 'upcoming' | 'popular', cacheKey: string): Promise<KalstropFixture[]> {
     const pageSize = type === 'live' ? 10 : 100;
     const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}`);
     if (!data) return [];
@@ -298,6 +292,22 @@ export class KalstropService {
     this.setCache(cacheKey, result, CACHE_TTL[type] ?? 60_000);
     this.logger.debug(`Kalstrop API call: ${sport}/${type} → ${result.length} fixtures cached`);
     return result;
+  }
+
+  async getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular'): Promise<KalstropFixture[]> {
+    const cacheKey = `${sport}-${type}`;
+    const cached = this.getCached<KalstropFixture[]>(cacheKey);
+    if (cached) return cached;
+
+    // Deduplicate: if a fetch for this key is already in-flight, return the same promise
+    if (this.inFlight.has(cacheKey)) {
+      return this.inFlight.get(cacheKey)!;
+    }
+
+    const promise = this.fetchFixturesUncached(sport, type, cacheKey);
+    this.inFlight.set(cacheKey, promise);
+    promise.finally(() => this.inFlight.delete(cacheKey));
+    return promise;
   }
 
   async getFixtureDetails(fixtureId: string, group = 'TOP_MARKETS'): Promise<any> {
