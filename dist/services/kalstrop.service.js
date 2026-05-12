@@ -226,12 +226,15 @@ let KalstropService = KalstropService_1 = class KalstropService {
     async fetchFixturesUncached(sport, type, cacheKey) {
         const pageSize = type === 'live' ? 10 : 30;
         const maxPages = type === 'upcoming' ? 3 : 1;
-        const data = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}`);
+        const dateParams = type === 'upcoming'
+            ? `&startTime=${encodeURIComponent(new Date().toISOString())}&endTime=${encodeURIComponent(new Date(Date.now() + 5 * 24 * 3600_000).toISOString())}`
+            : '';
+        const data = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}${dateParams}`);
         if (!data)
             return [];
         let { nodes, cursor } = this.extractNodes(data, sport);
         for (let page = 1; page < maxPages && cursor; page++) {
-            const nextData = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}&after=${encodeURIComponent(cursor)}`);
+            const nextData = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}&after=${encodeURIComponent(cursor)}${dateParams}`);
             if (!nextData)
                 break;
             const next = this.extractNodes(nextData, sport);
