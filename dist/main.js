@@ -9,6 +9,7 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const app_module_1 = require("./app.module");
 const constants_1 = require("./config/constants");
 const http_exception_filter_1 = require("./filters/http-exception.filter");
+const cors_io_adapter_1 = require("./socket/cors-io.adapter");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.enableCors({
@@ -36,6 +37,7 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
     }));
     app.useGlobalFilters(new http_exception_filter_1.HttpExceptionFilter());
+    app.useWebSocketAdapter(new cors_io_adapter_1.CorsIoAdapter(app));
     await app.listen(process.env.PORT ? Number(process.env.PORT) : constants_1.DEFAULT_PORT);
 }
 void bootstrap();

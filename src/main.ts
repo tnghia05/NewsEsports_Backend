@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { DEFAULT_PORT } from './config/constants';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
+import { CorsIoAdapter } from './socket/cors-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -44,6 +45,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.useWebSocketAdapter(new CorsIoAdapter(app));
 
   await app.listen(process.env.PORT ? Number(process.env.PORT) : DEFAULT_PORT);
 }
