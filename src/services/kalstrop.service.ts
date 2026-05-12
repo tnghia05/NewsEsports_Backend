@@ -311,20 +311,25 @@ export class KalstropService {
     return result;
   }
 
-  async getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular'): Promise<KalstropFixture[]> {
-    const cacheKey = `${sport}-${type}`;
-    const cached = this.getCached<KalstropFixture[]>(cacheKey);
-    if (cached) return cached;
+  async getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular', region?: string): Promise<KalstropFixture[]> {
+    const baseCacheKey = `${sport}-${type}`;
+    const cached = this.getCached<KalstropFixture[]>(baseCacheKey);
+    const base = cached ?? await (() => {
+      if (this.inFlight.has(baseCacheKey)) return this.inFlight.get(baseCacheKey)!;
+      const p = this.fetchFixturesUncached(sport, type, baseCacheKey);
+      this.inFlight.set(baseCacheKey, p);
+      p.finally(() => this.inFlight.delete(baseCacheKey));
+      return p;
+    })();
 
-    // Deduplicate: if a fetch for this key is already in-flight, return the same promise
-    if (this.inFlight.has(cacheKey)) {
-      return this.inFlight.get(cacheKey)!;
-    }
-
-    const promise = this.fetchFixturesUncached(sport, type, cacheKey);
-    this.inFlight.set(cacheKey, promise);
-    promise.finally(() => this.inFlight.delete(cacheKey));
-    return promise;
+    if (!region) return base;
+    // Client-side filter by region: match against competition name, slug, or category
+    return base.filter(f =>
+      f.competition?.toLowerCase().includes(region) ||
+      f.competitionSlug?.toLowerCase().includes(region) ||
+      f.category?.toLowerCase().includes(region) ||
+      f.categorySlug?.toLowerCase().includes(region)
+    );
   }
 
   async getFixtureDetails(fixtureId: string, group = 'TOP_MARKETS'): Promise<any> {

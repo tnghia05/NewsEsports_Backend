@@ -12,10 +12,11 @@ export class KalstropController {
   getFixtures(
     @Param('sport') sport: string,
     @Param('type') type: string,
+    @Query('region') region?: string,
   ) {
     const s = ALLOWED_SPORTS.includes(sport) ? sport : 'lol';
     const t = ALLOWED_TYPES.includes(type) ? (type as 'live' | 'upcoming' | 'popular') : 'upcoming';
-    return this.kalstrop.getFixtures(s, t);
+    return this.kalstrop.getFixtures(s, t, region?.toLowerCase().trim());
   }
 
   @Get('fixture/:id/details')

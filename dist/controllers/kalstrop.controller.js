@@ -22,10 +22,10 @@ let KalstropController = class KalstropController {
     constructor(kalstrop) {
         this.kalstrop = kalstrop;
     }
-    getFixtures(sport, type) {
+    getFixtures(sport, type, region) {
         const s = ALLOWED_SPORTS.includes(sport) ? sport : 'lol';
         const t = ALLOWED_TYPES.includes(type) ? type : 'upcoming';
-        return this.kalstrop.getFixtures(s, t);
+        return this.kalstrop.getFixtures(s, t, region?.toLowerCase().trim());
     }
     getFixtureDetails(id, group) {
         return this.kalstrop.getFixtureDetails(id, group);
@@ -39,8 +39,9 @@ __decorate([
     (0, common_1.Get)(':sport/:type'),
     __param(0, (0, common_1.Param)('sport')),
     __param(1, (0, common_1.Param)('type')),
+    __param(2, (0, common_1.Query)('region')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", void 0)
 ], KalstropController.prototype, "getFixtures", null);
 __decorate([

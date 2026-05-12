@@ -291,18 +291,23 @@ let KalstropService = KalstropService_1 = class KalstropService {
         this.logger.debug(`Kalstrop API call: ${sport}/${type} → ${result.length} fixtures cached`);
         return result;
     }
-    async getFixtures(sport, type) {
-        const cacheKey = `${sport}-${type}`;
-        const cached = this.getCached(cacheKey);
-        if (cached)
-            return cached;
-        if (this.inFlight.has(cacheKey)) {
-            return this.inFlight.get(cacheKey);
-        }
-        const promise = this.fetchFixturesUncached(sport, type, cacheKey);
-        this.inFlight.set(cacheKey, promise);
-        promise.finally(() => this.inFlight.delete(cacheKey));
-        return promise;
+    async getFixtures(sport, type, region) {
+        const baseCacheKey = `${sport}-${type}`;
+        const cached = this.getCached(baseCacheKey);
+        const base = cached ?? await (() => {
+            if (this.inFlight.has(baseCacheKey))
+                return this.inFlight.get(baseCacheKey);
+            const p = this.fetchFixturesUncached(sport, type, baseCacheKey);
+            this.inFlight.set(baseCacheKey, p);
+            p.finally(() => this.inFlight.delete(baseCacheKey));
+            return p;
+        })();
+        if (!region)
+            return base;
+        return base.filter(f => f.competition?.toLowerCase().includes(region) ||
+            f.competitionSlug?.toLowerCase().includes(region) ||
+            f.category?.toLowerCase().includes(region) ||
+            f.categorySlug?.toLowerCase().includes(region));
     }
     async getFixtureDetails(fixtureId, group = 'TOP_MARKETS') {
         const cacheKey = `details-${fixtureId}-${group}`;
