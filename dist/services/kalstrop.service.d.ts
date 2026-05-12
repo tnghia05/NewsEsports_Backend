@@ -37,6 +37,7 @@ export declare class KalstropService {
     private parseDecimalOdds;
     private extractOddsFromCompetitor;
     private transformFixtures;
+    private extractNodes;
     private fetchFixturesUncached;
     getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular'): Promise<KalstropFixture[]>;
     getFixtureDetails(fixtureId: string, group?: string): Promise<any>;

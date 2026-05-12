@@ -211,14 +211,12 @@ export class KalstropService {
     return fixtures;
   }
 
-  private async fetchFixturesUncached(sport: string, type: 'live' | 'upcoming' | 'popular', cacheKey: string): Promise<KalstropFixture[]> {
-    const pageSize = type === 'live' ? 10 : 100;
-    const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}`);
-    if (!data) return [];
-
-    // upcoming → sportsFixtures.nodes (flat list)
-    // live     → sportsCompetitions.nodes[].fixtures.nodes (grouped by competition)
+  private extractNodes(data: any, sport: string): { nodes: any[]; cursor?: string } {
     let nodes: any[] = data?.sportsFixtures?.nodes ?? [];
+    const cursor: string | undefined = data?.sportsFixtures?.pageInfo?.hasNextPage
+      ? data.sportsFixtures.pageInfo.endCursor
+      : undefined;
+
     if (nodes.length === 0 && data?.sportsCompetitions?.nodes) {
       const comps: any[] = data.sportsCompetitions.nodes;
       for (const comp of comps) {
@@ -231,11 +229,30 @@ export class KalstropService {
         })));
       }
     }
+    return { nodes, cursor };
+  }
 
-    if (nodes.length > 0) {
-      if (nodes[0]?.competition) {
-        this.logger.debug(`Kalstrop competition field: ${JSON.stringify(nodes[0].competition).slice(0, 400)}`);
-      }
+  private async fetchFixturesUncached(sport: string, type: 'live' | 'upcoming' | 'popular', cacheKey: string): Promise<KalstropFixture[]> {
+    const pageSize = type === 'live' ? 10 : 30;
+    const maxPages = type === 'upcoming' ? 3 : 1; // up to 90 upcoming fixtures
+
+    // First page
+    const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}`);
+    if (!data) return [];
+
+    let { nodes, cursor } = this.extractNodes(data, sport);
+
+    // Paginate through subsequent pages (upcoming only, max 2 more pages)
+    for (let page = 1; page < maxPages && cursor; page++) {
+      const nextData = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}&after=${encodeURIComponent(cursor)}`);
+      if (!nextData) break;
+      const next = this.extractNodes(nextData, sport);
+      nodes = [...nodes, ...next.nodes];
+      cursor = next.cursor;
+    }
+
+    if (nodes.length > 0 && nodes[0]?.competition) {
+      this.logger.debug(`Kalstrop competition field: ${JSON.stringify(nodes[0].competition).slice(0, 400)}`);
     }
 
     const now = new Date();

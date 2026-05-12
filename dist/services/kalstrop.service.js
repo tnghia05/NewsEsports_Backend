@@ -204,12 +204,11 @@ let KalstropService = KalstropService_1 = class KalstropService {
         }
         return fixtures;
     }
-    async fetchFixturesUncached(sport, type, cacheKey) {
-        const pageSize = type === 'live' ? 10 : 100;
-        const data = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}`);
-        if (!data)
-            return [];
+    extractNodes(data, sport) {
         let nodes = data?.sportsFixtures?.nodes ?? [];
+        const cursor = data?.sportsFixtures?.pageInfo?.hasNextPage
+            ? data.sportsFixtures.pageInfo.endCursor
+            : undefined;
         if (nodes.length === 0 && data?.sportsCompetitions?.nodes) {
             const comps = data.sportsCompetitions.nodes;
             for (const comp of comps) {
@@ -222,10 +221,25 @@ let KalstropService = KalstropService_1 = class KalstropService {
                 })));
             }
         }
-        if (nodes.length > 0) {
-            if (nodes[0]?.competition) {
-                this.logger.debug(`Kalstrop competition field: ${JSON.stringify(nodes[0].competition).slice(0, 400)}`);
-            }
+        return { nodes, cursor };
+    }
+    async fetchFixturesUncached(sport, type, cacheKey) {
+        const pageSize = type === 'live' ? 10 : 30;
+        const maxPages = type === 'upcoming' ? 3 : 1;
+        const data = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}`);
+        if (!data)
+            return [];
+        let { nodes, cursor } = this.extractNodes(data, sport);
+        for (let page = 1; page < maxPages && cursor; page++) {
+            const nextData = await this.fetchApi(`/sports/${sport}/${type}?first=${pageSize}&after=${encodeURIComponent(cursor)}`);
+            if (!nextData)
+                break;
+            const next = this.extractNodes(nextData, sport);
+            nodes = [...nodes, ...next.nodes];
+            cursor = next.cursor;
+        }
+        if (nodes.length > 0 && nodes[0]?.competition) {
+            this.logger.debug(`Kalstrop competition field: ${JSON.stringify(nodes[0].competition).slice(0, 400)}`);
         }
         const now = new Date();
         const result = nodes.map((f) => {
