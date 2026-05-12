@@ -332,6 +332,53 @@ export class KalstropService {
     );
   }
 
+  async getCompetitions(categorySlug: string): Promise<{ slug: string; name: string; fixturesCount: number; weight: number }[]> {
+    const cacheKey = `competitions-${categorySlug}`;
+    const cached = this.getCached<any[]>(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.fetchApi<any[]>(`/competition/${encodeURIComponent(categorySlug)}/fixtures`);
+    if (!data || !Array.isArray(data)) return [];
+
+    const all: { slug: string; name: string; fixturesCount: number; weight: number }[] = [];
+    for (const cat of data) {
+      for (const comp of cat?.competitions ?? []) {
+        if ((comp.fixturesCount ?? 0) > 0) {
+          all.push({ slug: comp.slug, name: comp.name, fixturesCount: comp.fixturesCount, weight: comp.weight ?? 100 });
+        }
+      }
+    }
+
+    this.setCache(cacheKey, all, 3_600_000); // 1h — slugs rarely change
+    this.logger.debug(`Kalstrop competitions [${categorySlug}]: ${all.map(c => c.slug).join(', ')}`);
+    return all;
+  }
+
+  async getCompetitionFixtures(competitionSlug: string): Promise<KalstropFixture[]> {
+    const cacheKey = `comp-fixtures-${competitionSlug}`;
+    const cached = this.getCached<KalstropFixture[]>(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.fetchApi<any>(`/competition/${encodeURIComponent(competitionSlug)}/fixtures`);
+    if (!data) return [];
+
+    // Response may be an array (category-level) or a single object
+    const items: any[] = Array.isArray(data) ? data : [data];
+    const result: KalstropFixture[] = [];
+    for (const item of items) {
+      // If item has fixtures.nodes → competition-level fixture list
+      const nodes: any[] = item?.fixtures?.nodes ?? item?.nodes ?? [];
+      if (nodes.length > 0) {
+        result.push(...this.transformFixtures({ nodes }, item.name ?? competitionSlug, competitionSlug, 'lol'));
+      }
+      // If item has competitions array → category-level response, skip (not individual fixtures)
+    }
+
+    this.setCache(cacheKey, result, 1_800_000); // 30min
+    this.logger.debug(`Kalstrop comp-fixtures [${competitionSlug}]: ${result.length} fixtures`);
+    return result;
+  }
+
   async getFixtureDetails(fixtureId: string, group = 'TOP_MARKETS'): Promise<any> {
     const cacheKey = `details-${fixtureId}-${group}`;
     const cached = this.getCached<any>(cacheKey);

@@ -19,6 +19,24 @@ export class KalstropController {
     return this.kalstrop.getFixtures(s, t, region?.toLowerCase().trim());
   }
 
+  @Get(':sport/competitions')
+  getCompetitions(@Param('sport') sport: string) {
+    const categorySlug = `league-of-legends-international`; // LoL uses this category
+    // For other sports add mappings as needed
+    const slugMap: Record<string, string> = {
+      lol: 'league-of-legends-international',
+      cs2: 'counter-strike',
+      dota2: 'dota-2',
+      valorant: 'valorant',
+    };
+    return this.kalstrop.getCompetitions(slugMap[sport] ?? `${sport}-international`);
+  }
+
+  @Get('competition/:slug/fixtures')
+  getCompetitionFixtures(@Param('slug') slug: string) {
+    return this.kalstrop.getCompetitionFixtures(slug);
+  }
+
   @Get('fixture/:id/details')
   getFixtureDetails(
     @Param('id') id: string,

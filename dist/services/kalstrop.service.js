@@ -309,6 +309,46 @@ let KalstropService = KalstropService_1 = class KalstropService {
             f.category?.toLowerCase().includes(region) ||
             f.categorySlug?.toLowerCase().includes(region));
     }
+    async getCompetitions(categorySlug) {
+        const cacheKey = `competitions-${categorySlug}`;
+        const cached = this.getCached(cacheKey);
+        if (cached)
+            return cached;
+        const data = await this.fetchApi(`/competition/${encodeURIComponent(categorySlug)}/fixtures`);
+        if (!data || !Array.isArray(data))
+            return [];
+        const all = [];
+        for (const cat of data) {
+            for (const comp of cat?.competitions ?? []) {
+                if ((comp.fixturesCount ?? 0) > 0) {
+                    all.push({ slug: comp.slug, name: comp.name, fixturesCount: comp.fixturesCount, weight: comp.weight ?? 100 });
+                }
+            }
+        }
+        this.setCache(cacheKey, all, 3_600_000);
+        this.logger.debug(`Kalstrop competitions [${categorySlug}]: ${all.map(c => c.slug).join(', ')}`);
+        return all;
+    }
+    async getCompetitionFixtures(competitionSlug) {
+        const cacheKey = `comp-fixtures-${competitionSlug}`;
+        const cached = this.getCached(cacheKey);
+        if (cached)
+            return cached;
+        const data = await this.fetchApi(`/competition/${encodeURIComponent(competitionSlug)}/fixtures`);
+        if (!data)
+            return [];
+        const items = Array.isArray(data) ? data : [data];
+        const result = [];
+        for (const item of items) {
+            const nodes = item?.fixtures?.nodes ?? item?.nodes ?? [];
+            if (nodes.length > 0) {
+                result.push(...this.transformFixtures({ nodes }, item.name ?? competitionSlug, competitionSlug, 'lol'));
+            }
+        }
+        this.setCache(cacheKey, result, 1_800_000);
+        this.logger.debug(`Kalstrop comp-fixtures [${competitionSlug}]: ${result.length} fixtures`);
+        return result;
+    }
     async getFixtureDetails(fixtureId, group = 'TOP_MARKETS') {
         const cacheKey = `details-${fixtureId}-${group}`;
         const cached = this.getCached(cacheKey);

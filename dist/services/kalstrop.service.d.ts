@@ -40,6 +40,13 @@ export declare class KalstropService {
     private extractNodes;
     private fetchFixturesUncached;
     getFixtures(sport: string, type: 'live' | 'upcoming' | 'popular', region?: string): Promise<KalstropFixture[]>;
+    getCompetitions(categorySlug: string): Promise<{
+        slug: string;
+        name: string;
+        fixturesCount: number;
+        weight: number;
+    }[]>;
+    getCompetitionFixtures(competitionSlug: string): Promise<KalstropFixture[]>;
     getFixtureDetails(fixtureId: string, group?: string): Promise<any>;
     private extractWinnerOddsFromDetails;
     getFixtureSsrGroups(sport: string, category: string, tournament: string, fixture: string): Promise<any>;

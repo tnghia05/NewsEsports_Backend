@@ -27,6 +27,19 @@ let KalstropController = class KalstropController {
         const t = ALLOWED_TYPES.includes(type) ? type : 'upcoming';
         return this.kalstrop.getFixtures(s, t, region?.toLowerCase().trim());
     }
+    getCompetitions(sport) {
+        const categorySlug = `league-of-legends-international`;
+        const slugMap = {
+            lol: 'league-of-legends-international',
+            cs2: 'counter-strike',
+            dota2: 'dota-2',
+            valorant: 'valorant',
+        };
+        return this.kalstrop.getCompetitions(slugMap[sport] ?? `${sport}-international`);
+    }
+    getCompetitionFixtures(slug) {
+        return this.kalstrop.getCompetitionFixtures(slug);
+    }
     getFixtureDetails(id, group) {
         return this.kalstrop.getFixtureDetails(id, group);
     }
@@ -44,6 +57,20 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", void 0)
 ], KalstropController.prototype, "getFixtures", null);
+__decorate([
+    (0, common_1.Get)(':sport/competitions'),
+    __param(0, (0, common_1.Param)('sport')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], KalstropController.prototype, "getCompetitions", null);
+__decorate([
+    (0, common_1.Get)('competition/:slug/fixtures'),
+    __param(0, (0, common_1.Param)('slug')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], KalstropController.prototype, "getCompetitionFixtures", null);
 __decorate([
     (0, common_1.Get)('fixture/:id/details'),
     __param(0, (0, common_1.Param)('id')),
