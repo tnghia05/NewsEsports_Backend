@@ -5,15 +5,7 @@ export declare class MatchesService {
     private readonly matchModel;
     constructor(matchModel: Model<MatchDocument>);
     list(query: QueryMatchesDto): Promise<{
-        items: (import("mongoose").Document<unknown, {}, import("../models/match.model").Match, {}, import("mongoose").DefaultSchemaOptions> & import("../models/match.model").Match & {
-            _id: import("mongoose").Types.ObjectId;
-        } & {
-            __v: number;
-        } & {
-            id: string;
-        } & Required<{
-            _id: import("mongoose").Types.ObjectId;
-        }>)[];
+        items: any[];
         page: number;
         limit: number;
         total: number;

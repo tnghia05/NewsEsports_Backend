@@ -31,19 +31,29 @@ export class MatchesService {
       };
     }
 
-    const sort: Record<string, 1 | -1> =
-      tab === 'finished' ? { startsAt: -1 } : { startsAt: 1 };
+    const total = await this.matchModel.countDocuments(filter).exec();
 
-    const [items, total] = await Promise.all([
-      this.matchModel
-        .find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .lean()
-        .exec(),
-      this.matchModel.countDocuments(filter).exec(),
-    ]);
+    let items: any[];
+    if (tab === 'all') {
+      items = await this.matchModel.aggregate([
+        { $match: filter },
+        { $addFields: { _statusOrder: { $switch: {
+          branches: [
+            { case: { $eq: ['$status', 'live'] }, then: 0 },
+            { case: { $eq: ['$status', 'not_started'] }, then: 1 },
+            { case: { $eq: ['$status', 'finished'] }, then: 2 },
+          ],
+          default: 1,
+        }}}},
+        { $sort: { _statusOrder: 1, startsAt: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+        { $project: { _statusOrder: 0 } },
+      ]).exec();
+    } else {
+      const sort: Record<string, 1 | -1> = tab === 'finished' ? { startsAt: -1 } : { startsAt: 1 };
+      items = await this.matchModel.find(filter).sort(sort).skip(skip).limit(limit).lean().exec();
+    }
 
     return { items, page, limit, total, hasMore: skip + items.length < total };
   }

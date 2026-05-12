@@ -6,15 +6,7 @@ export declare class MatchesController {
     private readonly matchSyncWorkerService;
     constructor(matchesService: MatchesService, matchSyncWorkerService: MatchSyncWorkerService);
     list(query: QueryMatchesDto): Promise<{
-        items: (import("mongoose").Document<unknown, {}, import("../models/match.model").Match, {}, import("mongoose").DefaultSchemaOptions> & import("../models/match.model").Match & {
-            _id: import("mongoose").Types.ObjectId;
-        } & {
-            __v: number;
-        } & {
-            id: string;
-        } & Required<{
-            _id: import("mongoose").Types.ObjectId;
-        }>)[];
+        items: any[];
         page: number;
         limit: number;
         total: number;
