@@ -253,11 +253,26 @@ export class LoLEsportsService {
 
     const games: any[] = e.match?.games ?? [];
     const inProgressGame = games.find((g) => g.state === 'inProgress');
+    // LoLEsports API sometimes returns 'completed' between BO3 games.
+    // Detect ongoing series: neither team has enough wins AND at least one game played.
+    const teamWins = (e.match?.teams ?? []).map((t: any) => t.result?.gameWins ?? 0) as number[];
+    const winsNeeded = e.match?.strategy?.count ? Math.ceil(e.match.strategy.count / 2) : 2;
+    const seriesStillOngoing = teamWins.length === 2
+      && teamWins[0] < winsNeeded && teamWins[1] < winsNeeded
+      && teamWins[0] + teamWins[1] > 0;
+    const gamesPlayed = games.filter((g: any) => g.state === 'completed' || g.state === 'inProgress').length;
+    const resolvedState = inProgressGame
+      ? 'inProgress'
+      : (seriesStillOngoing && e.state === 'completed')
+        ? 'inProgress'
+        : (e.state === 'completed' && gamesPlayed === 0)
+          ? 'unstarted'
+          : e.state;
 
     return {
       id: e.id,
       startTime: e.startTime,
-      state: e.state,
+      state: resolvedState,
       blockName: e.blockName,
       league: {
         id: e.league?.id,

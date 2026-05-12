@@ -250,10 +250,23 @@ let LoLEsportsService = LoLEsportsService_1 = class LoLEsportsService {
         const twitchStream = streams.find((s) => s.provider === 'twitch');
         const games = e.match?.games ?? [];
         const inProgressGame = games.find((g) => g.state === 'inProgress');
+        const teamWins = (e.match?.teams ?? []).map((t) => t.result?.gameWins ?? 0);
+        const winsNeeded = e.match?.strategy?.count ? Math.ceil(e.match.strategy.count / 2) : 2;
+        const seriesStillOngoing = teamWins.length === 2
+            && teamWins[0] < winsNeeded && teamWins[1] < winsNeeded
+            && teamWins[0] + teamWins[1] > 0;
+        const gamesPlayed = games.filter((g) => g.state === 'completed' || g.state === 'inProgress').length;
+        const resolvedState = inProgressGame
+            ? 'inProgress'
+            : (seriesStillOngoing && e.state === 'completed')
+                ? 'inProgress'
+                : (e.state === 'completed' && gamesPlayed === 0)
+                    ? 'unstarted'
+                    : e.state;
         return {
             id: e.id,
             startTime: e.startTime,
-            state: e.state,
+            state: resolvedState,
             blockName: e.blockName,
             league: {
                 id: e.league?.id,
