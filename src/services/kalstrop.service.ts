@@ -233,23 +233,18 @@ export class KalstropService {
   }
 
   private async fetchFixturesUncached(sport: string, type: 'live' | 'upcoming' | 'popular', cacheKey: string): Promise<KalstropFixture[]> {
-    const pageSize = type === 'live' ? 10 : 30;
-    const maxPages = type === 'upcoming' ? 3 : 1; // up to 90 upcoming fixtures
-
-    // For upcoming, extend window to 5 days so we capture matches beyond 24h
-    const dateParams = type === 'upcoming'
-      ? `&startTime=${encodeURIComponent(new Date().toISOString())}&endTime=${encodeURIComponent(new Date(Date.now() + 5 * 24 * 3600_000).toISOString())}`
-      : '';
+    const pageSize = type === 'live' ? 10 : type === 'popular' ? 10 : 30;
+    const maxPages = type === 'upcoming' ? 3 : 1;
 
     // First page
-    const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}${dateParams}`);
+    const data = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}`);
     if (!data) return [];
 
     let { nodes, cursor } = this.extractNodes(data, sport);
 
     // Paginate through subsequent pages (upcoming only, max 2 more pages)
     for (let page = 1; page < maxPages && cursor; page++) {
-      const nextData = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}&after=${encodeURIComponent(cursor)}${dateParams}`);
+      const nextData = await this.fetchApi<any>(`/sports/${sport}/${type}?first=${pageSize}&after=${encodeURIComponent(cursor)}`);
       if (!nextData) break;
       const next = this.extractNodes(nextData, sport);
       nodes = [...nodes, ...next.nodes];
