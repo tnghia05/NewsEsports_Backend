@@ -85,6 +85,8 @@ const pandascore_service_1 = require("../infra/pandascore/pandascore.service");
 const lol_esports_service_1 = require("../services/lol-esports.service");
 const grid_controller_1 = require("../controllers/grid.controller");
 const kalstrop_controller_1 = require("../controllers/kalstrop.controller");
+const kalstrop_ws_service_1 = require("../services/kalstrop-ws.service");
+const kalstrop_gateway_1 = require("../socket/kalstrop.gateway");
 const admin_controller_1 = require("../controllers/admin.controller");
 const grid_service_1 = require("../services/grid.service");
 const kalstrop_service_1 = require("../services/kalstrop.service");
@@ -187,6 +189,8 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             lol_esports_service_1.LoLEsportsService,
             grid_service_1.GridService,
             kalstrop_service_1.KalstropService,
+            kalstrop_ws_service_1.KalstropWsService,
+            kalstrop_gateway_1.KalstropGateway,
             ai_stats_service_1.AiStatsService,
             jwt_strategy_1.JwtStrategy,
             r2_service_1.R2Service,

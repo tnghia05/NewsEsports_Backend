@@ -26,6 +26,7 @@ export interface KalstropFixture {
   preMatchWidgetUrl?: string;
   tournamentSlug?: string;
   categorySlug?: string;
+  defaultMarketId?: string;
 }
 
 interface CacheEntry<T> {
@@ -160,6 +161,9 @@ export class KalstropService {
 
       const oddsA = defaultOdds[0];
       const oddsB = defaultOdds[1];
+      const defaultMarketId: string | undefined = f?.defaultMarketsInfo?.defaultMarket?.odds?.[0]?.marketId
+        ?? f?.defaultMarketsInfo?.defaultMarket?.id
+        ?? undefined;
 
       fixtures.push({
         id: f.id ?? '',
@@ -194,6 +198,7 @@ export class KalstropService {
             probability: oddsB ? parseFloat(oddsB.probability ?? '0') : undefined,
           },
         ],
+        defaultMarketId,
       });
     }
 

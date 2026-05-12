@@ -106,6 +106,8 @@ import { PandaScoreService } from '../infra/pandascore/pandascore.service';
 import { LoLEsportsService } from '../services/lol-esports.service';
 import { GridController } from '../controllers/grid.controller';
 import { KalstropController } from '../controllers/kalstrop.controller';
+import { KalstropWsService } from '../services/kalstrop-ws.service';
+import { KalstropGateway } from '../socket/kalstrop.gateway';
 import { AdminController } from '../controllers/admin.controller';
 import { GridService } from '../services/grid.service';
 import { KalstropService } from '../services/kalstrop.service';
@@ -211,6 +213,8 @@ import {
     LoLEsportsService,
     GridService,
     KalstropService,
+    KalstropWsService,
+    KalstropGateway,
     AiStatsService,
     JwtStrategy,
     R2Service,

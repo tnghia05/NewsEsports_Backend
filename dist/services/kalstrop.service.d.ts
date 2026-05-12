@@ -20,6 +20,7 @@ export interface KalstropFixture {
     preMatchWidgetUrl?: string;
     tournamentSlug?: string;
     categorySlug?: string;
+    defaultMarketId?: string;
 }
 export declare class KalstropService {
     private readonly logger;

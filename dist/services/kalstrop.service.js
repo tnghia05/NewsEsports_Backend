@@ -159,6 +159,9 @@ let KalstropService = KalstropService_1 = class KalstropService {
                 continue;
             const oddsA = defaultOdds[0];
             const oddsB = defaultOdds[1];
+            const defaultMarketId = f?.defaultMarketsInfo?.defaultMarket?.odds?.[0]?.marketId
+                ?? f?.defaultMarketsInfo?.defaultMarket?.id
+                ?? undefined;
             fixtures.push({
                 id: f.id ?? '',
                 slug: f.slug ?? '',
@@ -192,6 +195,7 @@ let KalstropService = KalstropService_1 = class KalstropService {
                         probability: oddsB ? parseFloat(oddsB.probability ?? '0') : undefined,
                     },
                 ],
+                defaultMarketId,
             });
         }
         return fixtures;
