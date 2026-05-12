@@ -84,7 +84,7 @@ jobs:
             # GRID esports API
             GRID_API_KEY=${{ secrets.GRID_API_KEY }}
 
-            # Kalstrop Odds API
+            # Kalstrop OddsS API
             KALSTROP_CLIENT_ID=${{ secrets.KALSTROP_CLIENT_ID }}
             KALSTROP_SHARED_SECRET=${{ secrets.KALSTROP_SHARED_SECRET }}
 
