@@ -14,6 +14,11 @@ export type AiModerationResult = {
     sentiment4Scores?: Partial<Record<Sentiment4Label, number>>;
     intentScores?: Partial<Record<IntentLabel, number>>;
     aspectScores?: Partial<Record<AspectLabel, number>>;
+    confidence?: number;
+    entities?: {
+        text: string;
+        type: string;
+    }[];
     aiVersion?: string;
 };
 export declare class AiService {

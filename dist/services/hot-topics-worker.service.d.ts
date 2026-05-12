@@ -2,10 +2,14 @@ import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Model } from 'mongoose';
 import { AiService } from '../infra/ai/ai.service';
+import { type AdminAlertDocument } from '../models/admin-alert.model';
+import { type EntityTrendDocument } from '../models/entity-trend.model';
 import { type PostDocument } from '../models/post.model';
 import { type CommentDocument } from '../models/comment.model';
 import { type HashtagEventDocument } from '../models/hashtag-event.model';
 import { type HotTopicDocument } from '../models/hot-topic.model';
+import { type PostLikeDocument } from '../models/post-like.model';
+import { type HotKeywordDocument } from '../models/hot-keyword.model';
 export declare class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly config;
     private readonly aiService;
@@ -13,17 +17,29 @@ export declare class HotTopicsWorkerService implements OnModuleInit, OnModuleDes
     private readonly commentModel;
     private readonly hashtagEventModel;
     private readonly hotTopicModel;
+    private readonly adminAlertModel;
+    private readonly entityTrendModel;
+    private readonly postLikeModel;
+    private readonly hotKeywordModel;
     private readonly logger;
     private timer?;
     private running;
+    private lastManualTriggerAt;
+    private readonly MANUAL_DEBOUNCE_MS;
     private readonly intervalMs;
     private readonly topN;
     private readonly sampleN;
     private readonly trendCooldownMs;
-    constructor(config: ConfigService, aiService: AiService, postModel: Model<PostDocument>, commentModel: Model<CommentDocument>, hashtagEventModel: Model<HashtagEventDocument>, hotTopicModel: Model<HotTopicDocument>);
+    constructor(config: ConfigService, aiService: AiService, postModel: Model<PostDocument>, commentModel: Model<CommentDocument>, hashtagEventModel: Model<HashtagEventDocument>, hotTopicModel: Model<HotTopicDocument>, adminAlertModel: Model<AdminAlertDocument>, entityTrendModel: Model<EntityTrendDocument>, postLikeModel: Model<PostLikeDocument>, hotKeywordModel: Model<HotKeywordDocument>);
     onModuleInit(): void;
     onModuleDestroy(): void;
+    triggerRecompute(): Promise<{
+        triggered: boolean;
+        message: string;
+    }>;
     private tick;
+    private recomputeEntityTrends;
+    private detectToxicitySpikes;
     private recompute;
     private computeTrendForTag;
 }

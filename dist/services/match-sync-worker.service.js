@@ -66,7 +66,7 @@ let MatchSyncWorkerService = MatchSyncWorkerService_1 = class MatchSyncWorkerSer
                 : await this.fetchFromPandaScore();
             for (const m of matches) {
                 await this.matchModel
-                    .findOneAndUpdate({ externalId: m.externalId }, { $set: { ...m, syncedAt: new Date() } }, { upsert: true, new: true })
+                    .findOneAndUpdate({ externalId: m.externalId }, { $set: { ...m, syncedAt: new Date() } }, { upsert: true, returnDocument: 'after' })
                     .exec();
                 upserted++;
             }

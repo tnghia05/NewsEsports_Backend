@@ -100,16 +100,22 @@ let CommentsService = CommentsService_1 = class CommentsService {
         return { items, page, limit, total, hasMore };
     }
     applyModerationFilter(filter, viewer, opts) {
+        if (viewer?.role === 'admin') {
+            return;
+        }
         if (!viewer) {
             filter.moderationStatus = 'approved';
         }
-        else if (viewer.role === 'admin' ||
-            (opts.ownerId && viewer.id === opts.ownerId)) {
+        else if (opts.ownerId && viewer.id === opts.ownerId) {
+            filter.moderationStatus = { $ne: 'rejected' };
         }
         else {
             filter['$or'] = [
                 { moderationStatus: 'approved' },
-                { authorId: viewer.id },
+                {
+                    authorId: viewer.id,
+                    moderationStatus: { $in: ['pending', 'under_review'] },
+                },
             ];
         }
     }
@@ -219,6 +225,8 @@ let CommentsService = CommentsService_1 = class CommentsService {
             patch.aspectScores = undefined;
             patch.aiVersion = undefined;
             patch.aiError = undefined;
+            patch.qualityScore = undefined;
+            patch.aiEntities = undefined;
             if (comment.moderationStatus === 'approved') {
                 await this.decrementApprovedCommentTarget(comment);
             }

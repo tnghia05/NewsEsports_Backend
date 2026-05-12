@@ -84,8 +84,14 @@ const match_sync_worker_service_1 = require("../services/match-sync-worker.servi
 const pandascore_service_1 = require("../infra/pandascore/pandascore.service");
 const lol_esports_service_1 = require("../services/lol-esports.service");
 const grid_controller_1 = require("../controllers/grid.controller");
+const kalstrop_controller_1 = require("../controllers/kalstrop.controller");
+const admin_controller_1 = require("../controllers/admin.controller");
 const grid_service_1 = require("../services/grid.service");
+const kalstrop_service_1 = require("../services/kalstrop.service");
+const ai_stats_service_1 = require("../services/ai-stats.service");
 const match_model_1 = require("../models/match.model");
+const admin_alert_model_1 = require("../models/admin-alert.model");
+const entity_trend_model_1 = require("../models/entity-trend.model");
 let ApiV1Module = class ApiV1Module {
 };
 exports.ApiV1Module = ApiV1Module;
@@ -119,6 +125,8 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: payment_model_1.PaymentModelName, schema: payment_model_1.PaymentSchema },
                 { name: order_counter_model_1.OrderCounterModelName, schema: order_counter_model_1.OrderCounterSchema },
                 { name: match_model_1.MatchModelName, schema: match_model_1.MatchSchema },
+                { name: admin_alert_model_1.AdminAlertModelName, schema: admin_alert_model_1.AdminAlertSchema },
+                { name: entity_trend_model_1.EntityTrendModelName, schema: entity_trend_model_1.EntityTrendSchema },
             ]),
         ],
         controllers: [
@@ -142,6 +150,8 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             pandascore_controller_1.PandaScoreController,
             lol_esports_controller_1.LoLEsportsController,
             grid_controller_1.GridController,
+            kalstrop_controller_1.KalstropController,
+            admin_controller_1.AdminController,
         ],
         providers: [
             health_service_1.HealthService,
@@ -176,6 +186,8 @@ exports.ApiV1Module = ApiV1Module = __decorate([
             pandascore_service_1.PandaScoreService,
             lol_esports_service_1.LoLEsportsService,
             grid_service_1.GridService,
+            kalstrop_service_1.KalstropService,
+            ai_stats_service_1.AiStatsService,
             jwt_strategy_1.JwtStrategy,
             r2_service_1.R2Service,
         ],

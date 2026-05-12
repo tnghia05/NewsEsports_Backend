@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.HashtagsController = void 0;
 const common_1 = require("@nestjs/common");
 const hashtags_service_1 = require("../services/hashtags.service");
+const hot_topics_worker_service_1 = require("../services/hot-topics-worker.service");
 const query_hashtag_posts_dto_1 = require("../dto/hashtags/query-hashtag-posts.dto");
 const trending_hashtags_dto_1 = require("../dto/hashtags/trending-hashtags.dto");
 const hot_topics_dto_1 = require("../dto/hashtags/hot-topics.dto");
@@ -23,8 +24,10 @@ const optional_jwt_auth_guard_1 = require("../guards/optional-jwt-auth.guard");
 const user_decorator_1 = require("../decorators/user.decorator");
 let HashtagsController = class HashtagsController {
     hashtagsService;
-    constructor(hashtagsService) {
+    hotTopicsWorker;
+    constructor(hashtagsService, hotTopicsWorker) {
         this.hashtagsService = hashtagsService;
+        this.hotTopicsWorker = hotTopicsWorker;
     }
     listPosts(tag, query) {
         return this.hashtagsService.listPostsByTag(tag, query);
@@ -37,6 +40,16 @@ let HashtagsController = class HashtagsController {
     }
     hotTopics(query) {
         return this.hashtagsService.hotTopics(query);
+    }
+    refreshHotTopics() {
+        return this.hotTopicsWorker.triggerRecompute();
+    }
+    entityTrends(window, limit, type) {
+        return this.hashtagsService.getEntityTrends({
+            window: window ?? '24h',
+            limit: limit ? Number(limit) : 10,
+            type,
+        });
     }
 };
 exports.HashtagsController = HashtagsController;
@@ -71,8 +84,24 @@ __decorate([
     __metadata("design:paramtypes", [hot_topics_dto_1.HotTopicsDto]),
     __metadata("design:returntype", void 0)
 ], HashtagsController.prototype, "hotTopics", null);
+__decorate([
+    (0, common_1.Post)('hot-topics/refresh'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], HashtagsController.prototype, "refreshHotTopics", null);
+__decorate([
+    (0, common_1.Get)('entity-trends'),
+    __param(0, (0, common_1.Query)('window')),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)('type')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", void 0)
+], HashtagsController.prototype, "entityTrends", null);
 exports.HashtagsController = HashtagsController = __decorate([
     (0, common_1.Controller)('hashtags'),
-    __metadata("design:paramtypes", [hashtags_service_1.HashtagsService])
+    __metadata("design:paramtypes", [hashtags_service_1.HashtagsService,
+        hot_topics_worker_service_1.HotTopicsWorkerService])
 ], HashtagsController);
 //# sourceMappingURL=hashtags.controller.js.map

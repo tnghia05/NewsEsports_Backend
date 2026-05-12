@@ -118,13 +118,15 @@ function normalizeAiResponse(data, toxicThreshold, fallbackVersion) {
         data?.toxic_score ??
         0;
     const score = clamp01(Number(toxScoreRaw) || 0);
-    const isToxic = typeof data?.toxicity?.isToxic === 'boolean'
+    const apiSaysToxic = typeof data?.toxicity?.isToxic === 'boolean'
         ? Boolean(data.toxicity.isToxic)
-        : score >= toxicThreshold ||
-            sentiment4 === 'toxic' ||
-            String(data?.label ?? '')
-                .toLowerCase()
-                .includes('toxic');
+        : false;
+    const isToxic = apiSaysToxic ||
+        score >= toxicThreshold ||
+        sentiment4 === 'toxic' ||
+        String(data?.label ?? '')
+            .toLowerCase()
+            .includes('toxic');
     const intent = parseIntent(data);
     const aspects = parseAspects(data);
     const sentiment4Scores = parseScoreMap(data?.debug?.sentiment4, ['positive', 'negative', 'neutral', 'toxic']);
@@ -138,6 +140,8 @@ function normalizeAiResponse(data, toxicThreshold, fallbackVersion) {
     const aiVersion = (typeof data?.aiVersion === 'string' ? data.aiVersion : undefined) ??
         (typeof data?.version === 'string' ? data.version : undefined) ??
         fallbackVersion;
+    const confidence = parseConfidence(data);
+    const entities = parseEntities(data);
     return {
         sentiment,
         toxicity: { isToxic, score },
@@ -147,6 +151,8 @@ function normalizeAiResponse(data, toxicThreshold, fallbackVersion) {
         sentiment4Scores,
         intentScores,
         aspectScores,
+        confidence,
+        entities: entities.length ? entities : undefined,
         aiVersion,
     };
 }
@@ -296,5 +302,34 @@ function parseAspects(data) {
         }
     }
     return Array.from(new Set(out));
+}
+function parseConfidence(data) {
+    if (typeof data?.confidence === 'number') {
+        return clamp01(data.confidence);
+    }
+    const scores = data?.debug?.sentiment4;
+    if (!scores || typeof scores !== 'object')
+        return undefined;
+    const vals = Object.values(scores)
+        .map(Number)
+        .filter((v) => !Number.isNaN(v));
+    if (!vals.length)
+        return undefined;
+    return clamp01(Math.max(...vals));
+}
+function parseEntities(data) {
+    const raw = data?.entities;
+    if (!Array.isArray(raw))
+        return [];
+    const out = [];
+    for (const item of raw) {
+        if (item &&
+            typeof item.text === 'string' &&
+            typeof item.type === 'string' &&
+            item.text.length > 0) {
+            out.push({ text: item.text, type: item.type });
+        }
+    }
+    return out;
 }
 //# sourceMappingURL=ai.service.js.map

@@ -40,6 +40,8 @@ declare const EnvSchema: z.ZodObject<{
     CLOUDINARY_CLOUD_NAME: z.ZodOptional<z.ZodString>;
     CLOUDINARY_API_KEY: z.ZodOptional<z.ZodString>;
     CLOUDINARY_API_SECRET: z.ZodOptional<z.ZodString>;
+    KALSTROP_CLIENT_ID: z.ZodOptional<z.ZodString>;
+    KALSTROP_SHARED_SECRET: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 export type Env = z.infer<typeof EnvSchema>;
 export declare function validateEnv(raw: Record<string, unknown>): Env;

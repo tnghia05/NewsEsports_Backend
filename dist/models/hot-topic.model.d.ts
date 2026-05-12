@@ -7,6 +7,9 @@ export type HotTopicComponents = {
     read: number;
     discuss: number;
     originalUsers: number;
+    likes: number;
+    searchVolume: number;
+    velocityScore: number;
 };
 export type HotTopicTrend = {
     sampleCount: number;

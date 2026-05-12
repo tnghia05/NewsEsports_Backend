@@ -18,10 +18,14 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const ai_service_1 = require("../infra/ai/ai.service");
+const admin_alert_model_1 = require("../models/admin-alert.model");
+const entity_trend_model_1 = require("../models/entity-trend.model");
 const post_model_1 = require("../models/post.model");
 const comment_model_1 = require("../models/comment.model");
 const hashtag_event_model_1 = require("../models/hashtag-event.model");
 const hot_topic_model_1 = require("../models/hot-topic.model");
+const post_like_model_1 = require("../models/post-like.model");
+const hot_keyword_model_1 = require("../models/hot-keyword.model");
 let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerService {
     config;
     aiService;
@@ -29,21 +33,31 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
     commentModel;
     hashtagEventModel;
     hotTopicModel;
+    adminAlertModel;
+    entityTrendModel;
+    postLikeModel;
+    hotKeywordModel;
     logger = new common_1.Logger(HotTopicsWorkerService_1.name);
     timer;
     running = false;
+    lastManualTriggerAt = 0;
+    MANUAL_DEBOUNCE_MS = 30_000;
     intervalMs;
     topN;
     sampleN;
     trendCooldownMs;
-    constructor(config, aiService, postModel, commentModel, hashtagEventModel, hotTopicModel) {
+    constructor(config, aiService, postModel, commentModel, hashtagEventModel, hotTopicModel, adminAlertModel, entityTrendModel, postLikeModel, hotKeywordModel) {
         this.config = config;
         this.aiService = aiService;
         this.postModel = postModel;
         this.commentModel = commentModel;
         this.hashtagEventModel = hashtagEventModel;
         this.hotTopicModel = hotTopicModel;
-        this.intervalMs = Number(this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 60_000);
+        this.adminAlertModel = adminAlertModel;
+        this.entityTrendModel = entityTrendModel;
+        this.postLikeModel = postLikeModel;
+        this.hotKeywordModel = hotKeywordModel;
+        this.intervalMs = Number(this.config.get('HOT_TOPICS_INTERVAL_MS') ?? 300_000);
         this.topN = Number(this.config.get('HOT_TOPICS_TOP_N') ?? 30);
         this.sampleN = Number(this.config.get('HOT_TOPICS_SAMPLE_N') ?? 20);
         this.trendCooldownMs = Number(this.config.get('HOT_TOPICS_TREND_COOLDOWN_MS') ?? 10 * 60_000);
@@ -56,20 +70,182 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
         if (this.timer)
             clearInterval(this.timer);
     }
+    async triggerRecompute() {
+        const now = Date.now();
+        const remaining = this.MANUAL_DEBOUNCE_MS - (now - this.lastManualTriggerAt);
+        if (remaining > 0) {
+            this.logger.log(`[manual-refresh] debounced — ${Math.ceil(remaining / 1000)}s remaining`);
+            return {
+                triggered: false,
+                message: `Vui lòng chờ ${Math.ceil(remaining / 1000)}s trước khi làm mới lại.`,
+            };
+        }
+        if (this.running) {
+            this.logger.log('[manual-refresh] already running, skipped');
+            return { triggered: false, message: 'Đang recompute, vui lòng chờ.' };
+        }
+        this.lastManualTriggerAt = now;
+        this.logger.log('[manual-refresh] triggered by user — starting recompute');
+        this.tick().catch((e) => this.logger.error(`[manual-refresh] tick error: ${String(e?.message ?? e)}`));
+        return { triggered: true, message: 'Đã kích hoạt recompute.' };
+    }
     async tick() {
         if (this.running)
             return;
         this.running = true;
+        const t0 = Date.now();
+        this.logger.log('[tick] start recompute — 3h / 24h / 7d');
         try {
             await this.recompute('3h');
+            this.logger.log('[tick] 3h done');
             await this.recompute('24h');
+            this.logger.log('[tick] 24h done');
             await this.recompute('7d');
+            this.logger.log('[tick] 7d done');
+            await this.detectToxicitySpikes();
+            this.logger.log('[tick] toxicity spikes checked');
+            await this.recomputeEntityTrends('3h');
+            await this.recomputeEntityTrends('24h');
+            await this.recomputeEntityTrends('7d');
+            this.logger.log(`[tick] entity trends done — total ${Date.now() - t0}ms`);
         }
         catch (e) {
-            this.logger.warn(`recompute failed: ${String(e?.message ?? e)}`);
+            this.logger.warn(`[tick] failed: ${String(e?.message ?? e)}`);
         }
         finally {
             this.running = false;
+        }
+    }
+    async recomputeEntityTrends(window) {
+        const since = new Date(Date.now() - windowMs(window));
+        const now = new Date();
+        const rows = await this.commentModel
+            .aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: since },
+                    aiEntities: { $exists: true, $not: { $size: 0 } },
+                },
+            },
+            { $unwind: '$aiEntities' },
+            {
+                $group: {
+                    _id: { entity: '$aiEntities.text', type: '$aiEntities.type' },
+                    mentionCount: { $sum: 1 },
+                    positiveCount: {
+                        $sum: { $cond: [{ $eq: ['$sentiment4', 'positive'] }, 1, 0] },
+                    },
+                    negativeCount: {
+                        $sum: { $cond: [{ $eq: ['$sentiment4', 'negative'] }, 1, 0] },
+                    },
+                    neutralCount: {
+                        $sum: { $cond: [{ $eq: ['$sentiment4', 'neutral'] }, 1, 0] },
+                    },
+                    toxicCount: {
+                        $sum: { $cond: [{ $eq: ['$sentiment4', 'toxic'] }, 1, 0] },
+                    },
+                    praiseCount: {
+                        $sum: { $cond: [{ $eq: ['$intent', 'praise'] }, 1, 0] },
+                    },
+                    complainCount: {
+                        $sum: { $cond: [{ $eq: ['$intent', 'complain'] }, 1, 0] },
+                    },
+                    questionCount: {
+                        $sum: { $cond: [{ $eq: ['$intent', 'question'] }, 1, 0] },
+                    },
+                    otherCount: {
+                        $sum: { $cond: [{ $eq: ['$intent', 'other'] }, 1, 0] },
+                    },
+                },
+            },
+            { $sort: { mentionCount: -1 } },
+            { $limit: 100 },
+        ])
+            .exec();
+        if (!rows.length)
+            return;
+        const bulk = this.entityTrendModel.collection.initializeUnorderedBulkOp();
+        for (const r of rows) {
+            const total = Number(r.mentionCount) || 1;
+            bulk
+                .find({ entity: r._id.entity, entityType: r._id.type, window })
+                .upsert()
+                .updateOne({
+                $set: {
+                    mentionCount: total,
+                    sentiment: {
+                        positive: Number(r.positiveCount),
+                        negative: Number(r.negativeCount),
+                        neutral: Number(r.neutralCount),
+                        toxic: Number(r.toxicCount),
+                    },
+                    toxicRate: round4(Number(r.toxicCount) / total),
+                    intent: {
+                        praise: Number(r.praiseCount),
+                        complain: Number(r.complainCount),
+                        question: Number(r.questionCount),
+                        other: Number(r.otherCount),
+                    },
+                    updatedAt: now,
+                },
+            });
+        }
+        if (bulk.length > 0)
+            await bulk.execute();
+        await this.entityTrendModel
+            .deleteMany({
+            window,
+            updatedAt: { $lt: new Date(Date.now() - windowMs(window)) },
+        })
+            .exec();
+        this.logger.log(`entityTrends window=${window} entities=${rows.length}`);
+    }
+    async detectToxicitySpikes() {
+        const [topics3h, topics24h] = await Promise.all([
+            this.hotTopicModel
+                .find({ window: '3h', 'trend.sampleCount': { $gt: 0 } })
+                .select({ tag: 1, trend: 1 })
+                .lean()
+                .exec(),
+            this.hotTopicModel
+                .find({ window: '24h', 'trend.sampleCount': { $gt: 0 } })
+                .select({ tag: 1, trend: 1 })
+                .lean()
+                .exec(),
+        ]);
+        const ratio24hMap = new Map();
+        for (const t of topics24h) {
+            const trend = t.trend;
+            if (trend?.sampleCount > 0) {
+                ratio24hMap.set(String(t.tag), (trend.toxicCount ?? 0) / trend.sampleCount);
+            }
+        }
+        const MIN_SAMPLES = 5;
+        const SPIKE_MULTIPLIER = 2;
+        for (const t of topics3h) {
+            const trend = t.trend;
+            if (!trend || trend.sampleCount < MIN_SAMPLES)
+                continue;
+            const ratio3h = (trend.toxicCount ?? 0) / trend.sampleCount;
+            const ratio24h = ratio24hMap.get(String(t.tag)) ?? 0;
+            if (ratio3h > SPIKE_MULTIPLIER * ratio24h && ratio3h > 0.1) {
+                await this.adminAlertModel
+                    .findOneAndUpdate({
+                    type: 'toxicity_spike',
+                    tag: String(t.tag),
+                    createdAt: { $gte: new Date(Date.now() - 60 * 60_000) },
+                }, {
+                    $setOnInsert: {
+                        type: 'toxicity_spike',
+                        tag: String(t.tag),
+                        ratio3h: Math.round(ratio3h * 1000) / 1000,
+                        ratio24h: Math.round(ratio24h * 1000) / 1000,
+                        isRead: false,
+                    },
+                }, { upsert: true })
+                    .exec();
+                this.logger.warn(`toxicity_spike tag=${t.tag} ratio3h=${ratio3h.toFixed(3)} ratio24h=${ratio24h.toFixed(3)}`);
+            }
         }
     }
     async recompute(window) {
@@ -77,9 +253,30 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
         const sinceDate = new Date(Date.now() - wMs);
         const recentCutoff = new Date(Date.now() - wMs / 3);
         const started = Date.now();
+        const prevDocs = await this.hotTopicModel
+            .find({ window })
+            .select({ tag: 1, hotness: 1 })
+            .lean()
+            .exec();
+        const prevHotnessMap = new Map();
+        for (const d of prevDocs)
+            prevHotnessMap.set(String(d.tag), Number(d.hotness) || 0);
+        const commentPostIds = await this.commentModel
+            .distinct('postId', { createdAt: { $gte: sinceDate } })
+            .exec();
         const rows = await this.postModel
             .aggregate([
-            { $match: { status: 'published', createdAt: { $gte: sinceDate } } },
+            {
+                $match: {
+                    status: 'published',
+                    $or: [
+                        { createdAt: { $gte: sinceDate } },
+                        ...(commentPostIds.length > 0
+                            ? [{ _id: { $in: commentPostIds } }]
+                            : []),
+                    ],
+                },
+            },
             { $unwind: '$tags' },
             {
                 $group: {
@@ -107,9 +304,10 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
         ])
             .exec();
         const tagList = rows.map((r) => String(r.tag)).filter(Boolean);
+        this.logger.log(`recompute window=${window} found ${rows.length} tagged posts — tags=[${tagList.slice(0, 5).join(', ')}${tagList.length > 5 ? ', ...' : ''}]`);
         if (!tagList.length) {
             await this.hotTopicModel.deleteMany({ window }).exec();
-            this.logger.log(`recompute window=${window} empty in ${Date.now() - started}ms`);
+            this.logger.log(`recompute window=${window} empty (no published posts with tags in last ${window}) in ${Date.now() - started}ms`);
             return;
         }
         const tagToPostIds = new Map();
@@ -206,6 +404,32 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
         for (const r of readRows) {
             readMap.set(String(r._id), Number(r.read) || 0);
         }
+        const likeRows = uniquePostIds.length > 0
+            ? await this.postLikeModel
+                .aggregate([
+                { $match: { postId: { $in: uniquePostIds }, createdAt: { $gte: sinceDate } } },
+                { $group: { _id: '$postId', count: { $sum: 1 } } },
+            ])
+                .exec()
+            : [];
+        const postLikeMap = new Map();
+        for (const r of likeRows)
+            postLikeMap.set(String(r._id), Number(r.count) || 0);
+        const tagLikeMap = new Map();
+        for (const [tag, pids] of tagToPostIds) {
+            tagLikeMap.set(tag, pids.reduce((s, pid) => s + (postLikeMap.get(pid) ?? 0), 0));
+        }
+        const kwWindow = window === '7d' ? '7d' : '24h';
+        const kwDocs = tagList.length > 0
+            ? await this.hotKeywordModel
+                .find({ window: kwWindow, keyword: { $in: tagList } })
+                .select({ keyword: 1, score: 1 })
+                .lean()
+                .exec()
+            : [];
+        const searchMap = new Map();
+        for (const kw of kwDocs)
+            searchMap.set(String(kw.keyword), Number(kw.score) || 0);
         const now = new Date();
         const bulk = this.hotTopicModel.collection.initializeUnorderedBulkOp();
         const scored = [];
@@ -215,26 +439,41 @@ let HotTopicsWorkerService = HotTopicsWorkerService_1 = class HotTopicsWorkerSer
             const originalUsers = mergedUsersMap.get(tag) ?? 0;
             const commentCount = commentMap.get(tag) ?? 0;
             const read = readMap.get(tag) ?? 0;
+            const likes = tagLikeMap.get(tag) ?? 0;
+            const searchVolume = searchMap.get(tag) ?? 0;
+            if (originalUsers < 2)
+                continue;
             const discuss = postCount + commentCount;
             const readScore = Math.log1p(read);
             const discussScore = Math.log1p(discuss);
             const originalScore = Math.log1p(originalUsers);
-            const raw = 0.3 * readScore + 0.3 * discussScore + 0.4 * originalScore;
+            const likeScore = Math.log1p(likes);
+            const searchScore = Math.log1p(searchVolume);
+            const raw = 0.20 * readScore +
+                0.20 * discussScore +
+                0.25 * originalScore +
+                0.15 * likeScore +
+                0.20 * searchScore;
             const recentPosts = tagRecentPosts.get(tag) ?? 0;
             const recentComments = recentCommentMap.get(tag) ?? 0;
             const totalActivity = postCount + commentCount;
             const recentActivity = recentPosts + recentComments;
             const recencyRatio = totalActivity > 0 ? recentActivity / totalActivity : 0;
-            const recencyBoost = 1 + 0.5 * recencyRatio;
-            const hotness = clamp01((raw * recencyBoost) / 4.5) * 10;
+            const decayFactor = 0.4 + 1.2 * recencyRatio;
+            const baseHotness = clamp01((raw * decayFactor) / 4.5) * 10;
+            const prevH = prevHotnessMap.get(tag) ?? 0;
+            const velocity = prevH > 0 ? baseHotness / (prevH + 0.1) : 1.0;
+            const velocityBoost = 0.85 + 0.15 * clamp01(Math.log1p(velocity) / Math.log1p(3));
+            const hotness = clamp01((baseHotness * velocityBoost) / 10) * 10;
             scored.push({
                 tag,
                 hotness,
-                components: { read, discuss, originalUsers },
+                components: { read, discuss, originalUsers, likes, searchVolume, velocityScore: round2(velocity) },
             });
         }
         scored.sort((a, b) => b.hotness - a.hotness);
         const topN = scored.slice(0, Math.min(Math.max(1, this.topN), 50));
+        this.logger.log(`recompute window=${window} scored top3=[${topN.slice(0, 3).map((s) => `${s.tag}:${s.hotness.toFixed(2)}`).join(', ')}]`);
         for (const s of topN) {
             bulk
                 .find({ window, tag: s.tag })
@@ -387,8 +626,12 @@ exports.HotTopicsWorkerService = HotTopicsWorkerService = HotTopicsWorkerService
     __param(3, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(4, (0, mongoose_1.InjectModel)(hashtag_event_model_1.HashtagEventModelName)),
     __param(5, (0, mongoose_1.InjectModel)(hot_topic_model_1.HotTopicModelName)),
+    __param(6, (0, mongoose_1.InjectModel)(admin_alert_model_1.AdminAlertModelName)),
+    __param(7, (0, mongoose_1.InjectModel)(entity_trend_model_1.EntityTrendModelName)),
+    __param(8, (0, mongoose_1.InjectModel)(post_like_model_1.PostLikeModelName)),
+    __param(9, (0, mongoose_1.InjectModel)(hot_keyword_model_1.HotKeywordModelName)),
     __metadata("design:paramtypes", [config_1.ConfigService,
-        ai_service_1.AiService, Function, Function, Function, Function])
+        ai_service_1.AiService, Function, Function, Function, Function, Function, Function, Function, Function])
 ], HotTopicsWorkerService);
 function accumulateResult(trend, acc, r) {
     trend.labeledCount += 1;

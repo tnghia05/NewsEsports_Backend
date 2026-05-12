@@ -124,7 +124,9 @@ export class KalstropService {
     if (defaultMarket) {
       const sels: any[] = defaultMarket.selections ?? [];
       const idx = (fixture?.competitors ?? []).indexOf(competitor);
-      const sel = idx >= 0 ? sels[idx] : null;
+      // Kalstrop selections are [away, home] but competitors are [home, away] → swap
+      const selIdx = sels.length === 2 && idx >= 0 ? 1 - idx : idx;
+      const sel = selIdx >= 0 ? sels[selIdx] : null;
       if (sel) {
         const decimal = sel.price ?? sel.odds ?? sel.decimalOdds
           ?? (sel.oddsNumerator ? this.parseDecimalOdds(sel.oddsNumerator, sel.oddsDenominator) : undefined);

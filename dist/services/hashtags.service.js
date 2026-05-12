@@ -19,16 +19,19 @@ const post_model_1 = require("../models/post.model");
 const comment_model_1 = require("../models/comment.model");
 const hashtag_event_model_1 = require("../models/hashtag-event.model");
 const hot_topic_model_1 = require("../models/hot-topic.model");
+const entity_trend_model_1 = require("../models/entity-trend.model");
 let HashtagsService = class HashtagsService {
     postModel;
     commentModel;
     hashtagEventModel;
     hotTopicModel;
-    constructor(postModel, commentModel, hashtagEventModel, hotTopicModel) {
+    entityTrendModel;
+    constructor(postModel, commentModel, hashtagEventModel, hotTopicModel, entityTrendModel) {
         this.postModel = postModel;
         this.commentModel = commentModel;
         this.hashtagEventModel = hashtagEventModel;
         this.hotTopicModel = hotTopicModel;
+        this.entityTrendModel = entityTrendModel;
     }
     async listPostsByTag(tag, opts) {
         const page = opts.page;
@@ -67,48 +70,22 @@ let HashtagsService = class HashtagsService {
         return { items, page, limit };
     }
     async trending(window) {
-        const sinceMs = window === '7d' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-        const since = new Date(Date.now() - sinceMs);
-        const pipeline = [
-            { $match: { status: 'published', createdAt: { $gte: since } } },
-            { $unwind: '$tags' },
-            {
-                $addFields: {
-                    engagement: {
-                        $add: [
-                            { $multiply: ['$likeCount', 3] },
-                            { $multiply: ['$commentCount', 5] },
-                            { $multiply: ['$viewCount', 1] },
-                        ],
-                    },
-                },
-            },
-            {
-                $group: {
-                    _id: '$tags',
-                    postCount: { $sum: 1 },
-                    engagement: { $sum: '$engagement' },
-                },
-            },
-            {
-                $addFields: {
-                    score: { $add: ['$postCount', '$engagement'] },
-                },
-            },
-            { $sort: { score: -1 } },
-            { $limit: 30 },
-            {
-                $project: {
-                    _id: 0,
-                    tag: '$_id',
-                    postCount: 1,
-                    engagement: 1,
-                    score: 1,
-                },
-            },
-        ];
-        const items = await this.postModel.aggregate(pipeline).exec();
-        return { window, items };
+        const items = await this.hotTopicModel
+            .find({ window })
+            .sort({ hotness: -1 })
+            .limit(30)
+            .lean()
+            .exec();
+        return {
+            window,
+            items: items.map((r) => ({
+                tag: r.tag,
+                postCount: r.components?.discuss ?? 0,
+                engagement: r.components?.read ?? 0,
+                score: r.hotness,
+                trend: r.trend ?? undefined,
+            })),
+        };
     }
     async createEvent(user, dto) {
         const tag = normalizeTag(dto.tag);
@@ -121,6 +98,31 @@ let HashtagsService = class HashtagsService {
             action: 'view',
         });
         return { ok: true };
+    }
+    async getEntityTrends(opts) {
+        const window = normalizeHotTopicWindow(opts.window);
+        const limit = Math.min(50, Math.max(1, opts.limit));
+        const filter = { window };
+        if (opts.type)
+            filter['entityType'] = String(opts.type).toUpperCase();
+        const items = await this.entityTrendModel
+            .find(filter)
+            .sort({ mentionCount: -1 })
+            .limit(limit)
+            .lean()
+            .exec();
+        return {
+            window,
+            items: items.map((r, idx) => ({
+                rank: idx + 1,
+                entity: r.entity,
+                type: r.entityType,
+                mentionCount: r.mentionCount,
+                sentiment: r.sentiment,
+                toxicRate: r.toxicRate,
+                intent: r.intent,
+            })),
+        };
     }
     async hotTopics(query) {
         const window = normalizeHotTopicWindow(query.window);
@@ -156,7 +158,8 @@ exports.HashtagsService = HashtagsService = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(2, (0, mongoose_1.InjectModel)(hashtag_event_model_1.HashtagEventModelName)),
     __param(3, (0, mongoose_1.InjectModel)(hot_topic_model_1.HotTopicModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, Function])
+    __param(4, (0, mongoose_1.InjectModel)(entity_trend_model_1.EntityTrendModelName)),
+    __metadata("design:paramtypes", [Function, Function, Function, Function, Function])
 ], HashtagsService);
 function normalizeTag(tag) {
     return tag.trim().toLowerCase().replace(/^#/, '');

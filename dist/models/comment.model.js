@@ -29,6 +29,8 @@ let Comment = class Comment {
     aspectScores;
     aiVersion;
     aiError;
+    qualityScore;
+    aiEntities;
     likeCount;
     isDeleted;
     deletedAt;
@@ -58,7 +60,7 @@ __decorate([
     (0, mongoose_1.Prop)({
         type: String,
         required: true,
-        enum: ['pending', 'approved', 'rejected'],
+        enum: ['pending', 'approved', 'rejected', 'under_review'],
         default: 'pending',
         index: true,
     }),
@@ -117,6 +119,14 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)
 ], Comment.prototype, "aiError", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number }),
+    __metadata("design:type", Number)
+], Comment.prototype, "qualityScore", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: [{ text: { type: String }, type: { type: String }, _id: false }] }),
+    __metadata("design:type", Array)
+], Comment.prototype, "aiEntities", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Number, default: 0 }),
     __metadata("design:type", Number)

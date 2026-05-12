@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommentModerationWorkerService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
+const config_1 = require("@nestjs/config");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
@@ -23,6 +24,7 @@ const news_model_1 = require("../models/news.model");
 const ai_service_1 = require("../infra/ai/ai.service");
 const notifications_service_1 = require("./notifications.service");
 let CommentModerationWorkerService = CommentModerationWorkerService_1 = class CommentModerationWorkerService {
+    config;
     jobModel;
     commentModel;
     postModel;
@@ -32,13 +34,18 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
     logger = new common_1.Logger(CommentModerationWorkerService_1.name);
     timer;
     running = false;
-    constructor(jobModel, commentModel, postModel, newsModel, aiService, notificationsService) {
+    confidenceThreshold;
+    toxicReviewThreshold;
+    constructor(config, jobModel, commentModel, postModel, newsModel, aiService, notificationsService) {
+        this.config = config;
         this.jobModel = jobModel;
         this.commentModel = commentModel;
         this.postModel = postModel;
         this.newsModel = newsModel;
         this.aiService = aiService;
         this.notificationsService = notificationsService;
+        this.confidenceThreshold = Number(this.config.get('AI_CONFIDENCE_THRESHOLD', { infer: true }) ?? 0.6);
+        this.toxicReviewThreshold = Number(this.config.get('AI_TOXIC_REVIEW_THRESHOLD', { infer: true }) ?? 0.4);
     }
     onModuleInit() {
         this.timer = setInterval(() => void this.tick(), 1500);
@@ -116,8 +123,34 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                 .replace(/\s+/g, ' ')
                 .slice(0, 80);
             this.logger.log(`processJob callAI jobId=${String(job._id)} commentId=${String(comment._id)} postId=${comment.postId ?? 'n/a'} newsId=${comment.newsId ?? 'n/a'} len=${String(comment.content ?? '').length} preview="${preview}"`);
-            const ai = await this.aiService.analyzeComment(comment.content);
+            let textToAnalyze = comment.content;
+            if (comment.parentId) {
+                const parent = await this.commentModel
+                    .findById(comment.parentId)
+                    .select({ content: 1 })
+                    .lean()
+                    .exec();
+                if (parent?.content) {
+                    const parentSnippet = String(parent.content)
+                        .trim()
+                        .replace(/\s+/g, ' ')
+                        .slice(0, 200);
+                    textToAnalyze = `${parentSnippet} [SEP] ${comment.content}`;
+                }
+            }
+            const ai = await this.aiService.analyzeComment(textToAnalyze);
             const rejected = ai.toxicity.isToxic;
+            const inGrayZone = !rejected && ai.toxicity.score >= this.toxicReviewThreshold;
+            const lowConfidence = !rejected &&
+                !inGrayZone &&
+                ai.confidence !== undefined &&
+                ai.confidence < this.confidenceThreshold;
+            const moderationStatus = rejected
+                ? 'rejected'
+                : inGrayZone || lowConfidence
+                    ? 'under_review'
+                    : 'approved';
+            const qualityScore = computeQualityScore(ai);
             await this.commentModel
                 .updateOne({ _id: comment._id }, {
                 $set: {
@@ -131,12 +164,14 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
                     aspectScores: ai.aspectScores,
                     aiVersion: ai.aiVersion,
                     aiError: undefined,
-                    moderationStatus: rejected ? 'rejected' : 'approved',
+                    qualityScore,
+                    aiEntities: ai.entities,
+                    moderationStatus,
                 },
             })
                 .exec();
-            this.logger.log(`processJob updated commentId=${String(comment._id)} status=${rejected ? 'rejected' : 'approved'} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score}`);
-            if (!rejected) {
+            this.logger.log(`processJob updated commentId=${String(comment._id)} status=${moderationStatus} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score} conf=${ai.confidence?.toFixed(3) ?? 'n/a'} quality=${qualityScore.toFixed(3)}`);
+            if (moderationStatus === 'approved') {
                 if (post) {
                     await this.postModel
                         .updateOne({ _id: post._id }, { $inc: { commentCount: 1 } })
@@ -197,11 +232,21 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
 exports.CommentModerationWorkerService = CommentModerationWorkerService;
 exports.CommentModerationWorkerService = CommentModerationWorkerService = CommentModerationWorkerService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_1.InjectModel)(comment_moderation_job_model_1.CommentModerationJobModelName)),
-    __param(1, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
-    __param(2, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
-    __param(3, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, Function, ai_service_1.AiService,
+    __param(1, (0, mongoose_1.InjectModel)(comment_moderation_job_model_1.CommentModerationJobModelName)),
+    __param(2, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
+    __param(3, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
+    __param(4, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
+    __metadata("design:paramtypes", [config_1.ConfigService, Function, Function, Function, Function, ai_service_1.AiService,
         notifications_service_1.NotificationsService])
 ], CommentModerationWorkerService);
+function computeQualityScore(ai) {
+    const s = ai.intentScores ?? {};
+    const praise = Number(s['praise'] ?? 0);
+    const question = Number(s['question'] ?? 0);
+    const other = Number(s['other'] ?? 0);
+    const complain = Number(s['complain'] ?? 0);
+    const toxicPenalty = ai.toxicity.score;
+    const raw = praise * 1.0 + question * 0.7 + other * 0.3 - complain * 0.2 - toxicPenalty * 1.0;
+    return Math.max(-1, Math.min(1, raw));
+}
 //# sourceMappingURL=comment-moderation-worker.service.js.map

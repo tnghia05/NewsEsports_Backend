@@ -1,7 +1,7 @@
 import type { HydratedDocument } from 'mongoose';
 export type CommentDocument = HydratedDocument<Comment>;
 export declare const CommentModelName = "Comment";
-export type CommentModerationStatus = 'pending' | 'approved' | 'rejected';
+export type CommentModerationStatus = 'pending' | 'approved' | 'rejected' | 'under_review';
 export type CommentSentiment = 'positive' | 'neutral' | 'negative';
 export declare class Comment {
     postId?: string;
@@ -23,6 +23,11 @@ export declare class Comment {
     aspectScores?: Record<string, number>;
     aiVersion?: string;
     aiError?: string;
+    qualityScore?: number;
+    aiEntities?: {
+        text: string;
+        type: string;
+    }[];
     likeCount: number;
     isDeleted: boolean;
     deletedAt?: Date;
@@ -175,6 +180,27 @@ export declare const CommentSchema: import("mongoose").Schema<Comment, import("m
         id: string;
     }> | undefined;
     aiError?: import("mongoose").SchemaDefinitionProperty<string | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    qualityScore?: import("mongoose").SchemaDefinitionProperty<number | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    aiEntities?: import("mongoose").SchemaDefinitionProperty<{
+        text: string;
+        type: string;
+    }[] | undefined, Comment, import("mongoose").Document<unknown, {}, Comment, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Comment & {
         _id: import("mongoose").Types.ObjectId;
