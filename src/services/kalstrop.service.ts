@@ -44,8 +44,8 @@ const CACHE_TTL: Record<string, number> = {
 export class KalstropService {
   private readonly logger = new Logger(KalstropService.name);
   private readonly cache = new Map<string, CacheEntry<any>>();
-  private lastApiCallAt = 0;
-  private readonly minCallGapMs = 600;  // 600ms between any two API calls
+  private readonly minCallGapMs = 1100;  // 1.1s gap → safely under 1 req/sec limit
+  private throttleQueue: Promise<void> = Promise.resolve();
 
   private getCached<T>(key: string): T | null {
     const entry = this.cache.get(key);
@@ -78,11 +78,16 @@ export class KalstropService {
     };
   }
 
-  private async throttle(): Promise<void> {
-    const now = Date.now();
-    const wait = this.minCallGapMs - (now - this.lastApiCallAt);
-    if (wait > 0) await new Promise(r => setTimeout(r, wait));
-    this.lastApiCallAt = Date.now();
+  private lastCallAt = 0;
+
+  private throttle(): Promise<void> {
+    const prev = this.throttleQueue;
+    this.throttleQueue = prev.then(() => new Promise<void>(resolve => {
+      const wait = this.minCallGapMs - (Date.now() - this.lastCallAt);
+      const fire = () => { this.lastCallAt = Date.now(); resolve(); };
+      wait > 0 ? setTimeout(fire, wait) : fire();
+    }));
+    return this.throttleQueue;
   }
 
   private async fetchApi<T>(path: string): Promise<T | null> {

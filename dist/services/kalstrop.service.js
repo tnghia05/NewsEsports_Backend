@@ -52,8 +52,8 @@ const CACHE_TTL = {
 let KalstropService = KalstropService_1 = class KalstropService {
     logger = new common_1.Logger(KalstropService_1.name);
     cache = new Map();
-    lastApiCallAt = 0;
-    minCallGapMs = 600;
+    minCallGapMs = 1100;
+    throttleQueue = Promise.resolve();
     getCached(key) {
         const entry = this.cache.get(key);
         if (!entry)
@@ -83,12 +83,15 @@ let KalstropService = KalstropService_1 = class KalstropService {
             'Content-Type': 'application/json',
         };
     }
-    async throttle() {
-        const now = Date.now();
-        const wait = this.minCallGapMs - (now - this.lastApiCallAt);
-        if (wait > 0)
-            await new Promise(r => setTimeout(r, wait));
-        this.lastApiCallAt = Date.now();
+    lastCallAt = 0;
+    throttle() {
+        const prev = this.throttleQueue;
+        this.throttleQueue = prev.then(() => new Promise(resolve => {
+            const wait = this.minCallGapMs - (Date.now() - this.lastCallAt);
+            const fire = () => { this.lastCallAt = Date.now(); resolve(); };
+            wait > 0 ? setTimeout(fire, wait) : fire();
+        }));
+        return this.throttleQueue;
     }
     async fetchApi(path) {
         await this.throttle();

@@ -25,11 +25,12 @@ export interface KalstropFixture {
 export declare class KalstropService {
     private readonly logger;
     private readonly cache;
-    private lastApiCallAt;
     private readonly minCallGapMs;
+    private throttleQueue;
     private getCached;
     private setCache;
     private getHeaders;
+    private lastCallAt;
     private throttle;
     private fetchApi;
     private parseDecimalOdds;
