@@ -250,6 +250,8 @@ export class LoLEsportsService {
     const streams: any[] = e.streams ?? [];
     const youtubeStream = streams.find((s) => s.provider === 'youtube');
     const twitchStream = streams.find((s) => s.provider === 'twitch');
+    const lplStream = streams.find((s) => s.provider === 'lpl');
+    const bilibiliStream = streams.find((s) => s.provider === 'bilibili');
 
     const games: any[] = e.match?.games ?? [];
     const inProgressGame = games.find((g) => g.state === 'inProgress');
@@ -311,6 +313,18 @@ export class LoLEsportsService {
               channel: twitchStream.parameter,
               locale: twitchStream.locale,
               statsEnabled: twitchStream.statsStatus === 'enabled',
+            }
+          : null,
+        lpl: lplStream
+          ? {
+              url: lplStream.parameter,
+              locale: lplStream.locale,
+            }
+          : null,
+        bilibili: bilibiliStream
+          ? {
+              url: bilibiliStream.parameter,
+              locale: bilibiliStream.locale,
             }
           : null,
       },
