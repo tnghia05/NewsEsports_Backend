@@ -16,6 +16,7 @@ import {
   PandaScoreService,
   type PandaScoreMatch,
 } from '../infra/pandascore/pandascore.service';
+import { PredictionsService } from './predictions.service';
 
 @Injectable()
 export class MatchSyncWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -31,6 +32,7 @@ export class MatchSyncWorkerService implements OnModuleInit, OnModuleDestroy {
     @InjectModel(MatchModelName)
     private readonly matchModel: Model<MatchDocument>,
     private readonly pandaScore: PandaScoreService,
+    private readonly predictions: PredictionsService,
   ) {
     this.intervalMs = Number(
       this.config.get('MATCH_SYNC_INTERVAL_MS') ?? 5 * 60_000,
@@ -74,14 +76,19 @@ export class MatchSyncWorkerService implements OnModuleInit, OnModuleDestroy {
           : await this.fetchFromPandaScore();
 
       for (const m of matches) {
-        await this.matchModel
+        const prevDoc = await this.matchModel
           .findOneAndUpdate(
             { externalId: m.externalId },
             { $set: { ...m, syncedAt: new Date() } },
-            { upsert: true, returnDocument: 'after' },
+            { upsert: true, returnDocument: 'before' },
           )
           .exec();
         upserted++;
+
+        const newStatus = (m as any).status as MatchStatus;
+        if (prevDoc && prevDoc.status !== 'finished' && newStatus === 'finished') {
+          void this.autoSettle(String(prevDoc._id), (m as any).teams ?? []);
+        }
       }
     } catch (e: any) {
       this.logger.error(`Match sync failed: ${String(e?.message ?? e)}`);
@@ -93,6 +100,32 @@ export class MatchSyncWorkerService implements OnModuleInit, OnModuleDestroy {
       `Match sync done in ${elapsed}ms provider=${this.provider} upserted=${upserted}`,
     );
     return { ok: true, upserted, provider: this.provider };
+  }
+
+  private async autoSettle(
+    matchId: string,
+    teams: Array<{ score?: number }>,
+  ) {
+    const scoreA = teams[0]?.score ?? 0;
+    const scoreB = teams[1]?.score ?? 0;
+    try {
+      if (scoreA === scoreB) {
+        await this.predictions.cancelMatch(matchId);
+        this.logger.log(
+          `Auto-cancelled predictions for match ${matchId} (draw ${scoreA}-${scoreB})`,
+        );
+      } else {
+        const winnerTeamIndex = scoreA > scoreB ? 0 : 1;
+        const result = await this.predictions.settle(matchId, winnerTeamIndex);
+        this.logger.log(
+          `Auto-settled ${result.settled} predictions for match ${matchId} — winner team ${winnerTeamIndex} (${scoreA}-${scoreB})`,
+        );
+      }
+    } catch (e: any) {
+      this.logger.error(
+        `Auto-settle failed for match ${matchId}: ${String(e?.message ?? e)}`,
+      );
+    }
   }
 
   private async fetchFromPandaScore() {
