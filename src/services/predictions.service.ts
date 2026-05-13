@@ -11,6 +11,7 @@ import {
   type PredictionDocument,
 } from '../models/prediction.model';
 import { MatchModelName, type MatchDocument } from '../models/match.model';
+import { UserModelName, type UserDocument } from '../models/user.model';
 import { PointsService } from './points.service';
 
 @Injectable()
@@ -20,6 +21,8 @@ export class PredictionsService {
     private readonly predictionModel: Model<PredictionDocument>,
     @InjectModel(MatchModelName)
     private readonly matchModel: Model<MatchDocument>,
+    @InjectModel(UserModelName)
+    private readonly userModel: Model<UserDocument>,
     private readonly pointsService: PointsService,
   ) {}
 
@@ -135,6 +138,25 @@ export class PredictionsService {
 
   async listByMatch(matchId: string) {
     return this.predictionModel.find({ matchId }).lean().exec();
+  }
+
+  async listByMatchForAdmin(matchId: string) {
+    const predictions = await this.predictionModel
+      .find({ matchId })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+    const userIds = [...new Set(predictions.map((p) => p.userId))];
+    const users = await this.userModel
+      .find({ _id: { $in: userIds } })
+      .select('displayName avatarUrl')
+      .lean()
+      .exec();
+    const userMap = new Map(users.map((u) => [String(u._id), u]));
+    return predictions.map((p) => ({
+      ...p,
+      displayName: (userMap.get(String(p.userId)) as any)?.displayName ?? p.userId,
+    }));
   }
 
   async getMyPredictionForMatch(userId: string, matchId: string) {

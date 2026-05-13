@@ -123,6 +123,13 @@ export class PointsController {
     return this.predictionsService.getPendingMatchSummary();
   }
 
+  @Get('predictions/admin/match/:matchId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  listByMatchAdmin(@Param('matchId') matchId: string) {
+    return this.predictionsService.listByMatchForAdmin(matchId);
+  }
+
   // ── Points Store ──────────────────────────────────────────────────────────
 
   @Get('store')
