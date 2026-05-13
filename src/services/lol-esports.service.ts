@@ -232,6 +232,61 @@ export class LoLEsportsService {
     }
   }
 
+  async getGameTimeline(gameId: string) {
+    try {
+      const allFrames: any[] = [];
+      let gameStartTs: number | null = null;
+      let done = false;
+
+      // Fetch the very first window (game start)
+      const firstRes = await fetch(`${LIVE_STATS_API}/window/${gameId}`);
+      if (!firstRes.ok) return null;
+      const firstData = await firstRes.json();
+      const firstFrames: any[] = firstData?.frames ?? [];
+      if (!firstFrames.length) return null;
+
+      gameStartTs = new Date(firstFrames[0].rfc460Timestamp).getTime();
+      allFrames.push(...firstFrames);
+
+      if (firstFrames.some((f: any) => f.gameState === 'finished')) done = true;
+
+      // Advance by 10-minute windows until we hit the finished frame
+      for (let minOffset = 10; !done && minOffset <= 70; minOffset += 10) {
+        const t = new Date(gameStartTs + minOffset * 60 * 1000);
+        const st = this.roundToTenSeconds(t);
+        try {
+          const res = await fetch(`${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`);
+          if (!res.ok) break;
+          const data = await res.json();
+          const frames: any[] = data?.frames ?? [];
+          if (!frames.length) break;
+          allFrames.push(...frames);
+          if (frames.some((f: any) => f.gameState === 'finished')) done = true;
+        } catch { break; }
+      }
+
+      // Deduplicate by timestamp, then sample ~every 6 frames (≈1 min at 10s per frame)
+      const seen = new Set<string>();
+      const unique = allFrames.filter((f: any) => {
+        if (!f.rfc460Timestamp || seen.has(f.rfc460Timestamp)) return false;
+        seen.add(f.rfc460Timestamp);
+        return true;
+      });
+
+      const sampled = unique.filter((_, i) => i % 6 === 0);
+
+      return sampled.map((f: any) => {
+        const blueGold: number = f.blueTeam?.totalGold ?? 0;
+        const redGold: number = f.redTeam?.totalGold ?? 0;
+        const minute = Math.floor((new Date(f.rfc460Timestamp).getTime() - gameStartTs!) / 60000);
+        return { minute, blueGold, redGold, diff: blueGold - redGold };
+      });
+    } catch (err) {
+      this.logger.warn(`getGameTimeline failed for ${gameId}: ${err}`);
+      return null;
+    }
+  }
+
   async getEventDetails(matchId: string, hl = 'vi-VN') {
     try {
       const data = await this.fetchJson<any>(

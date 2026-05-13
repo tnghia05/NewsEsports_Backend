@@ -49,4 +49,9 @@ export class LoLEsportsController {
   ) {
     return this.lolesports.getPostgameStats(gameId, firstFrameTime);
   }
+
+  @Get('timeline/:gameId')
+  getGameTimeline(@Param('gameId') gameId: string) {
+    return this.lolesports.getGameTimeline(gameId);
+  }
 }
