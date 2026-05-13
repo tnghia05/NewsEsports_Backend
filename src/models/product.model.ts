@@ -49,6 +49,9 @@ export class Product {
 
   @Prop({ type: [String], default: [], index: true })
   tags!: string[];
+
+  @Prop({ type: Number, min: 0, index: true })
+  pointsPrice?: number;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

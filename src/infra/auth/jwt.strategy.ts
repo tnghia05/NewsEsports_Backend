@@ -27,6 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       displayName: user.displayName,
       role: user.role,
       avatarUrl: user.avatarUrl ?? undefined,
+      points: user.points ?? 0,
     };
   }
 }

@@ -20,6 +20,7 @@ import type { QueryCommentsDto } from '../dto/comments/query-comments.dto';
 import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
 import type { UpdateCommentDto } from '../dto/comments/update-comment.dto';
 import { NotificationsService } from './notifications.service';
+import { PointsService } from './points.service';
 import {
   CommentModerationJobModelName,
   type CommentModerationJobDocument,
@@ -40,6 +41,7 @@ export class CommentsService {
     private readonly notificationsService: NotificationsService,
     @InjectModel(CommentModerationJobModelName)
     private readonly jobModel: Model<CommentModerationJobDocument>,
+    private readonly pointsService: PointsService,
   ) {}
 
   async listForPost(
@@ -219,6 +221,9 @@ export class CommentsService {
     );
 
     await this.enqueueModerationJob(String(created._id));
+    this.pointsService
+      .addPoints(viewer.id, 5, 'comment_create', { postId, commentId: String(created._id) })
+      .catch(() => {});
     return created;
   }
 
@@ -257,6 +262,9 @@ export class CommentsService {
     );
 
     await this.enqueueModerationJob(String(created._id));
+    this.pointsService
+      .addPoints(viewer.id, 5, 'comment_create', { newsId, commentId: String(created._id) })
+      .catch(() => {});
     return created;
   }
 

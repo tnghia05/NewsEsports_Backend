@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -49,4 +50,9 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   shippingMethod?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pointsDiscount?: number;
 }

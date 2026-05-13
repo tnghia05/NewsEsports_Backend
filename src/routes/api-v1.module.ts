@@ -109,9 +109,12 @@ import { KalstropController } from '../controllers/kalstrop.controller';
 import { KalstropWsService } from '../services/kalstrop-ws.service';
 import { KalstropGateway } from '../socket/kalstrop.gateway';
 import { AdminController } from '../controllers/admin.controller';
+import { PointsController } from '../controllers/points.controller';
 import { GridService } from '../services/grid.service';
 import { KalstropService } from '../services/kalstrop.service';
 import { AiStatsService } from '../services/ai-stats.service';
+import { PointsService } from '../services/points.service';
+import { PredictionsService } from '../services/predictions.service';
 import { MatchModelName, MatchSchema } from '../models/match.model';
 import {
   AdminAlertModelName,
@@ -121,6 +124,14 @@ import {
   EntityTrendModelName,
   EntityTrendSchema,
 } from '../models/entity-trend.model';
+import {
+  PointLedgerModelName,
+  PointLedgerSchema,
+} from '../models/point-ledger.model';
+import {
+  PredictionModelName,
+  PredictionSchema,
+} from '../models/prediction.model';
 
 @Module({
   imports: [
@@ -153,6 +164,8 @@ import {
       { name: MatchModelName, schema: MatchSchema },
       { name: AdminAlertModelName, schema: AdminAlertSchema },
       { name: EntityTrendModelName, schema: EntityTrendSchema },
+      { name: PointLedgerModelName, schema: PointLedgerSchema },
+      { name: PredictionModelName, schema: PredictionSchema },
     ]),
   ],
   controllers: [
@@ -178,6 +191,7 @@ import {
     GridController,
     KalstropController,
     AdminController,
+    PointsController,
   ],
   providers: [
     HealthService,
@@ -216,6 +230,8 @@ import {
     KalstropWsService,
     KalstropGateway,
     AiStatsService,
+    PointsService,
+    PredictionsService,
     JwtStrategy,
     R2Service,
   ],

@@ -25,6 +25,7 @@ import type { UpdatePostDto } from '../dto/posts/update-post.dto';
 import type { QueryPostsDto } from '../dto/posts/query-posts.dto';
 import type { QueryUserPostsDto } from '../dto/users/query-user-posts.dto';
 import { FollowsService } from './follows.service';
+import { PointsService } from './points.service';
 import { assertCanReadPost } from '../utils/assert-can-read-post';
 
 @Injectable()
@@ -39,6 +40,7 @@ export class PostsService {
     @InjectModel(CommentModelName)
     private readonly commentModel: Model<CommentDocument>,
     private readonly followsService: FollowsService,
+    private readonly pointsService: PointsService,
   ) {}
 
   private async attachAuthors<T extends any>(items: T[]) {
@@ -68,7 +70,7 @@ export class PostsService {
 
   async create(author: JwtUser, dto: CreatePostDto) {
     const tags = normalizeTags(dto.tags);
-    return this.postModel.create({
+    const post = await this.postModel.create({
       authorId: author.id,
       title: dto.title.trim(),
       content: dto.content,
@@ -82,6 +84,12 @@ export class PostsService {
       likeCount: 0,
       isPinned: false,
     });
+    if (dto.status === 'published') {
+      this.pointsService
+        .addPoints(author.id, 20, 'post_publish', { postId: String(post._id) })
+        .catch(() => {});
+    }
+    return post;
   }
 
   async update(author: JwtUser, postId: string, dto: UpdatePostDto) {

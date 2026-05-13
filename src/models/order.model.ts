@@ -166,6 +166,12 @@ export class Order {
   @Prop({ type: Number, required: true, min: 0, default: 0 })
   shippingFee!: number;
 
+  @Prop({ type: Number, min: 0, default: 0 })
+  pointsDiscount!: number;
+
+  @Prop({ type: Number, min: 0, default: 0 })
+  pointsDiscountVnd!: number;
+
   @Prop({ type: Number, required: true, min: 0 })
   total!: number;
 

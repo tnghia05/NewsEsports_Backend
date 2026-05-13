@@ -23,6 +23,7 @@ import type { JwtUser } from '../types/auth';
 import type { CreateOrderDto } from '../dto/shop/orders/create-order.dto';
 import type { QueryOrdersDto } from '../dto/shop/orders/query-orders.dto';
 import { OrderReservationsService } from './order-reservations.service';
+import { PointsService } from './points.service';
 
 @Injectable()
 export class OrdersService {
@@ -36,6 +37,7 @@ export class OrdersService {
     @InjectModel(OrderCounterModelName)
     private readonly orderCounterModel: Model<OrderCounterDocument>,
     private readonly reservations: OrderReservationsService,
+    private readonly pointsService: PointsService,
   ) {}
 
   private adminMatchFromQuery(query: QueryOrdersDto) {
@@ -197,7 +199,21 @@ export class OrdersService {
 
     const subtotal = items.reduce((sum, it) => sum + it.lineTotal, 0);
     const shippingFee = 0;
-    const total = subtotal + shippingFee;
+    const pointsDiscountVnd =
+      dto.pointsDiscount && dto.pointsDiscount > 0
+        ? dto.pointsDiscount * 100
+        : 0;
+    const total = Math.max(0, subtotal + shippingFee - pointsDiscountVnd);
+
+    if (dto.pointsDiscount && dto.pointsDiscount > 0) {
+      await this.pointsService.deductPoints(
+        user.id,
+        dto.pointsDiscount,
+        'checkout_discount',
+        { subtotal, discountVnd: pointsDiscountVnd },
+      );
+    }
+
     const orderCode = await this.nextOrderCode();
     const userObjectId = Types.ObjectId.isValid(user.id)
       ? new Types.ObjectId(user.id)
@@ -215,6 +231,8 @@ export class OrdersService {
       reservedUntil,
       subtotal,
       shippingFee,
+      pointsDiscount: dto.pointsDiscount ?? 0,
+      pointsDiscountVnd,
       total,
       status: 'pending_payment',
       payment: {

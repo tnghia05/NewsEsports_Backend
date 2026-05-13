@@ -38,6 +38,9 @@ export class User {
     default: 'user',
   })
   role!: 'user' | 'admin';
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  points!: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
