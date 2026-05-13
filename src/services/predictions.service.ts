@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import type { Model } from 'mongoose';
+import { Types, type Model } from 'mongoose';
 import {
   PredictionModelName,
   type PredictionDocument,
@@ -139,5 +139,43 @@ export class PredictionsService {
 
   async getMyPredictionForMatch(userId: string, matchId: string) {
     return this.predictionModel.findOne({ userId, matchId }).lean().exec();
+  }
+
+  async getPendingMatchSummary() {
+    const agg = await this.predictionModel.aggregate([
+      { $match: { status: 'pending' } },
+      {
+        $group: {
+          _id: '$matchId',
+          count: { $sum: 1 },
+          totalPoints: { $sum: '$pointsBet' },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 100 },
+    ]);
+
+    const matchIds = agg
+      .map((r) => { try { return new Types.ObjectId(String(r._id)); } catch { return null; } })
+      .filter((id): id is Types.ObjectId => id !== null);
+    const matches = await this.matchModel
+      .find({ _id: { $in: matchIds } })
+      .select('matchName teams status')
+      .lean()
+      .exec();
+
+    const matchMap = new Map(matches.map((m) => [String(m._id), m]));
+
+    return agg.map((r) => {
+      const m = matchMap.get(String(r._id));
+      return {
+        matchId: String(r._id),
+        matchName: (m as any)?.matchName ?? 'Unknown',
+        teams: (m as any)?.teams ?? [],
+        matchStatus: (m as any)?.status ?? 'unknown',
+        count: r.count as number,
+        totalPoints: r.totalPoints as number,
+      };
+    });
   }
 }

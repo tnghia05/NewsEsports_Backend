@@ -116,6 +116,13 @@ export class PointsController {
     return this.predictionsService.cancelMatch(matchId);
   }
 
+  @Get('predictions/admin/pending')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  getPendingSummary() {
+    return this.predictionsService.getPendingMatchSummary();
+  }
+
   // ── Points Store ──────────────────────────────────────────────────────────
 
   @Get('store')
