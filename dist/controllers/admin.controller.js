@@ -18,10 +18,13 @@ const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 const roles_guard_1 = require("../guards/roles.guard");
 const roles_decorator_1 = require("../decorators/roles.decorator");
 const ai_stats_service_1 = require("../services/ai-stats.service");
+const ai_service_1 = require("../infra/ai/ai.service");
 let AdminController = class AdminController {
     aiStatsService;
-    constructor(aiStatsService) {
+    aiService;
+    constructor(aiStatsService, aiService) {
         this.aiStatsService = aiStatsService;
+        this.aiService = aiService;
     }
     getOverview() {
         return this.aiStatsService.getDashboardOverview();
@@ -49,6 +52,12 @@ let AdminController = class AdminController {
     }
     reviewComment(commentId, decision) {
         return this.aiStatsService.reviewComment(commentId, decision);
+    }
+    async testModeration(text) {
+        if (!text) {
+            return { error: 'Text is required' };
+        }
+        return this.aiService.analyzeComment(text);
     }
 };
 exports.AdminController = AdminController;
@@ -108,10 +117,18 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], AdminController.prototype, "reviewComment", null);
+__decorate([
+    (0, common_1.Post)('test'),
+    __param(0, (0, common_1.Body)('text')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "testModeration", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin/ai'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('admin'),
-    __metadata("design:paramtypes", [ai_stats_service_1.AiStatsService])
+    __metadata("design:paramtypes", [ai_stats_service_1.AiStatsService,
+        ai_service_1.AiService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

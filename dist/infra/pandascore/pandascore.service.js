@@ -106,6 +106,10 @@ let PandaScoreService = PandaScoreService_1 = class PandaScoreService {
         const safe = encodeURIComponent(tournamentId);
         return this.fetchList(`/tournaments/${safe}/teams`, { per_page: 50 });
     }
+    async fetchTournamentRosters(tournamentId) {
+        const safe = encodeURIComponent(tournamentId);
+        return this.fetchList(`/tournaments/${safe}/rosters`, { per_page: 50 });
+    }
     async fetchGameDetail(gameSlug, gameId) {
         if (!/^[a-z0-9-]+$/i.test(gameSlug))
             return null;

@@ -72,6 +72,21 @@ export interface PandaScoreStanding {
     draws: number;
     total: number;
 }
+export interface PandaScorePlayer {
+    id: number;
+    name: string;
+    first_name?: string;
+    last_name?: string;
+    image_url?: string;
+    nationality?: string;
+    role?: string;
+    age?: number;
+    hometown?: string;
+}
+export interface PandaScoreRoster {
+    team: PandaScoreTeam;
+    players: PandaScorePlayer[];
+}
 export interface PandaScoreMatch {
     id: number;
     name: string;
@@ -132,6 +147,7 @@ export declare class PandaScoreService {
     fetchRunningTournaments(videogame?: string): Promise<PandaScoreTournament[]>;
     fetchTournamentStandings(tournamentId: string): Promise<PandaScoreStanding[]>;
     fetchTournamentTeams(tournamentId: string): Promise<PandaScoreTeam[]>;
+    fetchTournamentRosters(tournamentId: string): Promise<PandaScoreRoster[]>;
     fetchGameDetail(gameSlug: string, gameId: string): Promise<unknown | null>;
     private fetchList;
     private fetchPage;

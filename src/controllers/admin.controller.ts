@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Query,
@@ -13,12 +14,16 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 import { AiStatsService } from '../services/ai-stats.service';
+import { AiService } from '../infra/ai/ai.service';
 
 @Controller('admin/ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 export class AdminController {
-  constructor(private readonly aiStatsService: AiStatsService) {}
+  constructor(
+    private readonly aiStatsService: AiStatsService,
+    private readonly aiService: AiService,
+  ) {}
 
   // Dashboard overview KPIs
   @Get('overview')
@@ -80,5 +85,14 @@ export class AdminController {
     @Body('decision') decision: 'approved' | 'rejected',
   ) {
     return this.aiStatsService.reviewComment(commentId, decision);
+  }
+
+  // Real-time PhoBERT testing endpoint for Admin Sandbox
+  @Post('test')
+  async testModeration(@Body('text') text: string) {
+    if (!text) {
+      return { error: 'Text is required' };
+    }
+    return this.aiService.analyzeComment(text);
   }
 }

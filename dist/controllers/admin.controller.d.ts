@@ -1,7 +1,9 @@
 import { AiStatsService } from '../services/ai-stats.service';
+import { AiService } from '../infra/ai/ai.service';
 export declare class AdminController {
     private readonly aiStatsService;
-    constructor(aiStatsService: AiStatsService);
+    private readonly aiService;
+    constructor(aiStatsService: AiStatsService, aiService: AiService);
     getOverview(): Promise<{
         users: {
             total: number;
@@ -71,5 +73,8 @@ export declare class AdminController {
     }>;
     reviewComment(commentId: string, decision: 'approved' | 'rejected'): Promise<{
         ok: boolean;
+    }>;
+    testModeration(text: string): Promise<import("../infra/ai/ai.service").AiModerationResult | {
+        error: string;
     }>;
 }

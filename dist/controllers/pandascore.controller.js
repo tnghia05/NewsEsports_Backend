@@ -63,6 +63,10 @@ let PandaScoreController = class PandaScoreController {
         guardToken(this.pandaScore.isConfigured);
         return this.pandaScore.fetchTournamentTeams(id);
     }
+    async getTournamentRosters(id) {
+        guardToken(this.pandaScore.isConfigured);
+        return this.pandaScore.fetchTournamentRosters(id);
+    }
     async getMatchDetail(matchIdOrSlug) {
         guardToken(this.pandaScore.isConfigured);
         const data = await this.pandaScore.fetchMatchDetail(matchIdOrSlug);
@@ -157,6 +161,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], PandaScoreController.prototype, "getTournamentTeams", null);
+__decorate([
+    (0, common_1.Get)('tournaments/:id/rosters'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], PandaScoreController.prototype, "getTournamentRosters", null);
 __decorate([
     (0, common_1.Get)('matches/:matchIdOrSlug'),
     __param(0, (0, common_1.Param)('matchIdOrSlug')),

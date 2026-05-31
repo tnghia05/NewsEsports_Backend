@@ -11,6 +11,7 @@ export declare class PandaScoreController {
     getRunningTournaments(videogame?: string): Promise<import("../infra/pandascore/pandascore.service").PandaScoreTournament[]>;
     getTournamentStandings(id: string): Promise<import("../infra/pandascore/pandascore.service").PandaScoreStanding[]>;
     getTournamentTeams(id: string): Promise<import("../infra/pandascore/pandascore.service").PandaScoreTeam[]>;
+    getTournamentRosters(id: string): Promise<import("../infra/pandascore/pandascore.service").PandaScoreRoster[]>;
     getMatchDetail(matchIdOrSlug: string): Promise<{}>;
     getMatchOpponents(matchIdOrSlug: string): Promise<{}>;
     getLoLGame(gameId: string): Promise<{}>;
