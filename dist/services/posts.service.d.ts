@@ -10,6 +10,7 @@ import type { UpdatePostDto } from '../dto/posts/update-post.dto';
 import type { QueryPostsDto } from '../dto/posts/query-posts.dto';
 import type { QueryUserPostsDto } from '../dto/users/query-user-posts.dto';
 import { FollowsService } from './follows.service';
+import { PointsService } from './points.service';
 export declare class PostsService {
     private readonly postModel;
     private readonly userModel;
@@ -17,7 +18,8 @@ export declare class PostsService {
     private readonly postSaveModel;
     private readonly commentModel;
     private readonly followsService;
-    constructor(postModel: Model<PostDocument>, userModel: Model<UserDocument>, postLikeModel: Model<PostLikeDocument>, postSaveModel: Model<PostSaveDocument>, commentModel: Model<CommentDocument>, followsService: FollowsService);
+    private readonly pointsService;
+    constructor(postModel: Model<PostDocument>, userModel: Model<UserDocument>, postLikeModel: Model<PostLikeDocument>, postSaveModel: Model<PostSaveDocument>, commentModel: Model<CommentDocument>, followsService: FollowsService, pointsService: PointsService);
     private attachAuthors;
     create(author: JwtUser, dto: CreatePostDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
         _id: import("mongoose").Types.ObjectId;

@@ -67,6 +67,7 @@ export declare class ProductsController {
         reserved: number;
         status: import("../models/product.model").ProductStatus;
         tags: string[];
+        pointsPrice?: number;
         __v: number;
         id: string;
     }>;

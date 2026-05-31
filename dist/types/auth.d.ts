@@ -4,6 +4,7 @@ export type JwtUser = {
     displayName: string;
     role: 'user' | 'admin';
     avatarUrl?: string;
+    points?: number;
 };
 export type JwtPayload = {
     sub: string;

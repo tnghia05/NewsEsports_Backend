@@ -35,6 +35,7 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
             displayName: user.displayName,
             role: user.role,
             avatarUrl: user.avatarUrl ?? undefined,
+            points: user.points ?? 0,
         };
     }
 };

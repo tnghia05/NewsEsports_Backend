@@ -20,6 +20,7 @@ const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
 const news_model_1 = require("../models/news.model");
 const notifications_service_1 = require("./notifications.service");
+const points_service_1 = require("./points.service");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let CommentsService = CommentsService_1 = class CommentsService {
@@ -28,13 +29,15 @@ let CommentsService = CommentsService_1 = class CommentsService {
     newsModel;
     notificationsService;
     jobModel;
+    pointsService;
     logger = new common_1.Logger(CommentsService_1.name);
-    constructor(commentModel, postModel, newsModel, notificationsService, jobModel) {
+    constructor(commentModel, postModel, newsModel, notificationsService, jobModel, pointsService) {
         this.commentModel = commentModel;
         this.postModel = postModel;
         this.newsModel = newsModel;
         this.notificationsService = notificationsService;
         this.jobModel = jobModel;
+        this.pointsService = pointsService;
     }
     async listForPost(viewer, postId, query) {
         const post = await this.requirePost(postId);
@@ -163,6 +166,9 @@ let CommentsService = CommentsService_1 = class CommentsService {
         });
         this.logger.log(`createForPost created commentId=${String(created._id)} status=${created.moderationStatus} parentId=${dto.parentId ?? 'null'}`);
         await this.enqueueModerationJob(String(created._id));
+        this.pointsService
+            .addPoints(viewer.id, 5, 'comment_create', { postId, commentId: String(created._id) })
+            .catch(() => { });
         return created;
     }
     async createForNews(viewer, newsId, dto) {
@@ -191,6 +197,9 @@ let CommentsService = CommentsService_1 = class CommentsService {
         });
         this.logger.log(`createForNews created commentId=${String(created._id)} status=${created.moderationStatus} parentId=${dto.parentId ?? 'null'}`);
         await this.enqueueModerationJob(String(created._id));
+        this.pointsService
+            .addPoints(viewer.id, 5, 'comment_create', { newsId, commentId: String(created._id) })
+            .catch(() => { });
         return created;
     }
     async enqueueModerationJob(commentId) {
@@ -323,7 +332,7 @@ exports.CommentsService = CommentsService = CommentsService_1 = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __param(2, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
     __param(4, (0, mongoose_1.InjectModel)(comment_moderation_job_model_1.CommentModerationJobModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, notifications_service_1.NotificationsService, Function])
+    __metadata("design:paramtypes", [Function, Function, Function, notifications_service_1.NotificationsService, Function, points_service_1.PointsService])
 ], CommentsService);
 function assertCanEditComment(viewer, comment) {
     if (viewer.role === 'admin')

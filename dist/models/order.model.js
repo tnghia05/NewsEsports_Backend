@@ -173,6 +173,8 @@ let Order = class Order {
     reservedUntil;
     subtotal;
     shippingFee;
+    pointsDiscount;
+    pointsDiscountVnd;
     total;
     status;
     payment;
@@ -255,6 +257,14 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true, min: 0, default: 0 }),
     __metadata("design:type", Number)
 ], Order.prototype, "shippingFee", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, min: 0, default: 0 }),
+    __metadata("design:type", Number)
+], Order.prototype, "pointsDiscount", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, min: 0, default: 0 }),
+    __metadata("design:type", Number)
+], Order.prototype, "pointsDiscountVnd", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true, min: 0 }),
     __metadata("design:type", Number)

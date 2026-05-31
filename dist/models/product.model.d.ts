@@ -14,6 +14,7 @@ export declare class Product {
     reserved: number;
     status: ProductStatus;
     tags: string[];
+    pointsPrice?: number;
 }
 export declare const ProductSchema: import("mongoose").Schema<Product, import("mongoose").Model<Product, any, any, any, any, any, Product>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Product, import("mongoose").Document<unknown, {}, Product, {
     id: string;
@@ -106,6 +107,15 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
         id: string;
     }> | undefined;
     tags?: import("mongoose").SchemaDefinitionProperty<string[], Product, import("mongoose").Document<unknown, {}, Product, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    pointsPrice?: import("mongoose").SchemaDefinitionProperty<number | undefined, Product, import("mongoose").Document<unknown, {}, Product, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;

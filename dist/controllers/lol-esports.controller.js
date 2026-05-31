@@ -38,6 +38,9 @@ let LoLEsportsController = class LoLEsportsController {
     getPostgameStats(gameId, firstFrameTime) {
         return this.lolesports.getPostgameStats(gameId, firstFrameTime);
     }
+    getGameTimeline(gameId) {
+        return this.lolesports.getGameTimeline(gameId);
+    }
 };
 exports.LoLEsportsController = LoLEsportsController;
 __decorate([
@@ -87,6 +90,13 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], LoLEsportsController.prototype, "getPostgameStats", null);
+__decorate([
+    (0, common_1.Get)('timeline/:gameId'),
+    __param(0, (0, common_1.Param)('gameId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], LoLEsportsController.prototype, "getGameTimeline", null);
 exports.LoLEsportsController = LoLEsportsController = __decorate([
     (0, common_1.Controller)('lol-esports'),
     __metadata("design:paramtypes", [lol_esports_service_1.LoLEsportsService])

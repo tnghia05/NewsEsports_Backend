@@ -7,13 +7,15 @@ import type { JwtUser } from '../types/auth';
 import type { CreateOrderDto } from '../dto/shop/orders/create-order.dto';
 import type { QueryOrdersDto } from '../dto/shop/orders/query-orders.dto';
 import { OrderReservationsService } from './order-reservations.service';
+import { PointsService } from './points.service';
 export declare class OrdersService {
     private readonly orderModel;
     private readonly productModel;
     private readonly variantModel;
     private readonly orderCounterModel;
     private readonly reservations;
-    constructor(orderModel: Model<OrderDocument>, productModel: Model<ProductDocument>, variantModel: Model<ProductVariantDocument>, orderCounterModel: Model<OrderCounterDocument>, reservations: OrderReservationsService);
+    private readonly pointsService;
+    constructor(orderModel: Model<OrderDocument>, productModel: Model<ProductDocument>, variantModel: Model<ProductVariantDocument>, orderCounterModel: Model<OrderCounterDocument>, reservations: OrderReservationsService, pointsService: PointsService);
     private adminMatchFromQuery;
     private auditEntry;
     create(user: JwtUser, dto: CreateOrderDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/order.model").Order, {}, import("mongoose").DefaultSchemaOptions> & import("../models/order.model").Order & {

@@ -40,6 +40,7 @@ class CreateOrderDto {
     email;
     shippingAddress;
     shippingMethod;
+    pointsDiscount;
 }
 exports.CreateOrderDto = CreateOrderDto;
 __decorate([
@@ -73,4 +74,10 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateOrderDto.prototype, "shippingMethod", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateOrderDto.prototype, "pointsDiscount", void 0);
 //# sourceMappingURL=create-order.dto.js.map

@@ -19,19 +19,22 @@ const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const match_model_1 = require("../models/match.model");
 const pandascore_service_1 = require("../infra/pandascore/pandascore.service");
+const predictions_service_1 = require("./predictions.service");
 let MatchSyncWorkerService = MatchSyncWorkerService_1 = class MatchSyncWorkerService {
     config;
     matchModel;
     pandaScore;
+    predictions;
     logger = new common_1.Logger(MatchSyncWorkerService_1.name);
     timer;
     running = false;
     intervalMs;
     provider;
-    constructor(config, matchModel, pandaScore) {
+    constructor(config, matchModel, pandaScore, predictions) {
         this.config = config;
         this.matchModel = matchModel;
         this.pandaScore = pandaScore;
+        this.predictions = predictions;
         this.intervalMs = Number(this.config.get('MATCH_SYNC_INTERVAL_MS') ?? 5 * 60_000);
         this.provider = (this.config.get('MATCH_DATA_PROVIDER') ?? 'pandascore').toLowerCase();
     }
@@ -65,10 +68,14 @@ let MatchSyncWorkerService = MatchSyncWorkerService_1 = class MatchSyncWorkerSer
                 ? buildMockMatches()
                 : await this.fetchFromPandaScore();
             for (const m of matches) {
-                await this.matchModel
-                    .findOneAndUpdate({ externalId: m.externalId }, { $set: { ...m, syncedAt: new Date() } }, { upsert: true, returnDocument: 'after' })
+                const prevDoc = await this.matchModel
+                    .findOneAndUpdate({ externalId: m.externalId }, { $set: { ...m, syncedAt: new Date() } }, { upsert: true, returnDocument: 'before' })
                     .exec();
                 upserted++;
+                const newStatus = m.status;
+                if (prevDoc && prevDoc.status !== 'finished' && newStatus === 'finished') {
+                    void this.autoSettle(String(prevDoc._id), m.teams ?? []);
+                }
             }
         }
         catch (e) {
@@ -78,6 +85,24 @@ let MatchSyncWorkerService = MatchSyncWorkerService_1 = class MatchSyncWorkerSer
         const elapsed = Date.now() - started;
         this.logger.log(`Match sync done in ${elapsed}ms provider=${this.provider} upserted=${upserted}`);
         return { ok: true, upserted, provider: this.provider };
+    }
+    async autoSettle(matchId, teams) {
+        const scoreA = teams[0]?.score ?? 0;
+        const scoreB = teams[1]?.score ?? 0;
+        try {
+            if (scoreA === scoreB) {
+                await this.predictions.cancelMatch(matchId);
+                this.logger.log(`Auto-cancelled predictions for match ${matchId} (draw ${scoreA}-${scoreB})`);
+            }
+            else {
+                const winnerTeamIndex = scoreA > scoreB ? 0 : 1;
+                const result = await this.predictions.settle(matchId, winnerTeamIndex);
+                this.logger.log(`Auto-settled ${result.settled} predictions for match ${matchId} — winner team ${winnerTeamIndex} (${scoreA}-${scoreB})`);
+            }
+        }
+        catch (e) {
+            this.logger.error(`Auto-settle failed for match ${matchId}: ${String(e?.message ?? e)}`);
+        }
     }
     async fetchFromPandaScore() {
         if (!this.pandaScore.isConfigured) {
@@ -106,7 +131,8 @@ exports.MatchSyncWorkerService = MatchSyncWorkerService;
 exports.MatchSyncWorkerService = MatchSyncWorkerService = MatchSyncWorkerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, mongoose_1.InjectModel)(match_model_1.MatchModelName)),
-    __metadata("design:paramtypes", [config_1.ConfigService, Function, pandascore_service_1.PandaScoreService])
+    __metadata("design:paramtypes", [config_1.ConfigService, Function, pandascore_service_1.PandaScoreService,
+        predictions_service_1.PredictionsService])
 ], MatchSyncWorkerService);
 function mapPandaScoreMatch(m) {
     const statusMap = {

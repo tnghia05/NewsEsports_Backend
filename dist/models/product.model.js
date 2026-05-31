@@ -23,6 +23,7 @@ let Product = class Product {
     reserved;
     status;
     tags;
+    pointsPrice;
 };
 exports.Product = Product;
 __decorate([
@@ -75,6 +76,10 @@ __decorate([
     (0, mongoose_1.Prop)({ type: [String], default: [], index: true }),
     __metadata("design:type", Array)
 ], Product.prototype, "tags", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, min: 0, index: true }),
+    __metadata("design:type", Number)
+], Product.prototype, "pointsPrice", void 0);
 exports.Product = Product = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Product);

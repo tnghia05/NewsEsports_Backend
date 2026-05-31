@@ -21,18 +21,21 @@ const order_model_1 = require("../models/order.model");
 const product_model_1 = require("../models/product.model");
 const product_variant_model_1 = require("../models/product-variant.model");
 const order_reservations_service_1 = require("./order-reservations.service");
+const points_service_1 = require("./points.service");
 let OrdersService = class OrdersService {
     orderModel;
     productModel;
     variantModel;
     orderCounterModel;
     reservations;
-    constructor(orderModel, productModel, variantModel, orderCounterModel, reservations) {
+    pointsService;
+    constructor(orderModel, productModel, variantModel, orderCounterModel, reservations, pointsService) {
         this.orderModel = orderModel;
         this.productModel = productModel;
         this.variantModel = variantModel;
         this.orderCounterModel = orderCounterModel;
         this.reservations = reservations;
+        this.pointsService = pointsService;
     }
     adminMatchFromQuery(query) {
         const match = {};
@@ -173,7 +176,13 @@ let OrdersService = class OrdersService {
         }
         const subtotal = items.reduce((sum, it) => sum + it.lineTotal, 0);
         const shippingFee = 0;
-        const total = subtotal + shippingFee;
+        const pointsDiscountVnd = dto.pointsDiscount && dto.pointsDiscount > 0
+            ? dto.pointsDiscount * 100
+            : 0;
+        const total = Math.max(0, subtotal + shippingFee - pointsDiscountVnd);
+        if (dto.pointsDiscount && dto.pointsDiscount > 0) {
+            await this.pointsService.deductPoints(user.id, dto.pointsDiscount, 'checkout_discount', { subtotal, discountVnd: pointsDiscountVnd });
+        }
         const orderCode = await this.nextOrderCode();
         const userObjectId = mongoose_2.Types.ObjectId.isValid(user.id)
             ? new mongoose_2.Types.ObjectId(user.id)
@@ -190,6 +199,8 @@ let OrdersService = class OrdersService {
             reservedUntil,
             subtotal,
             shippingFee,
+            pointsDiscount: dto.pointsDiscount ?? 0,
+            pointsDiscountVnd,
             total,
             status: 'pending_payment',
             payment: {
@@ -488,7 +499,8 @@ exports.OrdersService = OrdersService = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(product_model_1.ProductModelName)),
     __param(2, (0, mongoose_1.InjectModel)(product_variant_model_1.ProductVariantModelName)),
     __param(3, (0, mongoose_1.InjectModel)(order_counter_model_1.OrderCounterModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, Function, order_reservations_service_1.OrderReservationsService])
+    __metadata("design:paramtypes", [Function, Function, Function, Function, order_reservations_service_1.OrderReservationsService,
+        points_service_1.PointsService])
 ], OrdersService);
 function assertAllowedTransition(from, to) {
     if (from === to)

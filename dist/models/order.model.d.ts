@@ -56,6 +56,8 @@ export declare class Order {
     reservedUntil?: Date;
     subtotal: number;
     shippingFee: number;
+    pointsDiscount: number;
+    pointsDiscountVnd: number;
     total: number;
     status: OrderStatus;
     payment?: OrderPaymentSnapshot;
@@ -223,6 +225,24 @@ export declare const OrderSchema: import("mongoose").Schema<Order, import("mongo
         id: string;
     }> | undefined;
     shippingFee?: import("mongoose").SchemaDefinitionProperty<number, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    pointsDiscount?: import("mongoose").SchemaDefinitionProperty<number, Order, import("mongoose").Document<unknown, {}, Order, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    pointsDiscountVnd?: import("mongoose").SchemaDefinitionProperty<number, Order, import("mongoose").Document<unknown, {}, Order, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Order & {
         _id: Types.ObjectId;

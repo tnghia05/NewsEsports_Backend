@@ -21,6 +21,7 @@ const post_like_model_1 = require("../models/post-like.model");
 const post_save_model_1 = require("../models/post-save.model");
 const comment_model_1 = require("../models/comment.model");
 const follows_service_1 = require("./follows.service");
+const points_service_1 = require("./points.service");
 const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let PostsService = class PostsService {
     postModel;
@@ -29,13 +30,15 @@ let PostsService = class PostsService {
     postSaveModel;
     commentModel;
     followsService;
-    constructor(postModel, userModel, postLikeModel, postSaveModel, commentModel, followsService) {
+    pointsService;
+    constructor(postModel, userModel, postLikeModel, postSaveModel, commentModel, followsService, pointsService) {
         this.postModel = postModel;
         this.userModel = userModel;
         this.postLikeModel = postLikeModel;
         this.postSaveModel = postSaveModel;
         this.commentModel = commentModel;
         this.followsService = followsService;
+        this.pointsService = pointsService;
     }
     async attachAuthors(items) {
         const authorIds = Array.from(new Set(items.map((p) => String(p.authorId ?? '')).filter(Boolean)));
@@ -57,7 +60,7 @@ let PostsService = class PostsService {
     }
     async create(author, dto) {
         const tags = normalizeTags(dto.tags);
-        return this.postModel.create({
+        const post = await this.postModel.create({
             authorId: author.id,
             title: dto.title.trim(),
             content: dto.content,
@@ -71,6 +74,12 @@ let PostsService = class PostsService {
             likeCount: 0,
             isPinned: false,
         });
+        if (dto.status === 'published') {
+            this.pointsService
+                .addPoints(author.id, 20, 'post_publish', { postId: String(post._id) })
+                .catch(() => { });
+        }
+        return post;
     }
     async update(author, postId, dto) {
         const post = await this.requirePost(postId);
@@ -349,7 +358,8 @@ exports.PostsService = PostsService = __decorate([
     __param(2, (0, mongoose_1.InjectModel)(post_like_model_1.PostLikeModelName)),
     __param(3, (0, mongoose_1.InjectModel)(post_save_model_1.PostSaveModelName)),
     __param(4, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, Function, Function, follows_service_1.FollowsService])
+    __metadata("design:paramtypes", [Function, Function, Function, Function, Function, follows_service_1.FollowsService,
+        points_service_1.PointsService])
 ], PostsService);
 async function attachLikeSaveFlags(postLikeModel, postSaveModel, viewer, items, page, limit, total, skip) {
     const hasMore = total != null && skip != null ? skip + items.length < total : undefined;

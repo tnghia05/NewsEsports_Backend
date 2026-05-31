@@ -35,6 +35,14 @@ export declare class LoLEsportsController {
                 locale: any;
                 statsEnabled: boolean;
             } | null;
+            lpl: {
+                url: any;
+                locale: any;
+            } | null;
+            bilibili: {
+                url: any;
+                locale: any;
+            } | null;
         };
         liveGameId: any;
     }[]>;
@@ -72,6 +80,14 @@ export declare class LoLEsportsController {
                     locale: any;
                     statsEnabled: boolean;
                 } | null;
+                lpl: {
+                    url: any;
+                    locale: any;
+                } | null;
+                bilibili: {
+                    url: any;
+                    locale: any;
+                } | null;
             };
             liveGameId: any;
         }[];
@@ -105,6 +121,14 @@ export declare class LoLEsportsController {
                 channel: any;
                 locale: any;
                 statsEnabled: boolean;
+            } | null;
+            lpl: {
+                url: any;
+                locale: any;
+            } | null;
+            bilibili: {
+                url: any;
+                locale: any;
             } | null;
         };
         liveGameId: any;
@@ -154,4 +178,10 @@ export declare class LoLEsportsController {
             }[];
         };
     } | null>;
+    getGameTimeline(gameId: string): Promise<{
+        minute: number;
+        blueGold: number;
+        redGold: number;
+        diff: number;
+    }[] | null>;
 }

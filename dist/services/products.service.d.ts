@@ -80,6 +80,7 @@ export declare class ProductsService {
         reserved: number;
         status: ProductStatus;
         tags: string[];
+        pointsPrice?: number;
         __v: number;
         id: string;
     }>;

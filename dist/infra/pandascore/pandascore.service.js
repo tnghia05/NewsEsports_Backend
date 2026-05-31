@@ -59,6 +59,53 @@ let PandaScoreService = PandaScoreService_1 = class PandaScoreService {
         const safe = encodeURIComponent(gameId);
         return this.fetchJson(`/lol/games/${safe}`);
     }
+    async fetchLeagues(videogame) {
+        const params = { per_page: 100, sort: 'name' };
+        if (videogame)
+            params['filter[videogame]'] = videogame;
+        return this.fetchList('/leagues', params);
+    }
+    async fetchRunningSeries(videogame) {
+        const params = { per_page: 50, sort: '-begin_at' };
+        if (videogame)
+            params['filter[videogame]'] = videogame;
+        return this.fetchList('/series/running', params);
+    }
+    async fetchUpcomingSeries(videogame) {
+        const params = { per_page: 50, sort: 'begin_at' };
+        if (videogame)
+            params['filter[videogame]'] = videogame;
+        return this.fetchList('/series/upcoming', params);
+    }
+    async fetchPastSeries(videogame) {
+        const params = { per_page: 50, sort: '-end_at' };
+        if (videogame)
+            params['filter[videogame]'] = videogame;
+        return this.fetchList('/series/past', params);
+    }
+    async fetchSerieDetail(slug) {
+        const safe = encodeURIComponent(slug);
+        return this.fetchJson(`/series/${safe}`);
+    }
+    async fetchSerieMatches(slug, status) {
+        const safe = encodeURIComponent(slug);
+        const path = status ? `/series/${safe}/matches/${status}` : `/series/${safe}/matches`;
+        return this.fetchList(path, { per_page: 100, sort: 'scheduled_at' });
+    }
+    async fetchRunningTournaments(videogame) {
+        const params = { per_page: 50, sort: '-begin_at' };
+        if (videogame)
+            params['filter[videogame]'] = videogame;
+        return this.fetchList('/tournaments/running', params);
+    }
+    async fetchTournamentStandings(tournamentId) {
+        const safe = encodeURIComponent(tournamentId);
+        return this.fetchList(`/tournaments/${safe}/standings`, { per_page: 50 });
+    }
+    async fetchTournamentTeams(tournamentId) {
+        const safe = encodeURIComponent(tournamentId);
+        return this.fetchList(`/tournaments/${safe}/teams`, { per_page: 50 });
+    }
     async fetchGameDetail(gameSlug, gameId) {
         if (!/^[a-z0-9-]+$/i.test(gameSlug))
             return null;
@@ -66,7 +113,7 @@ let PandaScoreService = PandaScoreService_1 = class PandaScoreService {
         const safeId = encodeURIComponent(gameId);
         return this.fetchJson(`/${safeSlug}/games/${safeId}`);
     }
-    async fetchPage(path, params) {
+    async fetchList(path, params = {}) {
         if (!this.token)
             return [];
         const qs = new URLSearchParams();
@@ -104,6 +151,9 @@ let PandaScoreService = PandaScoreService_1 = class PandaScoreService {
         finally {
             clearTimeout(timeout);
         }
+    }
+    async fetchPage(path, params) {
+        return this.fetchList(path, params);
     }
     async fetchJson(path) {
         if (!this.token)

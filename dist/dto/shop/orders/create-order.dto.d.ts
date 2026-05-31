@@ -10,4 +10,5 @@ export declare class CreateOrderDto {
     email?: string;
     shippingAddress?: string;
     shippingMethod?: string;
+    pointsDiscount?: number;
 }

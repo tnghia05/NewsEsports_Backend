@@ -231,6 +231,61 @@ let LoLEsportsService = LoLEsportsService_1 = class LoLEsportsService {
             return null;
         }
     }
+    async getGameTimeline(gameId) {
+        try {
+            const allFrames = [];
+            let gameStartTs = null;
+            let done = false;
+            const firstRes = await fetch(`${LIVE_STATS_API}/window/${gameId}`);
+            if (!firstRes.ok)
+                return null;
+            const firstData = await firstRes.json();
+            const firstFrames = firstData?.frames ?? [];
+            if (!firstFrames.length)
+                return null;
+            gameStartTs = new Date(firstFrames[0].rfc460Timestamp).getTime();
+            allFrames.push(...firstFrames);
+            if (firstFrames.some((f) => f.gameState === 'finished'))
+                done = true;
+            for (let minOffset = 10; !done && minOffset <= 70; minOffset += 10) {
+                const t = new Date(gameStartTs + minOffset * 60 * 1000);
+                const st = this.roundToTenSeconds(t);
+                try {
+                    const res = await fetch(`${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`);
+                    if (!res.ok)
+                        break;
+                    const data = await res.json();
+                    const frames = data?.frames ?? [];
+                    if (!frames.length)
+                        break;
+                    allFrames.push(...frames);
+                    if (frames.some((f) => f.gameState === 'finished'))
+                        done = true;
+                }
+                catch {
+                    break;
+                }
+            }
+            const seen = new Set();
+            const unique = allFrames.filter((f) => {
+                if (!f.rfc460Timestamp || seen.has(f.rfc460Timestamp))
+                    return false;
+                seen.add(f.rfc460Timestamp);
+                return true;
+            });
+            const sampled = unique.filter((_, i) => i % 6 === 0);
+            return sampled.map((f) => {
+                const blueGold = f.blueTeam?.totalGold ?? 0;
+                const redGold = f.redTeam?.totalGold ?? 0;
+                const minute = Math.floor((new Date(f.rfc460Timestamp).getTime() - gameStartTs) / 60000);
+                return { minute, blueGold, redGold, diff: blueGold - redGold };
+            });
+        }
+        catch (err) {
+            this.logger.warn(`getGameTimeline failed for ${gameId}: ${err}`);
+            return null;
+        }
+    }
     async getEventDetails(matchId, hl = 'vi-VN') {
         try {
             const data = await this.fetchJson(`${LOL_ESPORTS_API}/getEventDetails?hl=${hl}&id=${matchId}`);
@@ -248,6 +303,8 @@ let LoLEsportsService = LoLEsportsService_1 = class LoLEsportsService {
         const streams = e.streams ?? [];
         const youtubeStream = streams.find((s) => s.provider === 'youtube');
         const twitchStream = streams.find((s) => s.provider === 'twitch');
+        const lplStream = streams.find((s) => s.provider === 'lpl');
+        const bilibiliStream = streams.find((s) => s.provider === 'bilibili');
         const games = e.match?.games ?? [];
         const inProgressGame = games.find((g) => g.state === 'inProgress');
         const teamWins = (e.match?.teams ?? []).map((t) => t.result?.gameWins ?? 0);
@@ -305,6 +362,18 @@ let LoLEsportsService = LoLEsportsService_1 = class LoLEsportsService {
                         channel: twitchStream.parameter,
                         locale: twitchStream.locale,
                         statsEnabled: twitchStream.statsStatus === 'enabled',
+                    }
+                    : null,
+                lpl: lplStream
+                    ? {
+                        url: lplStream.parameter,
+                        locale: lplStream.locale,
+                    }
+                    : null,
+                bilibili: bilibiliStream
+                    ? {
+                        url: bilibiliStream.parameter,
+                        locale: bilibiliStream.locale,
                     }
                     : null,
             },

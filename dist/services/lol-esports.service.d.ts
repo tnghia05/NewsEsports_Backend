@@ -34,6 +34,14 @@ export declare class LoLEsportsService {
                 locale: any;
                 statsEnabled: boolean;
             } | null;
+            lpl: {
+                url: any;
+                locale: any;
+            } | null;
+            bilibili: {
+                url: any;
+                locale: any;
+            } | null;
         };
         liveGameId: any;
     }[]>;
@@ -70,6 +78,14 @@ export declare class LoLEsportsService {
                     channel: any;
                     locale: any;
                     statsEnabled: boolean;
+                } | null;
+                lpl: {
+                    url: any;
+                    locale: any;
+                } | null;
+                bilibili: {
+                    url: any;
+                    locale: any;
                 } | null;
             };
             liveGameId: any;
@@ -126,6 +142,12 @@ export declare class LoLEsportsService {
             }[];
         };
     } | null>;
+    getGameTimeline(gameId: string): Promise<{
+        minute: number;
+        blueGold: number;
+        redGold: number;
+        diff: number;
+    }[] | null>;
     getEventDetails(matchId: string, hl?: string): Promise<{
         match: {
             games: any;
@@ -154,6 +176,14 @@ export declare class LoLEsportsService {
                 channel: any;
                 locale: any;
                 statsEnabled: boolean;
+            } | null;
+            lpl: {
+                url: any;
+                locale: any;
+            } | null;
+            bilibili: {
+                url: any;
+                locale: any;
             } | null;
         };
         liveGameId: any;

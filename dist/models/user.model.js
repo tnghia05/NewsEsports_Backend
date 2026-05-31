@@ -19,6 +19,7 @@ let User = class User {
     avatarUrl;
     googleSub;
     role;
+    points;
 };
 exports.User = User;
 __decorate([
@@ -60,6 +61,10 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0, min: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "points", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);
