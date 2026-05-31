@@ -83,6 +83,12 @@ export class PandaScoreController {
     return this.pandaScore.fetchTournamentTeams(id);
   }
 
+  @Get('tournaments/:id/rosters')
+  async getTournamentRosters(@Param('id') id: string) {
+    guardToken(this.pandaScore.isConfigured);
+    return this.pandaScore.fetchTournamentRosters(id);
+  }
+
   // ── Match detail (existing) ────────────────────────────────────────────────
 
   @Get('matches/:matchIdOrSlug')

@@ -58,6 +58,23 @@ export interface PandaScoreStanding {
   total: number;
 }
 
+export interface PandaScorePlayer {
+  id: number;
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  image_url?: string;
+  nationality?: string;
+  role?: string;
+  age?: number;
+  hometown?: string;
+}
+
+export interface PandaScoreRoster {
+  team: PandaScoreTeam;
+  players: PandaScorePlayer[];
+}
+
 export interface PandaScoreMatch {
   id: number;
   name: string;
@@ -198,6 +215,11 @@ export class PandaScoreService {
   async fetchTournamentTeams(tournamentId: string): Promise<PandaScoreTeam[]> {
     const safe = encodeURIComponent(tournamentId);
     return this.fetchList<PandaScoreTeam>(`/tournaments/${safe}/teams`, { per_page: 50 });
+  }
+
+  async fetchTournamentRosters(tournamentId: string): Promise<PandaScoreRoster[]> {
+    const safe = encodeURIComponent(tournamentId);
+    return this.fetchList<PandaScoreRoster>(`/tournaments/${safe}/rosters`, { per_page: 50 });
   }
 
   async fetchGameDetail(gameSlug: string, gameId: string): Promise<unknown | null> {
