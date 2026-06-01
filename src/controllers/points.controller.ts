@@ -23,6 +23,7 @@ import { PlacePredictionDto } from '../dto/points/place-prediction.dto';
 import { SettlePredictionDto } from '../dto/points/settle-prediction.dto';
 import { RedeemProductDto } from '../dto/points/redeem-product.dto';
 import { ProductModelName, type ProductDocument } from '../models/product.model';
+import { UserModelName, type UserDocument } from '../models/user.model';
 
 @Controller('points')
 export class PointsController {
@@ -31,7 +32,29 @@ export class PointsController {
     private readonly predictionsService: PredictionsService,
     @InjectModel(ProductModelName)
     private readonly productModel: Model<ProductDocument>,
+    @InjectModel(UserModelName)
+    private readonly userModel: Model<UserDocument>,
   ) {}
+
+  // ── Leaderboard (public) ──────────────────────────────────────────────────
+
+  @Get('leaderboard')
+  async getLeaderboard(@Query('limit') limit?: string) {
+    const lim = Math.min(Number(limit) || 10, 50);
+    const users = await this.userModel
+      .find({ points: { $gt: 0 } })
+      .sort({ points: -1 })
+      .limit(lim)
+      .select('displayName avatarUrl points')
+      .lean()
+      .exec();
+    return users.map((u, i) => ({
+      rank: i + 1,
+      displayName: (u as any).displayName as string,
+      avatarUrl: (u as any).avatarUrl as string | undefined,
+      points: (u as any).points as number,
+    }));
+  }
 
   // ── Balance & History ─────────────────────────────────────────────────────
 
