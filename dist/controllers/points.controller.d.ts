@@ -6,11 +6,19 @@ import { PlacePredictionDto } from '../dto/points/place-prediction.dto';
 import { SettlePredictionDto } from '../dto/points/settle-prediction.dto';
 import { RedeemProductDto } from '../dto/points/redeem-product.dto';
 import { type ProductDocument } from '../models/product.model';
+import { type UserDocument } from '../models/user.model';
 export declare class PointsController {
     private readonly pointsService;
     private readonly predictionsService;
     private readonly productModel;
-    constructor(pointsService: PointsService, predictionsService: PredictionsService, productModel: Model<ProductDocument>);
+    private readonly userModel;
+    constructor(pointsService: PointsService, predictionsService: PredictionsService, productModel: Model<ProductDocument>, userModel: Model<UserDocument>);
+    getLeaderboard(limit?: string): Promise<{
+        rank: number;
+        displayName: string;
+        avatarUrl: string | undefined;
+        points: number;
+    }[]>;
     getMe(user: JwtUser, limit?: string, skip?: string): Promise<{
         items: (import("mongoose").Document<unknown, {}, import("../models/point-ledger.model").PointLedger, {}, import("mongoose").DefaultSchemaOptions> & import("../models/point-ledger.model").PointLedger & {
             _id: import("mongoose").Types.ObjectId;

@@ -26,14 +26,33 @@ const place_prediction_dto_1 = require("../dto/points/place-prediction.dto");
 const settle_prediction_dto_1 = require("../dto/points/settle-prediction.dto");
 const redeem_product_dto_1 = require("../dto/points/redeem-product.dto");
 const product_model_1 = require("../models/product.model");
+const user_model_1 = require("../models/user.model");
 let PointsController = class PointsController {
     pointsService;
     predictionsService;
     productModel;
-    constructor(pointsService, predictionsService, productModel) {
+    userModel;
+    constructor(pointsService, predictionsService, productModel, userModel) {
         this.pointsService = pointsService;
         this.predictionsService = predictionsService;
         this.productModel = productModel;
+        this.userModel = userModel;
+    }
+    async getLeaderboard(limit) {
+        const lim = Math.min(Number(limit) || 10, 50);
+        const users = await this.userModel
+            .find({ points: { $gt: 0 } })
+            .sort({ points: -1 })
+            .limit(lim)
+            .select('displayName avatarUrl points')
+            .lean()
+            .exec();
+        return users.map((u, i) => ({
+            rank: i + 1,
+            displayName: u.displayName,
+            avatarUrl: u.avatarUrl,
+            points: u.points,
+        }));
     }
     async getMe(user, limit, skip) {
         const balance = await this.pointsService.getBalance(user.id);
@@ -95,6 +114,13 @@ let PointsController = class PointsController {
     }
 };
 exports.PointsController = PointsController;
+__decorate([
+    (0, common_1.Get)('leaderboard'),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], PointsController.prototype, "getLeaderboard", null);
 __decorate([
     (0, common_1.Get)('me'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
@@ -198,7 +224,8 @@ __decorate([
 exports.PointsController = PointsController = __decorate([
     (0, common_1.Controller)('points'),
     __param(2, (0, mongoose_1.InjectModel)(product_model_1.ProductModelName)),
+    __param(3, (0, mongoose_1.InjectModel)(user_model_1.UserModelName)),
     __metadata("design:paramtypes", [points_service_1.PointsService,
-        predictions_service_1.PredictionsService, Function])
+        predictions_service_1.PredictionsService, Function, Function])
 ], PointsController);
 //# sourceMappingURL=points.controller.js.map
