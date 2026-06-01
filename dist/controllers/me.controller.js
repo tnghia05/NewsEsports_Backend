@@ -25,6 +25,9 @@ let MeController = class MeController {
     me(user) {
         return user;
     }
+    async getMeStats(user) {
+        return this.postsService.getUserStats(user.id);
+    }
     savedPosts(user) {
         return this.postsService.list(user, {
             tab: 'saved',
@@ -42,6 +45,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], MeController.prototype, "me", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('users/me/stats'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MeController.prototype, "getMeStats", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('me/saved-posts'),

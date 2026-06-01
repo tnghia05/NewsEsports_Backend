@@ -4,6 +4,12 @@ export declare class MeController {
     private readonly postsService;
     constructor(postsService: PostsService);
     me(user: JwtUser): JwtUser;
+    getMeStats(user: JwtUser): Promise<{
+        postCount: number;
+        commentCount: number;
+        likeCount: number;
+        savedCount: number;
+    }>;
     savedPosts(user: JwtUser): Promise<{
         total?: number | undefined;
         hasMore?: boolean | undefined;

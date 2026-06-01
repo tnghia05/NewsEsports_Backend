@@ -443,6 +443,26 @@ export class PostsService {
     return updated;
   }
 
+  async getUserStats(userId: string) {
+    const [postCount, commentCount, savedCount, posts, comments] = await Promise.all([
+      this.postModel.countDocuments({ authorId: userId }).exec(),
+      this.commentModel.countDocuments({ authorId: userId, isDeleted: { $ne: true } }).exec(),
+      this.postSaveModel.countDocuments({ userId }).exec(),
+      this.postModel.find({ authorId: userId }).select({ likeCount: 1 }).lean().exec(),
+      this.commentModel.find({ authorId: userId, isDeleted: { $ne: true } }).select({ likeCount: 1 }).lean().exec(),
+    ]);
+
+    const postLikes = posts.reduce((sum, p) => sum + (p.likeCount || 0), 0);
+    const commentLikes = comments.reduce((sum, c) => sum + (c.likeCount || 0), 0);
+
+    return {
+      postCount,
+      commentCount,
+      likeCount: postLikes + commentLikes,
+      savedCount,
+    };
+  }
+
   private async requirePost(postId: string) {
     const post = await this.postModel.findById(postId).exec();
     if (!post) throw new NotFoundException('Post not found');

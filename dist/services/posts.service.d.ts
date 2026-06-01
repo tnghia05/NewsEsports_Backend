@@ -112,5 +112,11 @@ export declare class PostsService {
     } & Required<{
         _id: import("mongoose").Types.ObjectId;
     }>>;
+    getUserStats(userId: string): Promise<{
+        postCount: number;
+        commentCount: number;
+        likeCount: number;
+        savedCount: number;
+    }>;
     private requirePost;
 }

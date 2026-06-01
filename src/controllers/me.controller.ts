@@ -15,6 +15,12 @@ export class MeController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('users/me/stats')
+  async getMeStats(@CurrentUser() user: JwtUser) {
+    return this.postsService.getUserStats(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('me/saved-posts')
   savedPosts(@CurrentUser() user: JwtUser) {
     // Alias for UI convenience
