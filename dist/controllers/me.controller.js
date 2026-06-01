@@ -17,13 +17,27 @@ const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 const user_decorator_1 = require("../decorators/user.decorator");
 const posts_service_1 = require("../services/posts.service");
+const users_service_1 = require("../services/users.service");
 let MeController = class MeController {
     postsService;
-    constructor(postsService) {
+    usersService;
+    constructor(postsService, usersService) {
         this.postsService = postsService;
+        this.usersService = usersService;
     }
     me(user) {
         return user;
+    }
+    async updateProfile(user, body) {
+        const updated = await this.usersService.updateUser(user.id, body);
+        return {
+            id: String(updated?._id),
+            email: updated?.email,
+            displayName: updated?.displayName,
+            avatarUrl: updated?.avatarUrl,
+            role: updated?.role,
+            points: updated?.points,
+        };
     }
     async getMeStats(user) {
         return this.postsService.getUserStats(user.id);
@@ -47,6 +61,15 @@ __decorate([
 ], MeController.prototype, "me", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Patch)('users/me'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], MeController.prototype, "updateProfile", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('users/me/stats'),
     __param(0, (0, user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -63,6 +86,7 @@ __decorate([
 ], MeController.prototype, "savedPosts", null);
 exports.MeController = MeController = __decorate([
     (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [posts_service_1.PostsService])
+    __metadata("design:paramtypes", [posts_service_1.PostsService,
+        users_service_1.UsersService])
 ], MeController);
 //# sourceMappingURL=me.controller.js.map

@@ -51,4 +51,14 @@ export class UsersService {
       )
       .exec();
   }
+
+  async updateUser(userId: string, update: { displayName?: string; avatarUrl?: string }) {
+    const patch: any = {};
+    if (update.displayName !== undefined) patch.displayName = update.displayName.trim();
+    if (update.avatarUrl !== undefined) patch.avatarUrl = update.avatarUrl.trim();
+
+    return this.userModel
+      .findByIdAndUpdate(userId, { $set: patch }, { returnDocument: 'after' })
+      .exec();
+  }
 }

@@ -46,6 +46,16 @@ let UsersService = class UsersService {
             .findByIdAndUpdate(userId, { $set: { googleSub, ...(avatarUrl ? { avatarUrl } : {}) } }, { returnDocument: 'after' })
             .exec();
     }
+    async updateUser(userId, update) {
+        const patch = {};
+        if (update.displayName !== undefined)
+            patch.displayName = update.displayName.trim();
+        if (update.avatarUrl !== undefined)
+            patch.avatarUrl = update.avatarUrl.trim();
+        return this.userModel
+            .findByIdAndUpdate(userId, { $set: patch }, { returnDocument: 'after' })
+            .exec();
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

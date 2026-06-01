@@ -86,5 +86,23 @@ export declare class UsersService {
     } & Required<{
         _id: import("mongoose").Types.ObjectId;
     }>) | null>;
+    updateUser(userId: string, update: {
+        displayName?: string;
+        avatarUrl?: string;
+    }): Promise<(import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/user.model").User, {}, import("mongoose").DefaultSchemaOptions> & import("../models/user.model").User & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/user.model").User, {}, import("mongoose").DefaultSchemaOptions> & import("../models/user.model").User & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    } & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }>) | null>;
 }
 export {};
