@@ -21,6 +21,7 @@ interface SubscribeOddsDto {
       'http://localhost:3000',
       'http://127.0.0.1:5173',
       'http://localhost:5175',
+      'https://tnghia05.github.io',
     ],
     credentials: true,
   },

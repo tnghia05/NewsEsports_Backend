@@ -23,8 +23,7 @@ import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class CommentModerationWorkerService
-  implements OnModuleInit, OnModuleDestroy
-{
+  implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CommentModerationWorkerService.name);
   private timer?: NodeJS.Timeout;
   private running = false;
@@ -55,7 +54,7 @@ export class CommentModerationWorkerService
   }
 
   onModuleInit() {
-    // Lightweight polling worker. In production you'd likely use BullMQ/Redis.
+    // Lightweight test polling worker. In production you'd likely use BullMQ/Redis.
     this.timer = setInterval(() => void this.tick(), 1500);
   }
 

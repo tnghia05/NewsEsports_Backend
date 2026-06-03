@@ -8,6 +8,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5175',
+  'https://tnghia05.github.io',
 ];
 
 export class CorsIoAdapter extends IoAdapter {

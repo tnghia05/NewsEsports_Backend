@@ -48,11 +48,9 @@ async function bootstrap() {
 
         origin === 'http://localhost:5175' ||
 
-        origin === 'http://127.0.0.1:5175'
+        origin === 'http://127.0.0.1:5175' ||
 
-
-
-
+        origin === 'https://tnghia05.github.io'
 
       ) {
 

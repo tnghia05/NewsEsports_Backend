@@ -23,7 +23,8 @@ async function bootstrap() {
                 origin === 'http://localhost:5623' ||
                 origin === 'http://localhost:5000' ||
                 origin === 'http://localhost:5175' ||
-                origin === 'http://127.0.0.1:5175') {
+                origin === 'http://127.0.0.1:5175' ||
+                origin === 'https://tnghia05.github.io') {
                 return callback(null, true);
             }
             return callback(new Error(`CORS blocked for origin: ${origin}`), false);

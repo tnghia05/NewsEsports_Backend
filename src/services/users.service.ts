@@ -16,7 +16,7 @@ type CreateUserInput = {
 export class UsersService {
   constructor(
     @InjectModel(UserModelName) private readonly userModel: Model<UserDocument>,
-  ) {}
+  ) { }
 
   findById(id: string) {
     return this.userModel.findById(id).exec();
@@ -64,7 +64,7 @@ export class UsersService {
 
   // ── Ban management ────────────────────────────────────────────────
 
-  /** Ban a user. durationDays = 0 means permanent (year 2099). */
+  /** Ban a useer. durationDays = 0 means permanent (year 2099). */
   async banUser(userId: string, opts: { durationDays: number; reason: string }) {
     const PERMANENT_DATE = new Date('2099-01-01T00:00:00Z');
     const banUntil =
