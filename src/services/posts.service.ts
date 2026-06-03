@@ -612,14 +612,15 @@ export class PostsService {
           const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
 
           const prompt =
-            `Bạn là AI phân tích cộng đồng esport Việt Nam. Dưới đây là thống kê từ ${n} bình luận trong một bài viết:\n` +
+            `Bạn là một nhà báo/phóng viên Esports sắc sảo và am hiểu cộng đồng từ một trang tin thể thao điện tử hàng đầu Việt Nam. Dưới đây là dữ liệu thống kê từ ${n} bình luận của cộng đồng game thủ dưới bài viết:\n` +
             `- Cảm xúc chủ đạo: ${dominantSentiment} (tích cực: ${pct(aggregate.sentiment4.positive)}%, tiêu cực: ${pct(aggregate.sentiment4.negative)}%, độc hại: ${pct(aggregate.sentiment4.toxic)}%)\n` +
             `- Chủ đề bình luận chính: ${dominantIntent} (khen ngợi: ${pct(aggregate.intent.praise)}%, phàn nàn: ${pct(aggregate.intent.complain)}%, hỏi đáp: ${pct(aggregate.intent.question)}%)\n` +
             `- Khía cạnh được thảo luận nhiều: ${topAspects.join(', ') || 'chung'}\n` +
             `- Điểm chất lượng trung bình: ${aggregate.avgQualityScore.toFixed(2)} (thang -1 đến +1)\n` +
             `- Bình luận độc hại bị lọc: ${aggregate.toxicCount} / ${n}\n` +
-            `Một vài bình luận tiêu biểu: ${sampleTexts.map((t) => `"${t}"`).join('; ')}\n\n` +
-            `Hãy viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt, thân thiện và trung lập, tóm tắt không khí bình luận để giúp người đọc hiểu bức tranh chung trước khi viết bình luận. KHÔNG liệt kê số liệu khô khan, hãy dùng ngôn ngữ tự nhiên. KHÔNG dùng markdown.`;
+            `Một vài bình luận tiêu biểu của game thủ: ${sampleTexts.map((t) => `"${t}"`).join('; ')}\n\n` +
+            `Yêu cầu: Hãy đóng vai một nhà báo Esports, viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt tóm tắt nhanh bức tranh dư luận và bầu không khí tranh luận của cộng đồng. ` +
+            `Văn phong phải đậm chất báo chí thể thao điện tử (sử dụng linh hoạt các thuật ngữ như meta, tuyển thủ, combat, phong độ, chiến thuật, lineup, cộng đồng fan, chảo lửa dư luận, v.v. khi phù hợp), lôi cuốn và sắc sảo, giúp người đọc nắm bắt ngay luồng ý kiến chính trước khi tham gia thảo luận. KHÔNG liệt kê số liệu khô khan, KHÔNG dùng markdown.`;
 
           this.logger.log(`[Digest] Calling Gemini API (gemini-3.1-flash-lite) for postId=${postId}`);
           const result = await model.generateContent(prompt);
