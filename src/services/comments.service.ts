@@ -21,6 +21,7 @@ import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
 import type { UpdateCommentDto } from '../dto/comments/update-comment.dto';
 import { NotificationsService } from './notifications.service';
 import { PointsService } from './points.service';
+import { UsersService } from './users.service';
 import {
   CommentModerationJobModelName,
   type CommentModerationJobDocument,
@@ -42,6 +43,7 @@ export class CommentsService {
     @InjectModel(CommentModerationJobModelName)
     private readonly jobModel: Model<CommentModerationJobDocument>,
     private readonly pointsService: PointsService,
+    private readonly usersService: UsersService,
   ) {}
 
   async listForPost(
@@ -186,6 +188,18 @@ export class CommentsService {
   }
 
   async createForPost(viewer: JwtUser, postId: string, dto: CreateCommentDto) {
+    // ── Ban check ──
+    const banStatus = await this.usersService.isBanned(viewer.id);
+    if (banStatus.banned) {
+      const isPermanent = banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
+      const untilStr = isPermanent
+        ? 'vĩnh viễn'
+        : `đến ${new Date(banStatus.until!).toLocaleDateString('vi-VN')}`;
+      throw new ForbiddenException(
+        `Tài khoản của bạn đã bị khóa ${untilStr}. Lý do: ${banStatus.reason ?? 'Vi phạm chính sách cộng đồng'}`,
+      );
+    }
+
     const post = await this.requirePost(postId);
     assertCanReadPost(viewer, post);
 
@@ -228,6 +242,18 @@ export class CommentsService {
   }
 
   async createForNews(viewer: JwtUser, newsId: string, dto: CreateCommentDto) {
+    // ── Ban check ──
+    const banStatus = await this.usersService.isBanned(viewer.id);
+    if (banStatus.banned) {
+      const isPermanent = banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
+      const untilStr = isPermanent
+        ? 'vĩnh viễn'
+        : `đến ${new Date(banStatus.until!).toLocaleDateString('vi-VN')}`;
+      throw new ForbiddenException(
+        `Tài khoản của bạn đã bị khóa ${untilStr}. Lý do: ${banStatus.reason ?? 'Vi phạm chính sách cộng đồng'}`,
+      );
+    }
+
     await this.requirePublishedNews(newsId);
 
     const contentPreview = String(dto.content ?? '')

@@ -41,6 +41,22 @@ export class User {
 
   @Prop({ type: Number, default: 0, min: 0 })
   points!: number;
+
+  // ── Ban / Moderation fields ──────────────────────────────────────
+  /** Null = not banned; Date in future = temp ban; far future (2099) = permanent */
+  @Prop({ type: Date, default: null, index: true })
+  banUntil?: Date | null;
+
+  @Prop({ type: String, default: null })
+  banReason?: string | null;
+
+  /** Number of times this user had a comment rejected as toxic */
+  @Prop({ type: Number, default: 0, min: 0 })
+  toxicStrikeCount!: number;
+
+  /** Latest warning sent timestamp — avoid spam */
+  @Prop({ type: Date, default: null })
+  lastWarnedAt?: Date | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

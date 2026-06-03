@@ -5,7 +5,13 @@ export type NotificationDocument = HydratedDocument<Notification>;
 
 export const NotificationModelName = 'Notification';
 
-export type NotificationType = 'comment' | 'reply' | 'follow' | 'post_like';
+export type NotificationType =
+  | 'comment'
+  | 'reply'
+  | 'follow'
+  | 'post_like'
+  | 'toxic_warning'  // AI detected toxic comment — warn user
+  | 'account_ban';   // Admin banned the account
 
 @Schema({ timestamps: true })
 export class Notification {
@@ -23,6 +29,10 @@ export class Notification {
 
   @Prop({ type: String, index: true })
   commentId?: string;
+
+  /** Custom message for toxic_warning / account_ban */
+  @Prop({ type: String })
+  message?: string;
 
   @Prop({ type: Boolean, default: false, index: true })
   isRead!: boolean;

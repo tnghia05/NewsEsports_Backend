@@ -17,6 +17,7 @@ import {
 } from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import { NewsModelName, type NewsDocument } from '../models/news.model';
+import { UserModelName, type UserDocument } from '../models/user.model';
 import { AiService, type AiModerationResult } from '../infra/ai/ai.service';
 import { NotificationsService } from './notifications.service';
 
@@ -40,6 +41,8 @@ export class CommentModerationWorkerService
     private readonly postModel: Model<PostDocument>,
     @InjectModel(NewsModelName)
     private readonly newsModel: Model<NewsDocument>,
+    @InjectModel(UserModelName)
+    private readonly userModel: Model<UserDocument>,
     private readonly aiService: AiService,
     private readonly notificationsService: NotificationsService,
   ) {
@@ -210,6 +213,48 @@ export class CommentModerationWorkerService
       this.logger.log(
         `processJob updated commentId=${String(comment._id)} status=${moderationStatus} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score} conf=${ai.confidence?.toFixed(3) ?? 'n/a'} quality=${qualityScore.toFixed(3)}`,
       );
+
+      // ── If REJECTED: send toxic warning + increment strike count ──
+      if (moderationStatus === 'rejected') {
+        // Throttle: only 1 warning per 5 minutes per user
+        const user = await this.userModel.findById(comment.authorId).exec();
+        const now = new Date();
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60_000);
+        const shouldWarn = !user?.lastWarnedAt || user.lastWarnedAt < fiveMinutesAgo;
+
+        // Increment strike count
+        const newStrikeCount = (user?.toxicStrikeCount ?? 0) + 1;
+        await this.userModel
+          .updateOne(
+            { _id: comment.authorId },
+            {
+              $inc: { toxicStrikeCount: 1 },
+              ...(shouldWarn ? { $set: { lastWarnedAt: now } } : {}),
+            },
+          )
+          .exec();
+
+        if (shouldWarn) {
+          const postId = comment.postId ? String(comment.postId) : undefined;
+          const commentId = String(comment._id);
+          const strikeMsg =
+            newStrikeCount >= 5
+              ? `⚠️ Cảnh báo lần ${newStrikeCount}: Tài khoản của bạn có nguy cơ bị khóa do vi phạm được phạt hiện nhiều lần. Vui lòng tuân thủ nội quy cộng đồng.`
+              : `⚠️ Bình luận của bạn đã bị AI phát hiện là độc hại (toxic score: ${(ai.toxicity.score * 100).toFixed(0)}%) và đã bị xóa. Đây là cảnh cáo lần ${newStrikeCount}.`;
+
+          await this.notificationsService.create({
+            userId: comment.authorId,
+            type: 'toxic_warning',
+            commentId,
+            postId,
+            message: strikeMsg,
+          });
+
+          this.logger.warn(
+            `Toxic warning sent userId=${comment.authorId} strike=${newStrikeCount} score=${ai.toxicity.score.toFixed(3)}`,
+          );
+        }
+      }
 
       if (moderationStatus === 'approved') {
         if (post) {
