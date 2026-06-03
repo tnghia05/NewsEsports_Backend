@@ -39,6 +39,7 @@ const EnvSchema = z.object({
     z.coerce.number().positive().optional(),
   ),
   AI_VERSION: z.preprocess(emptyStringToUndefined, z.string().optional()),
+  GEMINI_API_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
 
   // Google login (Milestone 1)
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
