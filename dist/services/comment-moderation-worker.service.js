@@ -21,6 +21,7 @@ const comment_moderation_job_model_1 = require("../models/comment-moderation-job
 const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
 const news_model_1 = require("../models/news.model");
+const user_model_1 = require("../models/user.model");
 const ai_service_1 = require("../infra/ai/ai.service");
 const notifications_service_1 = require("./notifications.service");
 let CommentModerationWorkerService = CommentModerationWorkerService_1 = class CommentModerationWorkerService {
@@ -29,6 +30,7 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
     commentModel;
     postModel;
     newsModel;
+    userModel;
     aiService;
     notificationsService;
     logger = new common_1.Logger(CommentModerationWorkerService_1.name);
@@ -36,12 +38,13 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
     running = false;
     confidenceThreshold;
     toxicReviewThreshold;
-    constructor(config, jobModel, commentModel, postModel, newsModel, aiService, notificationsService) {
+    constructor(config, jobModel, commentModel, postModel, newsModel, userModel, aiService, notificationsService) {
         this.config = config;
         this.jobModel = jobModel;
         this.commentModel = commentModel;
         this.postModel = postModel;
         this.newsModel = newsModel;
+        this.userModel = userModel;
         this.aiService = aiService;
         this.notificationsService = notificationsService;
         this.confidenceThreshold = Number(this.config.get('AI_CONFIDENCE_THRESHOLD', { infer: true }) ?? 0.6);
@@ -171,6 +174,34 @@ let CommentModerationWorkerService = CommentModerationWorkerService_1 = class Co
             })
                 .exec();
             this.logger.log(`processJob updated commentId=${String(comment._id)} status=${moderationStatus} sentiment=${ai.sentiment} sentiment4=${ai.sentiment4 ?? 'n/a'} toxic=${ai.toxicity.isToxic} score=${ai.toxicity.score} conf=${ai.confidence?.toFixed(3) ?? 'n/a'} quality=${qualityScore.toFixed(3)}`);
+            if (moderationStatus === 'rejected') {
+                const user = await this.userModel.findById(comment.authorId).exec();
+                const now = new Date();
+                const fiveMinutesAgo = new Date(now.getTime() - 5 * 60_000);
+                const shouldWarn = !user?.lastWarnedAt || user.lastWarnedAt < fiveMinutesAgo;
+                const newStrikeCount = (user?.toxicStrikeCount ?? 0) + 1;
+                await this.userModel
+                    .updateOne({ _id: comment.authorId }, {
+                    $inc: { toxicStrikeCount: 1 },
+                    ...(shouldWarn ? { $set: { lastWarnedAt: now } } : {}),
+                })
+                    .exec();
+                if (shouldWarn) {
+                    const postId = comment.postId ? String(comment.postId) : undefined;
+                    const commentId = String(comment._id);
+                    const strikeMsg = newStrikeCount >= 5
+                        ? `⚠️ Cảnh báo lần ${newStrikeCount}: Tài khoản của bạn có nguy cơ bị khóa do vi phạm được phạt hiện nhiều lần. Vui lòng tuân thủ nội quy cộng đồng.`
+                        : `⚠️ Bình luận của bạn đã bị AI phát hiện là độc hại (toxic score: ${(ai.toxicity.score * 100).toFixed(0)}%) và đã bị xóa. Đây là cảnh cáo lần ${newStrikeCount}.`;
+                    await this.notificationsService.create({
+                        userId: comment.authorId,
+                        type: 'toxic_warning',
+                        commentId,
+                        postId,
+                        message: strikeMsg,
+                    });
+                    this.logger.warn(`Toxic warning sent userId=${comment.authorId} strike=${newStrikeCount} score=${ai.toxicity.score.toFixed(3)}`);
+                }
+            }
             if (moderationStatus === 'approved') {
                 if (post) {
                     await this.postModel
@@ -236,7 +267,8 @@ exports.CommentModerationWorkerService = CommentModerationWorkerService = Commen
     __param(2, (0, mongoose_1.InjectModel)(comment_model_1.CommentModelName)),
     __param(3, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __param(4, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
-    __metadata("design:paramtypes", [config_1.ConfigService, Function, Function, Function, Function, ai_service_1.AiService,
+    __param(5, (0, mongoose_1.InjectModel)(user_model_1.UserModelName)),
+    __metadata("design:paramtypes", [config_1.ConfigService, Function, Function, Function, Function, Function, ai_service_1.AiService,
         notifications_service_1.NotificationsService])
 ], CommentModerationWorkerService);
 function computeQualityScore(ai) {

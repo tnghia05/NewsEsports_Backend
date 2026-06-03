@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { PostsService } from '../services/posts.service';
 import type { JwtUser } from '../types/auth';
 import { CreatePostDto } from '../dto/posts/create-post.dto';
@@ -9,7 +10,8 @@ export declare class PostsController {
     private readonly postsService;
     private readonly postLikesService;
     private readonly postSavesService;
-    constructor(postsService: PostsService, postLikesService: PostLikesService, postSavesService: PostSavesService);
+    private readonly config;
+    constructor(postsService: PostsService, postLikesService: PostLikesService, postSavesService: PostSavesService, config: ConfigService);
     list(user: JwtUser | undefined, query: QueryPostsDto): Promise<{
         total?: number | undefined;
         hasMore?: boolean | undefined;
@@ -18,6 +20,40 @@ export declare class PostsController {
         limit: number;
     }>;
     getById(user: JwtUser | undefined, id: string): Promise<any>;
+    getCommentDigest(id: string, force?: string): Promise<{
+        summary: null;
+        aggregate: null;
+        commentCount: number;
+        cached: boolean;
+    } | {
+        summary: string | null;
+        aggregate: {
+            commentCount: number;
+            sentiment: {
+                positive: number;
+                neutral: number;
+                negative: number;
+            };
+            sentiment4: {
+                positive: number;
+                negative: number;
+                neutral: number;
+                toxic: number;
+            };
+            intent: {
+                praise: number;
+                complain: number;
+                question: number;
+                other: number;
+            };
+            aspects: Record<string, number>;
+            avgQualityScore: number;
+            avgToxicityScore: number;
+            toxicCount: number;
+        };
+        commentCount: number;
+        cached: boolean;
+    }>;
     create(user: JwtUser, body: CreatePostDto): Promise<import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/post.model").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../models/post.model").Post & {
         _id: import("mongoose").Types.ObjectId;
     } & {

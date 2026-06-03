@@ -104,5 +104,64 @@ export declare class UsersService {
     } & Required<{
         _id: import("mongoose").Types.ObjectId;
     }>) | null>;
+    banUser(userId: string, opts: {
+        durationDays: number;
+        reason: string;
+    }): Promise<(import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/user.model").User, {}, import("mongoose").DefaultSchemaOptions> & import("../models/user.model").User & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/user.model").User, {}, import("mongoose").DefaultSchemaOptions> & import("../models/user.model").User & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    } & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }>) | null>;
+    unbanUser(userId: string): Promise<(import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/user.model").User, {}, import("mongoose").DefaultSchemaOptions> & import("../models/user.model").User & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    }, {}, import("mongoose").DefaultSchemaOptions> & import("mongoose").Document<unknown, {}, import("../models/user.model").User, {}, import("mongoose").DefaultSchemaOptions> & import("../models/user.model").User & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    } & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }>) | null>;
+    listToxicUsers(opts: {
+        page: number;
+        limit: number;
+        minStrikes?: number;
+    }): Promise<{
+        items: {
+            _id: import("mongoose").Types.ObjectId;
+            displayName: string;
+            email: string;
+            avatarUrl: string | undefined;
+            toxicStrikeCount: number;
+            banUntil: Date | null;
+            banReason: string | null;
+            isBanned: boolean;
+            isPermanent: boolean;
+        }[];
+        page: number;
+        limit: number;
+        total: number;
+        hasMore: boolean;
+    }>;
+    isBanned(userId: string): Promise<{
+        banned: boolean;
+        until?: Date;
+        reason?: string;
+    }>;
 }
 export {};

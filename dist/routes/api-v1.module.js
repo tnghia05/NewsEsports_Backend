@@ -99,6 +99,7 @@ const admin_alert_model_1 = require("../models/admin-alert.model");
 const entity_trend_model_1 = require("../models/entity-trend.model");
 const point_ledger_model_1 = require("../models/point-ledger.model");
 const prediction_model_1 = require("../models/prediction.model");
+const post_comment_digest_model_1 = require("../models/post-comment-digest.model");
 let ApiV1Module = class ApiV1Module {
 };
 exports.ApiV1Module = ApiV1Module;
@@ -136,6 +137,7 @@ exports.ApiV1Module = ApiV1Module = __decorate([
                 { name: entity_trend_model_1.EntityTrendModelName, schema: entity_trend_model_1.EntityTrendSchema },
                 { name: point_ledger_model_1.PointLedgerModelName, schema: point_ledger_model_1.PointLedgerSchema },
                 { name: prediction_model_1.PredictionModelName, schema: prediction_model_1.PredictionSchema },
+                { name: post_comment_digest_model_1.PostCommentDigestModelName, schema: post_comment_digest_model_1.PostCommentDigestSchema },
             ]),
         ],
         controllers: [

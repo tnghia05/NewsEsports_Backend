@@ -5,6 +5,7 @@ import { type CommentModerationJobDocument } from '../models/comment-moderation-
 import { type CommentDocument } from '../models/comment.model';
 import { type PostDocument } from '../models/post.model';
 import { type NewsDocument } from '../models/news.model';
+import { type UserDocument } from '../models/user.model';
 import { AiService } from '../infra/ai/ai.service';
 import { NotificationsService } from './notifications.service';
 export declare class CommentModerationWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -13,6 +14,7 @@ export declare class CommentModerationWorkerService implements OnModuleInit, OnM
     private readonly commentModel;
     private readonly postModel;
     private readonly newsModel;
+    private readonly userModel;
     private readonly aiService;
     private readonly notificationsService;
     private readonly logger;
@@ -20,7 +22,7 @@ export declare class CommentModerationWorkerService implements OnModuleInit, OnM
     private running;
     private readonly confidenceThreshold;
     private readonly toxicReviewThreshold;
-    constructor(config: ConfigService, jobModel: Model<CommentModerationJobDocument>, commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, newsModel: Model<NewsDocument>, aiService: AiService, notificationsService: NotificationsService);
+    constructor(config: ConfigService, jobModel: Model<CommentModerationJobDocument>, commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, newsModel: Model<NewsDocument>, userModel: Model<UserDocument>, aiService: AiService, notificationsService: NotificationsService);
     onModuleInit(): void;
     onModuleDestroy(): void;
     private tick;

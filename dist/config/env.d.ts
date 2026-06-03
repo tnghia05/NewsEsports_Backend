@@ -12,6 +12,7 @@ declare const EnvSchema: z.ZodObject<{
     AI_TIMEOUT_MS: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
     AI_TOXIC_THRESHOLD: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodCoercedNumber<unknown>>>;
     AI_VERSION: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
+    GEMINI_API_KEY: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
     GOOGLE_CLIENT_ID: z.ZodString;
     RSS_SOURCES: z.ZodOptional<z.ZodString>;
     VNPAY_TMN_CODE: z.ZodOptional<z.ZodString>;

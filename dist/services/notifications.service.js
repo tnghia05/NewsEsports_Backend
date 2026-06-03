@@ -22,7 +22,8 @@ let NotificationsService = class NotificationsService {
         this.notificationModel = notificationModel;
     }
     async create(input) {
-        if (input.actorId && input.actorId === input.userId)
+        if (input.actorId && input.actorId === input.userId &&
+            input.type !== 'toxic_warning' && input.type !== 'account_ban')
             return { ok: true };
         await this.notificationModel.create({
             ...input,

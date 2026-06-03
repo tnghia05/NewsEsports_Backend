@@ -19,16 +19,22 @@ const comment_model_1 = require("../models/comment.model");
 const post_model_1 = require("../models/post.model");
 const admin_alert_model_1 = require("../models/admin-alert.model");
 const user_model_1 = require("../models/user.model");
+const news_model_1 = require("../models/news.model");
+const notifications_service_1 = require("./notifications.service");
 let AiStatsService = class AiStatsService {
     commentModel;
     postModel;
     alertModel;
     userModel;
-    constructor(commentModel, postModel, alertModel, userModel) {
+    newsModel;
+    notificationsService;
+    constructor(commentModel, postModel, alertModel, userModel, newsModel, notificationsService) {
         this.commentModel = commentModel;
         this.postModel = postModel;
         this.alertModel = alertModel;
         this.userModel = userModel;
+        this.newsModel = newsModel;
+        this.notificationsService = notificationsService;
     }
     async getDashboardOverview() {
         const now = Date.now();
@@ -232,10 +238,58 @@ let AiStatsService = class AiStatsService {
         };
     }
     async reviewComment(commentId, decision) {
-        const result = await this.commentModel
-            .updateOne({ _id: commentId, moderationStatus: 'under_review' }, { $set: { moderationStatus: decision } })
+        const comment = await this.commentModel
+            .findOne({ _id: commentId, moderationStatus: 'under_review' })
             .exec();
-        return { ok: result.modifiedCount > 0 };
+        if (!comment)
+            return { ok: false };
+        comment.moderationStatus = decision;
+        await comment.save();
+        if (decision === 'approved') {
+            if (comment.postId) {
+                await this.postModel
+                    .updateOne({ _id: comment.postId }, { $inc: { commentCount: 1 } })
+                    .exec();
+                const post = await this.postModel
+                    .findById(comment.postId)
+                    .select({ authorId: 1 })
+                    .lean()
+                    .exec();
+                if (post) {
+                    if (comment.parentId) {
+                        const parent = await this.commentModel
+                            .findById(comment.parentId)
+                            .select({ authorId: 1 })
+                            .lean()
+                            .exec();
+                        if (parent && parent.authorId !== comment.authorId) {
+                            await this.notificationsService.create({
+                                userId: parent.authorId,
+                                actorId: comment.authorId,
+                                type: 'reply',
+                                postId: String(post._id),
+                                commentId: String(comment._id),
+                            });
+                        }
+                    }
+                    else if (post.authorId !== comment.authorId) {
+                        await this.notificationsService.create({
+                            userId: post.authorId,
+                            actorId: comment.authorId,
+                            type: 'comment',
+                            postId: String(post._id),
+                            commentId: String(comment._id),
+                        });
+                    }
+                }
+            }
+            else if (comment.newsId) {
+                await this.newsModel
+                    .updateOne({ _id: comment.newsId }, { $inc: { commentCount: 1 } })
+                    .exec();
+            }
+        }
+        return { ok: true };
     }
 };
 exports.AiStatsService = AiStatsService;
@@ -245,6 +299,7 @@ exports.AiStatsService = AiStatsService = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __param(2, (0, mongoose_1.InjectModel)(admin_alert_model_1.AdminAlertModelName)),
     __param(3, (0, mongoose_1.InjectModel)(user_model_1.UserModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, Function])
+    __param(4, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
+    __metadata("design:paramtypes", [Function, Function, Function, Function, Function, notifications_service_1.NotificationsService])
 ], AiStatsService);
 //# sourceMappingURL=ai-stats.service.js.map

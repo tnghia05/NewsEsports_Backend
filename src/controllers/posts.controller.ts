@@ -48,9 +48,13 @@ export class PostsController {
   }
 
   @Get(':id/comment-digest')
-  getCommentDigest(@Param('id') id: string) {
+  getCommentDigest(
+    @Param('id') id: string,
+    @Query('force') force?: string,
+  ) {
     const apiKey = this.config.get<string>('GEMINI_API_KEY', { infer: true }) ?? null;
-    return this.postsService.getCommentDigest(id, apiKey);
+    const forceRebuild = force === 'true';
+    return this.postsService.getCommentDigest(id, apiKey, forceRebuild);
   }
 
   @Post()

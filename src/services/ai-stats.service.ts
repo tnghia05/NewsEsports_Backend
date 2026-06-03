@@ -8,6 +8,8 @@ import {
   type AdminAlertDocument,
 } from '../models/admin-alert.model';
 import { UserModelName, type UserDocument } from '../models/user.model';
+import { NewsModelName, type NewsDocument } from '../models/news.model';
+import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class AiStatsService {
@@ -20,6 +22,9 @@ export class AiStatsService {
     private readonly alertModel: Model<AdminAlertDocument>,
     @InjectModel(UserModelName)
     private readonly userModel: Model<UserDocument>,
+    @InjectModel(NewsModelName)
+    private readonly newsModel: Model<NewsDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // Dashboard overview: real-time KPIs + 7-day activity chart
@@ -249,12 +254,59 @@ export class AiStatsService {
 
   // #13 Admin manually approves or rejects an under_review comment
   async reviewComment(commentId: string, decision: 'approved' | 'rejected') {
-    const result = await this.commentModel
-      .updateOne(
-        { _id: commentId, moderationStatus: 'under_review' },
-        { $set: { moderationStatus: decision } },
-      )
+    const comment = await this.commentModel
+      .findOne({ _id: commentId, moderationStatus: 'under_review' })
       .exec();
-    return { ok: (result as any).modifiedCount > 0 };
+    if (!comment) return { ok: false };
+
+    comment.moderationStatus = decision;
+    await comment.save();
+
+    if (decision === 'approved') {
+      if (comment.postId) {
+        await this.postModel
+          .updateOne({ _id: comment.postId }, { $inc: { commentCount: 1 } })
+          .exec();
+
+        const post = await this.postModel
+          .findById(comment.postId)
+          .select({ authorId: 1 })
+          .lean()
+          .exec();
+
+        if (post) {
+          if (comment.parentId) {
+            const parent = await this.commentModel
+              .findById(comment.parentId)
+              .select({ authorId: 1 })
+              .lean()
+              .exec();
+            if (parent && parent.authorId !== comment.authorId) {
+              await this.notificationsService.create({
+                userId: parent.authorId,
+                actorId: comment.authorId,
+                type: 'reply',
+                postId: String(post._id),
+                commentId: String(comment._id),
+              });
+            }
+          } else if (post.authorId !== comment.authorId) {
+            await this.notificationsService.create({
+              userId: post.authorId,
+              actorId: comment.authorId,
+              type: 'comment',
+              postId: String(post._id),
+              commentId: String(comment._id),
+            });
+          }
+        }
+      } else if (comment.newsId) {
+        await this.newsModel
+          .updateOne({ _id: comment.newsId }, { $inc: { commentCount: 1 } })
+          .exec();
+      }
+    }
+
+    return { ok: true };
   }
 }

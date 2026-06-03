@@ -9,6 +9,7 @@ export declare class NotificationsService {
         type: NotificationType;
         postId?: string;
         commentId?: string;
+        message?: string;
     }): Promise<{
         ok: boolean;
     }>;

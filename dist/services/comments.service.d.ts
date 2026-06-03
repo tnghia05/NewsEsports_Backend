@@ -8,6 +8,7 @@ import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
 import type { UpdateCommentDto } from '../dto/comments/update-comment.dto';
 import { NotificationsService } from './notifications.service';
 import { PointsService } from './points.service';
+import { UsersService } from './users.service';
 import { type CommentModerationJobDocument } from '../models/comment-moderation-job.model';
 export declare class CommentsService {
     private readonly commentModel;
@@ -16,8 +17,9 @@ export declare class CommentsService {
     private readonly notificationsService;
     private readonly jobModel;
     private readonly pointsService;
+    private readonly usersService;
     private readonly logger;
-    constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, newsModel: Model<NewsDocument>, notificationsService: NotificationsService, jobModel: Model<CommentModerationJobDocument>, pointsService: PointsService);
+    constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, newsModel: Model<NewsDocument>, notificationsService: NotificationsService, jobModel: Model<CommentModerationJobDocument>, pointsService: PointsService, usersService: UsersService);
     listForPost(viewer: JwtUser | undefined, postId: string, query: QueryCommentsDto): Promise<{
         items: (import("mongoose").Document<unknown, {}, import("mongoose").Document<unknown, {}, import("../models/comment.model").Comment, {}, import("mongoose").DefaultSchemaOptions> & import("../models/comment.model").Comment & {
             _id: import("mongoose").Types.ObjectId;

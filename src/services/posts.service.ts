@@ -478,7 +478,7 @@ export class PostsService {
     return post;
   }
 
-  async getCommentDigest(postId: string, geminiApiKey?: string | null) {
+  async getCommentDigest(postId: string, geminiApiKey?: string | null, force?: boolean) {
     // ── 1. Get newest approved comment timestamp ──────────────────────────────
     const newestComment = await this.commentModel
       .findOne({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
@@ -505,6 +505,7 @@ export class PostsService {
     const cached = await this.digestModel.findOne({ postId }).lean().exec();
 
     const cacheStillValid =
+      !force &&
       cached &&
       cached.commentCount === currentCount &&
       newestAt &&

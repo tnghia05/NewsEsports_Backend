@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostsController = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 const posts_service_1 = require("../services/posts.service");
 const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 const optional_jwt_auth_guard_1 = require("../guards/optional-jwt-auth.guard");
@@ -29,16 +30,23 @@ let PostsController = class PostsController {
     postsService;
     postLikesService;
     postSavesService;
-    constructor(postsService, postLikesService, postSavesService) {
+    config;
+    constructor(postsService, postLikesService, postSavesService, config) {
         this.postsService = postsService;
         this.postLikesService = postLikesService;
         this.postSavesService = postSavesService;
+        this.config = config;
     }
     list(user, query) {
         return this.postsService.list(user, query);
     }
     getById(user, id) {
         return this.postsService.getById(user, id);
+    }
+    getCommentDigest(id, force) {
+        const apiKey = this.config.get('GEMINI_API_KEY', { infer: true }) ?? null;
+        const forceRebuild = force === 'true';
+        return this.postsService.getCommentDigest(id, apiKey, forceRebuild);
     }
     create(user, body) {
         return this.postsService.create(user, body);
@@ -87,6 +95,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], PostsController.prototype, "getById", null);
+__decorate([
+    (0, common_1.Get)(':id/comment-digest'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('force')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], PostsController.prototype, "getCommentDigest", null);
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
@@ -164,6 +180,7 @@ exports.PostsController = PostsController = __decorate([
     (0, common_1.Controller)('posts'),
     __metadata("design:paramtypes", [posts_service_1.PostsService,
         post_likes_service_1.PostLikesService,
-        post_saves_service_1.PostSavesService])
+        post_saves_service_1.PostSavesService,
+        config_1.ConfigService])
 ], PostsController);
 //# sourceMappingURL=posts.controller.js.map

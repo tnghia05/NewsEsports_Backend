@@ -3,12 +3,16 @@ import { type CommentDocument } from '../models/comment.model';
 import { type PostDocument } from '../models/post.model';
 import { type AdminAlertDocument } from '../models/admin-alert.model';
 import { type UserDocument } from '../models/user.model';
+import { type NewsDocument } from '../models/news.model';
+import { NotificationsService } from './notifications.service';
 export declare class AiStatsService {
     private readonly commentModel;
     private readonly postModel;
     private readonly alertModel;
     private readonly userModel;
-    constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, alertModel: Model<AdminAlertDocument>, userModel: Model<UserDocument>);
+    private readonly newsModel;
+    private readonly notificationsService;
+    constructor(commentModel: Model<CommentDocument>, postModel: Model<PostDocument>, alertModel: Model<AdminAlertDocument>, userModel: Model<UserDocument>, newsModel: Model<NewsDocument>, notificationsService: NotificationsService);
     getDashboardOverview(): Promise<{
         users: {
             total: number;

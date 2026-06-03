@@ -1,13 +1,14 @@
 import type { HydratedDocument } from 'mongoose';
 export type NotificationDocument = HydratedDocument<Notification>;
 export declare const NotificationModelName = "Notification";
-export type NotificationType = 'comment' | 'reply' | 'follow' | 'post_like';
+export type NotificationType = 'comment' | 'reply' | 'follow' | 'post_like' | 'toxic_warning' | 'account_ban';
 export declare class Notification {
     userId: string;
     actorId?: string;
     type: NotificationType;
     postId?: string;
     commentId?: string;
+    message?: string;
     isRead: boolean;
     readAt?: Date;
 }
@@ -57,6 +58,15 @@ export declare const NotificationSchema: import("mongoose").Schema<Notification,
         id: string;
     }> | undefined;
     commentId?: import("mongoose").SchemaDefinitionProperty<string | undefined, Notification, import("mongoose").Document<unknown, {}, Notification, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Notification & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    message?: import("mongoose").SchemaDefinitionProperty<string | undefined, Notification, import("mongoose").Document<unknown, {}, Notification, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Notification & {
         _id: import("mongoose").Types.ObjectId;

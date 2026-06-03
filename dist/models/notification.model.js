@@ -18,6 +18,7 @@ let Notification = class Notification {
     type;
     postId;
     commentId;
+    message;
     isRead;
     readAt;
 };
@@ -42,6 +43,10 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String, index: true }),
     __metadata("design:type", String)
 ], Notification.prototype, "commentId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
+    __metadata("design:type", String)
+], Notification.prototype, "message", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Boolean, default: false, index: true }),
     __metadata("design:type", Boolean)

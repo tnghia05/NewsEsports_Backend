@@ -20,6 +20,10 @@ let User = class User {
     googleSub;
     role;
     points;
+    banUntil;
+    banReason;
+    toxicStrikeCount;
+    lastWarnedAt;
 };
 exports.User = User;
 __decorate([
@@ -65,6 +69,22 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Number, default: 0, min: 0 }),
     __metadata("design:type", Number)
 ], User.prototype, "points", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, default: null, index: true }),
+    __metadata("design:type", Object)
+], User.prototype, "banUntil", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null }),
+    __metadata("design:type", Object)
+], User.prototype, "banReason", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0, min: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "toxicStrikeCount", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, default: null }),
+    __metadata("design:type", Object)
+], User.prototype, "lastWarnedAt", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);

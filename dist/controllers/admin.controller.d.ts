@@ -1,9 +1,13 @@
 import { AiStatsService } from '../services/ai-stats.service';
 import { AiService } from '../infra/ai/ai.service';
+import { UsersService } from '../services/users.service';
+import { NotificationsService } from '../services/notifications.service';
 export declare class AdminController {
     private readonly aiStatsService;
     private readonly aiService;
-    constructor(aiStatsService: AiStatsService, aiService: AiService);
+    private readonly usersService;
+    private readonly notificationsService;
+    constructor(aiStatsService: AiStatsService, aiService: AiService, usersService: UsersService, notificationsService: NotificationsService);
     getOverview(): Promise<{
         users: {
             total: number;
@@ -76,5 +80,34 @@ export declare class AdminController {
     }>;
     testModeration(text: string): Promise<import("../infra/ai/ai.service").AiModerationResult | {
         error: string;
+    }>;
+    listToxicUsers(page: number, limit: number, minStrikes: number): Promise<{
+        items: {
+            _id: import("mongoose").Types.ObjectId;
+            displayName: string;
+            email: string;
+            avatarUrl: string | undefined;
+            toxicStrikeCount: number;
+            banUntil: Date | null;
+            banReason: string | null;
+            isBanned: boolean;
+            isPermanent: boolean;
+        }[];
+        page: number;
+        limit: number;
+        total: number;
+        hasMore: boolean;
+    }>;
+    banUser(userId: string, durationDays: number, reason: string): Promise<{
+        ok: boolean;
+        userId: string;
+        durationDays: number;
+        isPermanent: boolean;
+        reason: string;
+    }>;
+    unbanUser(userId: string): Promise<{
+        ok: boolean;
+        userId: string;
+        unbanned: boolean;
     }>;
 }

@@ -21,6 +21,7 @@ const post_model_1 = require("../models/post.model");
 const news_model_1 = require("../models/news.model");
 const notifications_service_1 = require("./notifications.service");
 const points_service_1 = require("./points.service");
+const users_service_1 = require("./users.service");
 const comment_moderation_job_model_1 = require("../models/comment-moderation-job.model");
 const assert_can_read_post_1 = require("../utils/assert-can-read-post");
 let CommentsService = CommentsService_1 = class CommentsService {
@@ -30,14 +31,16 @@ let CommentsService = CommentsService_1 = class CommentsService {
     notificationsService;
     jobModel;
     pointsService;
+    usersService;
     logger = new common_1.Logger(CommentsService_1.name);
-    constructor(commentModel, postModel, newsModel, notificationsService, jobModel, pointsService) {
+    constructor(commentModel, postModel, newsModel, notificationsService, jobModel, pointsService, usersService) {
         this.commentModel = commentModel;
         this.postModel = postModel;
         this.newsModel = newsModel;
         this.notificationsService = notificationsService;
         this.jobModel = jobModel;
         this.pointsService = pointsService;
+        this.usersService = usersService;
     }
     async listForPost(viewer, postId, query) {
         const post = await this.requirePost(postId);
@@ -140,6 +143,14 @@ let CommentsService = CommentsService_1 = class CommentsService {
         });
     }
     async createForPost(viewer, postId, dto) {
+        const banStatus = await this.usersService.isBanned(viewer.id);
+        if (banStatus.banned) {
+            const isPermanent = banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
+            const untilStr = isPermanent
+                ? 'vĩnh viễn'
+                : `đến ${new Date(banStatus.until).toLocaleDateString('vi-VN')}`;
+            throw new common_1.ForbiddenException(`Tài khoản của bạn đã bị khóa ${untilStr}. Lý do: ${banStatus.reason ?? 'Vi phạm chính sách cộng đồng'}`);
+        }
         const post = await this.requirePost(postId);
         (0, assert_can_read_post_1.assertCanReadPost)(viewer, post);
         const contentPreview = String(dto.content ?? '')
@@ -172,6 +183,14 @@ let CommentsService = CommentsService_1 = class CommentsService {
         return created;
     }
     async createForNews(viewer, newsId, dto) {
+        const banStatus = await this.usersService.isBanned(viewer.id);
+        if (banStatus.banned) {
+            const isPermanent = banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
+            const untilStr = isPermanent
+                ? 'vĩnh viễn'
+                : `đến ${new Date(banStatus.until).toLocaleDateString('vi-VN')}`;
+            throw new common_1.ForbiddenException(`Tài khoản của bạn đã bị khóa ${untilStr}. Lý do: ${banStatus.reason ?? 'Vi phạm chính sách cộng đồng'}`);
+        }
         await this.requirePublishedNews(newsId);
         const contentPreview = String(dto.content ?? '')
             .trim()
@@ -332,7 +351,8 @@ exports.CommentsService = CommentsService = CommentsService_1 = __decorate([
     __param(1, (0, mongoose_1.InjectModel)(post_model_1.PostModelName)),
     __param(2, (0, mongoose_1.InjectModel)(news_model_1.NewsModelName)),
     __param(4, (0, mongoose_1.InjectModel)(comment_moderation_job_model_1.CommentModerationJobModelName)),
-    __metadata("design:paramtypes", [Function, Function, Function, notifications_service_1.NotificationsService, Function, points_service_1.PointsService])
+    __metadata("design:paramtypes", [Function, Function, Function, notifications_service_1.NotificationsService, Function, points_service_1.PointsService,
+        users_service_1.UsersService])
 ], CommentsService);
 function assertCanEditComment(viewer, comment) {
     if (viewer.role === 'admin')

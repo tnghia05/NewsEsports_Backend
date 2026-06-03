@@ -99,5 +99,5 @@ jobs:
             command -v pm2 >/dev/null 2>&1 || sudo npm i -g pm2
 
             # Restart app
-            pm2 restart backend || pm2 start dist/main.js --name backend
+            pm2 restart backend --update-env || pm2 start dist/main.js --name backend
             pm2 save
