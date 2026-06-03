@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PostsService } from '../services/posts.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../guards/optional-jwt-auth.guard';
@@ -28,6 +29,7 @@ export class PostsController {
     private readonly postsService: PostsService,
     private readonly postLikesService: PostLikesService,
     private readonly postSavesService: PostSavesService,
+    private readonly config: ConfigService,
   ) {}
 
   @Get()
@@ -43,6 +45,12 @@ export class PostsController {
   @UseGuards(OptionalJwtAuthGuard)
   getById(@CurrentUser() user: JwtUser | undefined, @Param('id') id: string) {
     return this.postsService.getById(user, id);
+  }
+
+  @Get(':id/comment-digest')
+  getCommentDigest(@Param('id') id: string) {
+    const apiKey = this.config.get<string>('GEMINI_API_KEY', { infer: true }) ?? null;
+    return this.postsService.getCommentDigest(id, apiKey);
   }
 
   @Post()

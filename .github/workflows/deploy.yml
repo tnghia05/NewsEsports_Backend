@@ -46,6 +46,7 @@ jobs:
             # AI service (Milestone 3)
             AI_SERVICE_URL=${{ secrets.AI_SERVICE_URL }}
             AI_TIMEOUT_MS=${{ secrets.AI_TIMEOUT_MS }}
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             # (Preferred keys) - optional, kept for forward-compatibility
             AI_MODERATION_URL=${{ secrets.AI_MODERATION_URL }}
             AI_MODERATION_TIMEOUT_MS=${{ secrets.AI_MODERATION_TIMEOUT_MS }}

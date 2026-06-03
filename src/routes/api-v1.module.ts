@@ -132,6 +132,10 @@ import {
   PredictionModelName,
   PredictionSchema,
 } from '../models/prediction.model';
+import {
+  PostCommentDigestModelName,
+  PostCommentDigestSchema,
+} from '../models/post-comment-digest.model';
 
 @Module({
   imports: [
@@ -166,6 +170,7 @@ import {
       { name: EntityTrendModelName, schema: EntityTrendSchema },
       { name: PointLedgerModelName, schema: PointLedgerSchema },
       { name: PredictionModelName, schema: PredictionSchema },
+      { name: PostCommentDigestModelName, schema: PostCommentDigestSchema },
     ]),
   ],
   controllers: [

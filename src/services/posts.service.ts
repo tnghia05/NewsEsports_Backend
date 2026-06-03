@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -19,6 +20,10 @@ import {
   CommentModelName,
   type CommentDocument,
 } from '../models/comment.model';
+import {
+  PostCommentDigestModelName,
+  type PostCommentDigestDocument,
+} from '../models/post-comment-digest.model';
 import type { JwtUser } from '../types/auth';
 import type { CreatePostDto } from '../dto/posts/create-post.dto';
 import type { UpdatePostDto } from '../dto/posts/update-post.dto';
@@ -30,6 +35,8 @@ import { assertCanReadPost } from '../utils/assert-can-read-post';
 
 @Injectable()
 export class PostsService {
+  private readonly logger = new Logger(PostsService.name);
+
   constructor(
     @InjectModel(PostModelName) private readonly postModel: Model<PostDocument>,
     @InjectModel(UserModelName) private readonly userModel: Model<UserDocument>,
@@ -39,6 +46,8 @@ export class PostsService {
     private readonly postSaveModel: Model<PostSaveDocument>,
     @InjectModel(CommentModelName)
     private readonly commentModel: Model<CommentDocument>,
+    @InjectModel(PostCommentDigestModelName)
+    private readonly digestModel: Model<PostCommentDigestDocument>,
     private readonly followsService: FollowsService,
     private readonly pointsService: PointsService,
   ) {}
@@ -467,6 +476,175 @@ export class PostsService {
     const post = await this.postModel.findById(postId).exec();
     if (!post) throw new NotFoundException('Post not found');
     return post;
+  }
+
+  async getCommentDigest(postId: string, geminiApiKey?: string | null) {
+    // ── 1. Get newest approved comment timestamp ──────────────────────────────
+    const newestComment = await this.commentModel
+      .findOne({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
+      .select({ createdAt: 1 })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+
+    const currentCount = await this.commentModel.countDocuments({
+      postId,
+      isDeleted: { $ne: true },
+      moderationStatus: 'approved',
+    });
+
+    if (currentCount === 0) {
+      return { summary: null, aggregate: null, commentCount: 0, cached: false };
+    }
+
+    const newestAt = (newestComment as any)?.createdAt
+      ? new Date((newestComment as any).createdAt)
+      : null;
+
+    // ── 2. Check MongoDB cache ────────────────────────────────────────────────
+    const cached = await this.digestModel.findOne({ postId }).lean().exec();
+
+    const cacheStillValid =
+      cached &&
+      cached.commentCount === currentCount &&
+      newestAt &&
+      cached.lastCommentAt &&
+      new Date(cached.lastCommentAt).getTime() >= newestAt.getTime();
+
+    if (cacheStillValid) {
+      this.logger.debug(`[Digest] cache HIT postId=${postId} count=${currentCount}`);
+      return {
+        summary: cached.summary,
+        aggregate: cached.aggregate,
+        commentCount: cached.commentCount,
+        cached: true,
+      };
+    }
+
+    this.logger.log(`[Digest] cache MISS postId=${postId} count=${currentCount} — rebuilding`);
+
+    // ── 3. Fetch all approved comments with AI scores ─────────────────────────
+    const comments = await this.commentModel
+      .find({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
+      .select({
+        content: 1,
+        sentiment: 1,
+        sentiment4: 1,
+        intent: 1,
+        aspects: 1,
+        qualityScore: 1,
+        toxicity: 1,
+        createdAt: 1,
+      })
+      .sort({ createdAt: 1 })
+      .limit(200)
+      .lean()
+      .exec();
+
+    // ── 4. Aggregate scores ───────────────────────────────────────────────────
+    const aggregate = {
+      commentCount: comments.length,
+      sentiment: { positive: 0, neutral: 0, negative: 0 },
+      sentiment4: { positive: 0, negative: 0, neutral: 0, toxic: 0 },
+      intent: { praise: 0, complain: 0, question: 0, other: 0 },
+      aspects: {} as Record<string, number>,
+      avgQualityScore: 0,
+      avgToxicityScore: 0,
+      toxicCount: 0,
+    };
+
+    let totalQuality = 0;
+    let totalToxicity = 0;
+
+    for (const c of comments) {
+      if (c.sentiment)
+        aggregate.sentiment[c.sentiment as keyof typeof aggregate.sentiment] =
+          (aggregate.sentiment[c.sentiment as keyof typeof aggregate.sentiment] || 0) + 1;
+
+      if (c.sentiment4)
+        aggregate.sentiment4[c.sentiment4 as keyof typeof aggregate.sentiment4] =
+          (aggregate.sentiment4[c.sentiment4 as keyof typeof aggregate.sentiment4] || 0) + 1;
+
+      if (c.intent)
+        aggregate.intent[c.intent as keyof typeof aggregate.intent] =
+          (aggregate.intent[c.intent as keyof typeof aggregate.intent] || 0) + 1;
+
+      if (Array.isArray(c.aspects))
+        for (const a of c.aspects as string[])
+          aggregate.aspects[a] = (aggregate.aspects[a] || 0) + 1;
+
+      totalQuality += typeof c.qualityScore === 'number' ? c.qualityScore : 0;
+      const toxScore = (c.toxicity as any)?.score ?? 0;
+      totalToxicity += toxScore;
+      if ((c.toxicity as any)?.isToxic) aggregate.toxicCount++;
+    }
+
+    const n = comments.length;
+    aggregate.avgQualityScore = totalQuality / n;
+    aggregate.avgToxicityScore = totalToxicity / n;
+
+    // ── 5. Call Gemini only when necessary ───────────────────────────────────
+    // Re-use cached summary if aggregate is identical and only a few comments differ
+    const needsNewSummary =
+      !cached?.summary ||
+      !cacheStillValid;
+
+    let summary: string | null = cached?.summary ?? null;
+
+    if (needsNewSummary && geminiApiKey) {
+      const pct = (v: number) => Math.round((v / n) * 100);
+      const dominantSentiment = Object.entries(aggregate.sentiment4).sort((a, b) => b[1] - a[1])[0][0];
+      const dominantIntent = Object.entries(aggregate.intent).sort((a, b) => b[1] - a[1])[0][0];
+      const topAspects = Object.entries(aggregate.aspects).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+      const sampleTexts = comments
+        .filter((c) => ((c as any).qualityScore ?? 0) > -0.3)
+        .sort((a, b) => ((b as any).qualityScore ?? 0) - ((a as any).qualityScore ?? 0))
+        .slice(0, 5)
+        .map((c) => String((c as any).content ?? '').slice(0, 120))
+        .filter(Boolean);
+
+      try {
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
+
+        const prompt =
+          `Bạn là AI phân tích cộng đồng esport Việt Nam. Dưới đây là thống kê từ ${n} bình luận trong một bài viết:\n` +
+          `- Cảm xúc chủ đạo: ${dominantSentiment} (tích cực: ${pct(aggregate.sentiment4.positive)}%, tiêu cực: ${pct(aggregate.sentiment4.negative)}%, độc hại: ${pct(aggregate.sentiment4.toxic)}%)\n` +
+          `- Chủ đề bình luận chính: ${dominantIntent} (khen ngợi: ${pct(aggregate.intent.praise)}%, phàn nàn: ${pct(aggregate.intent.complain)}%, hỏi đáp: ${pct(aggregate.intent.question)}%)\n` +
+          `- Khía cạnh được thảo luận nhiều: ${topAspects.join(', ') || 'chung'}\n` +
+          `- Điểm chất lượng trung bình: ${aggregate.avgQualityScore.toFixed(2)} (thang -1 đến +1)\n` +
+          `- Bình luận độc hại bị lọc: ${aggregate.toxicCount} / ${n}\n` +
+          `Một vài bình luận tiêu biểu: ${sampleTexts.map((t) => `"${t}"`).join('; ')}\n\n` +
+          `Hãy viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt, thân thiện và trung lập, tóm tắt không khí bình luận để giúp người đọc hiểu bức tranh chung trước khi viết bình luận. KHÔNG liệt kê số liệu khô khan, hãy dùng ngôn ngữ tự nhiên. KHÔNG dùng markdown.`;
+
+        const result = await model.generateContent(prompt);
+        summary = result.response.text().trim();
+        this.logger.log(`[Digest] Gemini generated summary for postId=${postId}`);
+      } catch (e: any) {
+        this.logger.warn(`[Digest] Gemini error for postId=${postId}: ${String(e?.message ?? e)}`);
+        summary = cached?.summary ?? null;
+      }
+    }
+
+    // ── 6. Persist to MongoDB (upsert) ────────────────────────────────────────
+    await this.digestModel
+      .findOneAndUpdate(
+        { postId },
+        {
+          $set: {
+            summary,
+            aggregate,
+            commentCount: n,
+            lastCommentAt: newestAt,
+            generatedAt: needsNewSummary && summary ? new Date() : cached?.generatedAt,
+          },
+        },
+        { upsert: true, new: true },
+      )
+      .exec();
+
+    return { summary, aggregate, commentCount: n, cached: false };
   }
 }
 
