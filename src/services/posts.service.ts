@@ -626,8 +626,8 @@ export class PostsService {
             `- Điểm chất lượng trung bình: ${aggregate.avgQualityScore.toFixed(2)} (thang -1 đến +1)\n` +
             `- Bình luận độc hại bị lọc: ${aggregate.toxicCount} / ${n}\n` +
             `Một vài bình luận tiêu biểu của game thủ: ${sampleTexts.map((t) => `"${t}"`).join('; ')}\n\n` +
-            `Yêu cầu: Hãy đóng vai một nhà báo Esports, viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt tóm tắt nhanh bức tranh dư luận và bầu không khí tranh luận của cộng đồng. ` +
-            `Văn phong phải đậm chất báo chí thể thao điện tử (sử dụng linh hoạt các thuật ngữ như meta, tuyển thủ, combat, phong độ, chiến thuật, lineup, cộng đồng fan, chảo lửa dư luận, v.v. khi phù hợp), lôi cuốn và sắc sảo, liên quan trực tiếp đến bối cảnh bài viết được cung cấp ở trên. KHÔNG liệt kê số liệu khô khan, KHÔNG dùng markdown.`;
+            `Yêu cầu: Hãy đóng vai một nhà báo Esports, viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt tóm tắt nhanh bức tranh dư luận và bầu không khí tranh luận của cộng đồng game thủ. Trọng tâm chính phải đặt ở phản ứng, góc nhìn và ý kiến của cộng đồng (dựa trên DỮ LIỆU BÌNH LUẬN), chỉ sử dụng thông tin bài viết ở trên làm bối cảnh nền chứ TUYỆT ĐỐI KHÔNG tóm tắt nội dung bài viết. ` +
+            `Văn phong phải đậm chất báo chí thể thao điện tử (sử dụng linh hoạt các thuật ngữ như meta, tuyển thủ, combat, phong độ, chiến thuật, lineup, cộng đồng fan, chảo lửa dư luận, v.v. khi phù hợp), lôi cuốn và sắc sảo. KHÔNG liệt kê số liệu khô khan, KHÔNG dùng markdown.`;
 
           this.logger.log(`[Digest] Calling Gemini API (gemini-3.1-flash-lite) for postId=${postId}`);
           const result = await model.generateContent(prompt);
