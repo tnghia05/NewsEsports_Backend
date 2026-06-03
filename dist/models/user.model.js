@@ -24,6 +24,8 @@ let User = class User {
     banReason;
     toxicStrikeCount;
     lastWarnedAt;
+    createdAt;
+    updatedAt;
 };
 exports.User = User;
 __decorate([

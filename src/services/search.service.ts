@@ -84,7 +84,13 @@ export class SearchService {
     const skip = (page - 1) * limit;
 
     const q = query.q.trim();
-    const filter: any = { $text: { $search: q } };
+    const rx = new RegExp(escapeRegex(q), 'i');
+    const filter: any = {
+      $or: [
+        { displayName: { $regex: rx } },
+        { email: { $regex: rx } },
+      ],
+    };
     const items = await this.userModel
       .find(filter)
       .select({ displayName: 1, avatarUrl: 1 })

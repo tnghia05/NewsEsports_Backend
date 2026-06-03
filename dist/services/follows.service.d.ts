@@ -40,4 +40,8 @@ export declare class FollowsService {
         total: number;
         hasMore: boolean;
     }>;
+    getFollowStats(userId: string): Promise<{
+        followersCount: number;
+        followingCount: number;
+    }>;
 }

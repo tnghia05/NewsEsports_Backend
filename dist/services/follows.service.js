@@ -137,6 +137,13 @@ let FollowsService = class FollowsService {
             hasMore: skip + rows.length < total,
         };
     }
+    async getFollowStats(userId) {
+        const [followersCount, followingCount] = await Promise.all([
+            this.followModel.countDocuments({ followeeId: userId }).exec(),
+            this.followModel.countDocuments({ followerId: userId }).exec(),
+        ]);
+        return { followersCount, followingCount };
+    }
 };
 exports.FollowsService = FollowsService;
 exports.FollowsService = FollowsService = __decorate([

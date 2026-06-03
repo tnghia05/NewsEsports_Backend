@@ -19,17 +19,45 @@ const optional_jwt_auth_guard_1 = require("../guards/optional-jwt-auth.guard");
 const user_decorator_1 = require("../decorators/user.decorator");
 const follows_service_1 = require("../services/follows.service");
 const posts_service_1 = require("../services/posts.service");
+const users_service_1 = require("../services/users.service");
 const query_user_posts_dto_1 = require("../dto/users/query-user-posts.dto");
 const query_follow_dto_1 = require("../dto/users/query-follow.dto");
 let UsersController = class UsersController {
     followsService;
     postsService;
-    constructor(followsService, postsService) {
+    usersService;
+    constructor(followsService, postsService, usersService) {
         this.followsService = followsService;
         this.postsService = postsService;
+        this.usersService = usersService;
     }
     toggleFollow(user, followeeId) {
         return this.followsService.toggleFollow(user.id, followeeId);
+    }
+    async getUserProfile(viewer, userId) {
+        const userDoc = await this.usersService.findById(userId);
+        if (!userDoc) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const [stats, followStats] = await Promise.all([
+            this.postsService.getUserStats(userId),
+            this.followsService.getFollowStats(userId),
+        ]);
+        const isFollowing = viewer
+            ? await this.followsService.isFollowing(viewer.id, userId)
+            : false;
+        return {
+            id: String(userDoc._id),
+            displayName: userDoc.displayName,
+            avatarUrl: userDoc.avatarUrl ?? undefined,
+            role: userDoc.role,
+            points: userDoc.points,
+            createdAt: userDoc.createdAt,
+            postCount: stats.postCount ?? 0,
+            followersCount: followStats.followersCount,
+            followingCount: followStats.followingCount,
+            isFollowing,
+        };
     }
     async listUserPosts(viewer, userId, query) {
         const data = await this.postsService.listByUser(viewer, userId, query);
@@ -55,6 +83,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "toggleFollow", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(optional_jwt_auth_guard_1.OptionalJwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getUserProfile", null);
 __decorate([
     (0, common_1.Get)(':id/posts'),
     (0, common_1.UseGuards)(optional_jwt_auth_guard_1.OptionalJwtAuthGuard),
@@ -84,6 +121,7 @@ __decorate([
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [follows_service_1.FollowsService,
-        posts_service_1.PostsService])
+        posts_service_1.PostsService,
+        users_service_1.UsersService])
 ], UsersController);
 //# sourceMappingURL=users.controller.js.map

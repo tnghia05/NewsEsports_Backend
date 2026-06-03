@@ -15,6 +15,7 @@ export declare class PointsController {
     constructor(pointsService: PointsService, predictionsService: PredictionsService, productModel: Model<ProductDocument>, userModel: Model<UserDocument>);
     getLeaderboard(limit?: string): Promise<{
         rank: number;
+        id: string;
         displayName: string;
         avatarUrl: string | undefined;
         points: number;

@@ -57,6 +57,9 @@ export class User {
   /** Latest warning sent timestamp — avoid spam */
   @Prop({ type: Date, default: null })
   lastWarnedAt?: Date | null;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

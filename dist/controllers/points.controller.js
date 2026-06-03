@@ -44,11 +44,12 @@ let PointsController = class PointsController {
             .find({ points: { $gt: 0 } })
             .sort({ points: -1 })
             .limit(lim)
-            .select('displayName avatarUrl points')
+            .select('_id displayName avatarUrl points')
             .lean()
             .exec();
         return users.map((u, i) => ({
             rank: i + 1,
+            id: String(u._id),
             displayName: u.displayName,
             avatarUrl: u.avatarUrl,
             points: u.points,
