@@ -479,9 +479,9 @@ export class PostsService {
   }
 
   async getCommentDigest(postId: string, geminiApiKey?: string | null, force?: boolean) {
-    // ── 1. Get newest approved comment timestamp ──────────────────────────────
+    // ── 1. Get newest comment timestamp (approved or rejected) ────────────────
     const newestComment = await this.commentModel
-      .findOne({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
+      .findOne({ postId, isDeleted: { $ne: true }, moderationStatus: { $in: ['approved', 'rejected'] } })
       .select({ createdAt: 1 })
       .sort({ createdAt: -1 })
       .lean()
@@ -490,7 +490,7 @@ export class PostsService {
     const currentCount = await this.commentModel.countDocuments({
       postId,
       isDeleted: { $ne: true },
-      moderationStatus: 'approved',
+      moderationStatus: { $in: ['approved', 'rejected'] },
     });
 
     if (currentCount === 0) {
@@ -524,11 +524,11 @@ export class PostsService {
 
     this.logger.log(`[Digest] cache MISS postId=${postId} count=${currentCount} — rebuilding`);
 
-    // ── 3. Fetch post and all approved comments in parallel ───────────────────
+    // ── 3. Fetch post and all approved & rejected comments in parallel ────────
     const [post, comments] = await Promise.all([
       this.requirePost(postId),
       this.commentModel
-        .find({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
+        .find({ postId, isDeleted: { $ne: true }, moderationStatus: { $in: ['approved', 'rejected'] } })
         .select({
           content: 1,
           sentiment: 1,

@@ -373,7 +373,7 @@ let PostsService = PostsService_1 = class PostsService {
     }
     async getCommentDigest(postId, geminiApiKey, force) {
         const newestComment = await this.commentModel
-            .findOne({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
+            .findOne({ postId, isDeleted: { $ne: true }, moderationStatus: { $in: ['approved', 'rejected'] } })
             .select({ createdAt: 1 })
             .sort({ createdAt: -1 })
             .lean()
@@ -381,7 +381,7 @@ let PostsService = PostsService_1 = class PostsService {
         const currentCount = await this.commentModel.countDocuments({
             postId,
             isDeleted: { $ne: true },
-            moderationStatus: 'approved',
+            moderationStatus: { $in: ['approved', 'rejected'] },
         });
         if (currentCount === 0) {
             return { summary: null, aggregate: null, commentCount: 0, cached: false };
@@ -409,7 +409,7 @@ let PostsService = PostsService_1 = class PostsService {
         const [post, comments] = await Promise.all([
             this.requirePost(postId),
             this.commentModel
-                .find({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
+                .find({ postId, isDeleted: { $ne: true }, moderationStatus: { $in: ['approved', 'rejected'] } })
                 .select({
                 content: 1,
                 sentiment: 1,
