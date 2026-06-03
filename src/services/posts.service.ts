@@ -523,23 +523,26 @@ export class PostsService {
 
     this.logger.log(`[Digest] cache MISS postId=${postId} count=${currentCount} — rebuilding`);
 
-    // ── 3. Fetch all approved comments with AI scores ─────────────────────────
-    const comments = await this.commentModel
-      .find({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
-      .select({
-        content: 1,
-        sentiment: 1,
-        sentiment4: 1,
-        intent: 1,
-        aspects: 1,
-        qualityScore: 1,
-        toxicity: 1,
-        createdAt: 1,
-      })
-      .sort({ createdAt: 1 })
-      .limit(200)
-      .lean()
-      .exec();
+    // ── 3. Fetch post and all approved comments in parallel ───────────────────
+    const [post, comments] = await Promise.all([
+      this.requirePost(postId),
+      this.commentModel
+        .find({ postId, isDeleted: { $ne: true }, moderationStatus: 'approved' })
+        .select({
+          content: 1,
+          sentiment: 1,
+          sentiment4: 1,
+          intent: 1,
+          aspects: 1,
+          qualityScore: 1,
+          toxicity: 1,
+          createdAt: 1,
+        })
+        .sort({ createdAt: 1 })
+        .limit(200)
+        .lean()
+        .exec(),
+    ]);
 
     // ── 4. Aggregate scores ───────────────────────────────────────────────────
     const aggregate = {
@@ -612,7 +615,11 @@ export class PostsService {
           const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
 
           const prompt =
-            `Bạn là một nhà báo/phóng viên Esports sắc sảo và am hiểu cộng đồng từ một trang tin thể thao điện tử hàng đầu Việt Nam. Dưới đây là dữ liệu thống kê từ ${n} bình luận của cộng đồng game thủ dưới bài viết:\n` +
+            `Bạn là một nhà báo/phóng viên Esports sắc sảo và am hiểu cộng đồng từ một trang tin thể thao điện tử hàng đầu Việt Nam. Dưới đây là thông tin bài viết cùng dữ liệu thống kê từ ${n} bình luận của cộng đồng game thủ:\n\n` +
+            `THÔNG TIN BÀI VIẾT:\n` +
+            `- Tiêu đề: ${post.title}\n` +
+            `- Nội dung bài viết (trích đoạn): ${post.content.slice(0, 500)}...\n\n` +
+            `DỮ LIỆU BÌNH LUẬN:\n` +
             `- Cảm xúc chủ đạo: ${dominantSentiment} (tích cực: ${pct(aggregate.sentiment4.positive)}%, tiêu cực: ${pct(aggregate.sentiment4.negative)}%, độc hại: ${pct(aggregate.sentiment4.toxic)}%)\n` +
             `- Chủ đề bình luận chính: ${dominantIntent} (khen ngợi: ${pct(aggregate.intent.praise)}%, phàn nàn: ${pct(aggregate.intent.complain)}%, hỏi đáp: ${pct(aggregate.intent.question)}%)\n` +
             `- Khía cạnh được thảo luận nhiều: ${topAspects.join(', ') || 'chung'}\n` +
@@ -620,7 +627,7 @@ export class PostsService {
             `- Bình luận độc hại bị lọc: ${aggregate.toxicCount} / ${n}\n` +
             `Một vài bình luận tiêu biểu của game thủ: ${sampleTexts.map((t) => `"${t}"`).join('; ')}\n\n` +
             `Yêu cầu: Hãy đóng vai một nhà báo Esports, viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt tóm tắt nhanh bức tranh dư luận và bầu không khí tranh luận của cộng đồng. ` +
-            `Văn phong phải đậm chất báo chí thể thao điện tử (sử dụng linh hoạt các thuật ngữ như meta, tuyển thủ, combat, phong độ, chiến thuật, lineup, cộng đồng fan, chảo lửa dư luận, v.v. khi phù hợp), lôi cuốn và sắc sảo, giúp người đọc nắm bắt ngay luồng ý kiến chính trước khi tham gia thảo luận. KHÔNG liệt kê số liệu khô khan, KHÔNG dùng markdown.`;
+            `Văn phong phải đậm chất báo chí thể thao điện tử (sử dụng linh hoạt các thuật ngữ như meta, tuyển thủ, combat, phong độ, chiến thuật, lineup, cộng đồng fan, chảo lửa dư luận, v.v. khi phù hợp), lôi cuốn và sắc sảo, liên quan trực tiếp đến bối cảnh bài viết được cung cấp ở trên. KHÔNG liệt kê số liệu khô khan, KHÔNG dùng markdown.`;
 
           this.logger.log(`[Digest] Calling Gemini API (gemini-3.1-flash-lite) for postId=${postId}`);
           const result = await model.generateContent(prompt);
