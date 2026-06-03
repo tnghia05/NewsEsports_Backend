@@ -591,39 +591,44 @@ export class PostsService {
 
     let summary: string | null = cached?.summary ?? null;
 
-    if (needsNewSummary && geminiApiKey) {
-      const pct = (v: number) => Math.round((v / n) * 100);
-      const dominantSentiment = Object.entries(aggregate.sentiment4).sort((a, b) => b[1] - a[1])[0][0];
-      const dominantIntent = Object.entries(aggregate.intent).sort((a, b) => b[1] - a[1])[0][0];
-      const topAspects = Object.entries(aggregate.aspects).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
-      const sampleTexts = comments
-        .filter((c) => ((c as any).qualityScore ?? 0) > -0.3)
-        .sort((a, b) => ((b as any).qualityScore ?? 0) - ((a as any).qualityScore ?? 0))
-        .slice(0, 5)
-        .map((c) => String((c as any).content ?? '').slice(0, 120))
-        .filter(Boolean);
+    if (needsNewSummary) {
+      if (!geminiApiKey) {
+        this.logger.warn(`[Digest] GEMINI_API_KEY is missing! Skipping Gemini generation for postId=${postId}.`);
+      } else {
+        const pct = (v: number) => Math.round((v / n) * 100);
+        const dominantSentiment = Object.entries(aggregate.sentiment4).sort((a, b) => b[1] - a[1])[0][0];
+        const dominantIntent = Object.entries(aggregate.intent).sort((a, b) => b[1] - a[1])[0][0];
+        const topAspects = Object.entries(aggregate.aspects).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+        const sampleTexts = comments
+          .filter((c) => ((c as any).qualityScore ?? 0) > -0.3)
+          .sort((a, b) => ((b as any).qualityScore ?? 0) - ((a as any).qualityScore ?? 0))
+          .slice(0, 5)
+          .map((c) => String((c as any).content ?? '').slice(0, 120))
+          .filter(Boolean);
 
-      try {
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
+        try {
+          const { GoogleGenerativeAI } = await import('@google/generative-ai');
+          const genAI = new GoogleGenerativeAI(geminiApiKey);
+          const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
 
-        const prompt =
-          `Bạn là AI phân tích cộng đồng esport Việt Nam. Dưới đây là thống kê từ ${n} bình luận trong một bài viết:\n` +
-          `- Cảm xúc chủ đạo: ${dominantSentiment} (tích cực: ${pct(aggregate.sentiment4.positive)}%, tiêu cực: ${pct(aggregate.sentiment4.negative)}%, độc hại: ${pct(aggregate.sentiment4.toxic)}%)\n` +
-          `- Chủ đề bình luận chính: ${dominantIntent} (khen ngợi: ${pct(aggregate.intent.praise)}%, phàn nàn: ${pct(aggregate.intent.complain)}%, hỏi đáp: ${pct(aggregate.intent.question)}%)\n` +
-          `- Khía cạnh được thảo luận nhiều: ${topAspects.join(', ') || 'chung'}\n` +
-          `- Điểm chất lượng trung bình: ${aggregate.avgQualityScore.toFixed(2)} (thang -1 đến +1)\n` +
-          `- Bình luận độc hại bị lọc: ${aggregate.toxicCount} / ${n}\n` +
-          `Một vài bình luận tiêu biểu: ${sampleTexts.map((t) => `"${t}"`).join('; ')}\n\n` +
-          `Hãy viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt, thân thiện và trung lập, tóm tắt không khí bình luận để giúp người đọc hiểu bức tranh chung trước khi viết bình luận. KHÔNG liệt kê số liệu khô khan, hãy dùng ngôn ngữ tự nhiên. KHÔNG dùng markdown.`;
+          const prompt =
+            `Bạn là AI phân tích cộng đồng esport Việt Nam. Dưới đây là thống kê từ ${n} bình luận trong một bài viết:\n` +
+            `- Cảm xúc chủ đạo: ${dominantSentiment} (tích cực: ${pct(aggregate.sentiment4.positive)}%, tiêu cực: ${pct(aggregate.sentiment4.negative)}%, độc hại: ${pct(aggregate.sentiment4.toxic)}%)\n` +
+            `- Chủ đề bình luận chính: ${dominantIntent} (khen ngợi: ${pct(aggregate.intent.praise)}%, phàn nàn: ${pct(aggregate.intent.complain)}%, hỏi đáp: ${pct(aggregate.intent.question)}%)\n` +
+            `- Khía cạnh được thảo luận nhiều: ${topAspects.join(', ') || 'chung'}\n` +
+            `- Điểm chất lượng trung bình: ${aggregate.avgQualityScore.toFixed(2)} (thang -1 đến +1)\n` +
+            `- Bình luận độc hại bị lọc: ${aggregate.toxicCount} / ${n}\n` +
+            `Một vài bình luận tiêu biểu: ${sampleTexts.map((t) => `"${t}"`).join('; ')}\n\n` +
+            `Hãy viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt, thân thiện và trung lập, tóm tắt không khí bình luận để giúp người đọc hiểu bức tranh chung trước khi viết bình luận. KHÔNG liệt kê số liệu khô khan, hãy dùng ngôn ngữ tự nhiên. KHÔNG dùng markdown.`;
 
-        const result = await model.generateContent(prompt);
-        summary = result.response.text().trim();
-        this.logger.log(`[Digest] Gemini generated summary for postId=${postId}`);
-      } catch (e: any) {
-        this.logger.warn(`[Digest] Gemini error for postId=${postId}: ${String(e?.message ?? e)}`);
-        summary = cached?.summary ?? null;
+          this.logger.log(`[Digest] Calling Gemini API (gemini-3.1-flash-lite) for postId=${postId}`);
+          const result = await model.generateContent(prompt);
+          summary = result.response.text().trim();
+          this.logger.log(`[Digest] Gemini generated summary successfully: "${summary}"`);
+        } catch (e: any) {
+          this.logger.error(`[Digest] Gemini API call failed for postId=${postId}: ${String(e?.message ?? e)}`, e?.stack);
+          summary = cached?.summary ?? null;
+        }
       }
     }
 
