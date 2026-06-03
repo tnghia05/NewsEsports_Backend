@@ -50,7 +50,7 @@ export class PostsService {
     private readonly digestModel: Model<PostCommentDigestDocument>,
     private readonly followsService: FollowsService,
     private readonly pointsService: PointsService,
-  ) {}
+  ) { }
 
   private async attachAuthors<T extends any>(items: T[]) {
     const authorIds = Array.from(
@@ -96,7 +96,7 @@ export class PostsService {
     if (dto.status === 'published') {
       this.pointsService
         .addPoints(author.id, 20, 'post_publish', { postId: String(post._id) })
-        .catch(() => {});
+        .catch(() => { });
     }
     return post;
   }
@@ -148,12 +148,12 @@ export class PostsService {
     const refreshed = isAuthor
       ? post
       : ((await this.postModel
-          .findByIdAndUpdate(
-            post._id,
-            { $inc: { viewCount: 1 } },
-            { returnDocument: 'after' },
-          )
-          .exec()) ?? post);
+        .findByIdAndUpdate(
+          post._id,
+          { $inc: { viewCount: 1 } },
+          { returnDocument: 'after' },
+        )
+        .exec()) ?? post);
 
     if (!author) {
       const [withAuthor] = await this.attachAuthors([refreshed as any]);
@@ -538,6 +538,7 @@ export class PostsService {
           qualityScore: 1,
           toxicity: 1,
           createdAt: 1,
+          moderationStatus: 1,
         })
         .sort({ createdAt: 1 })
         .limit(200)
@@ -561,13 +562,19 @@ export class PostsService {
     let totalToxicity = 0;
 
     for (const c of comments) {
+      const isToxicComment = c.moderationStatus === 'rejected' || (c.toxicity as any)?.isToxic;
+      let s4 = c.sentiment4;
+      if (isToxicComment) {
+        s4 = 'toxic';
+      }
+
       if (c.sentiment)
         aggregate.sentiment[c.sentiment as keyof typeof aggregate.sentiment] =
           (aggregate.sentiment[c.sentiment as keyof typeof aggregate.sentiment] || 0) + 1;
 
-      if (c.sentiment4)
-        aggregate.sentiment4[c.sentiment4 as keyof typeof aggregate.sentiment4] =
-          (aggregate.sentiment4[c.sentiment4 as keyof typeof aggregate.sentiment4] || 0) + 1;
+      if (s4)
+        aggregate.sentiment4[s4 as keyof typeof aggregate.sentiment4] =
+          (aggregate.sentiment4[s4 as keyof typeof aggregate.sentiment4] || 0) + 1;
 
       if (c.intent)
         aggregate.intent[c.intent as keyof typeof aggregate.intent] =

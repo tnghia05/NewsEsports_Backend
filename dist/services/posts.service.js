@@ -419,6 +419,7 @@ let PostsService = PostsService_1 = class PostsService {
                 qualityScore: 1,
                 toxicity: 1,
                 createdAt: 1,
+                moderationStatus: 1,
             })
                 .sort({ createdAt: 1 })
                 .limit(200)
@@ -438,12 +439,17 @@ let PostsService = PostsService_1 = class PostsService {
         let totalQuality = 0;
         let totalToxicity = 0;
         for (const c of comments) {
+            const isToxicComment = c.moderationStatus === 'rejected' || c.toxicity?.isToxic;
+            let s4 = c.sentiment4;
+            if (isToxicComment) {
+                s4 = 'toxic';
+            }
             if (c.sentiment)
                 aggregate.sentiment[c.sentiment] =
                     (aggregate.sentiment[c.sentiment] || 0) + 1;
-            if (c.sentiment4)
-                aggregate.sentiment4[c.sentiment4] =
-                    (aggregate.sentiment4[c.sentiment4] || 0) + 1;
+            if (s4)
+                aggregate.sentiment4[s4] =
+                    (aggregate.sentiment4[s4] || 0) + 1;
             if (c.intent)
                 aggregate.intent[c.intent] =
                     (aggregate.intent[c.intent] || 0) + 1;
