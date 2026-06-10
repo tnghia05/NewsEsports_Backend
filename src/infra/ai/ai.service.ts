@@ -413,9 +413,7 @@ function parseConfidence(data: any): number | undefined {
   return clamp01(Math.max(...vals));
 }
 
-function parseEntities(
-  data: any,
-): { text: string; type: string }[] {
+function parseEntities(data: any): { text: string; type: string }[] {
   const raw = data?.entities;
   if (!Array.isArray(raw)) return [];
   const out: { text: string; type: string }[] = [];

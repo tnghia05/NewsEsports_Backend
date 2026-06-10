@@ -51,4 +51,3 @@ export class CreateProductVariantDto {
   @IsString()
   status?: 'active' | 'inactive';
 }
-

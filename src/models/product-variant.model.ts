@@ -18,7 +18,12 @@ export class VariantOption {
 
 @Schema({ timestamps: true })
 export class ProductVariant {
-  @Prop({ type: Types.ObjectId, ref: ProductModelName, required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: ProductModelName,
+    required: true,
+    index: true,
+  })
   productId!: Types.ObjectId;
 
   @Prop({ type: String, required: true, trim: true })
@@ -48,8 +53,8 @@ export class ProductVariant {
   status!: ProductVariantStatus;
 }
 
-export const ProductVariantSchema = SchemaFactory.createForClass(ProductVariant);
+export const ProductVariantSchema =
+  SchemaFactory.createForClass(ProductVariant);
 
 ProductVariantSchema.index({ productId: 1, status: 1, createdAt: -1 });
 ProductVariantSchema.index({ productId: 1, skuCode: 1 });
-

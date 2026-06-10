@@ -187,8 +187,12 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
     const curLen = (currentContent ?? '').trim().length;
     if (curLen >= 2000) return;
 
-    const timeoutMs = Number(this.config.get('RSS_SCRAPE_TIMEOUT_MS') ?? 12_000);
-    const maxBytes = Number(this.config.get('RSS_SCRAPE_MAX_BYTES') ?? 1_500_000);
+    const timeoutMs = Number(
+      this.config.get('RSS_SCRAPE_TIMEOUT_MS') ?? 12_000,
+    );
+    const maxBytes = Number(
+      this.config.get('RSS_SCRAPE_MAX_BYTES') ?? 1_500_000,
+    );
 
     const started = Date.now();
     const ctrl = new AbortController();
@@ -224,7 +228,9 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
 
     const excerpt =
       (article.excerpt ?? '').trim() ||
-      (extractedText.length > 260 ? `${extractedText.slice(0, 260).trim()}…` : extractedText);
+      (extractedText.length > 260
+        ? `${extractedText.slice(0, 260).trim()}…`
+        : extractedText);
 
     const ogImage =
       dom.window.document
@@ -233,10 +239,8 @@ export class NewsImportWorkerService implements OnModuleInit, OnModuleDestroy {
         ?.trim() || undefined;
 
     const firstImg =
-      dom.window.document
-        .querySelector('img')
-        ?.getAttribute('src')
-        ?.trim() || undefined;
+      dom.window.document.querySelector('img')?.getAttribute('src')?.trim() ||
+      undefined;
 
     const coverImageUrl = ogImage ?? firstImg;
 

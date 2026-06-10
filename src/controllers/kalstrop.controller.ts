@@ -15,7 +15,9 @@ export class KalstropController {
     @Query('region') region?: string,
   ) {
     const s = ALLOWED_SPORTS.includes(sport) ? sport : 'lol';
-    const t = ALLOWED_TYPES.includes(type) ? (type as 'live' | 'upcoming' | 'popular') : 'upcoming';
+    const t = ALLOWED_TYPES.includes(type)
+      ? (type as 'live' | 'upcoming' | 'popular')
+      : 'upcoming';
     return this.kalstrop.getFixtures(s, t, region?.toLowerCase().trim());
   }
 
@@ -29,7 +31,9 @@ export class KalstropController {
       dota2: 'dota-2',
       valorant: 'valorant',
     };
-    return this.kalstrop.getCompetitions(slugMap[sport] ?? `${sport}-international`);
+    return this.kalstrop.getCompetitions(
+      slugMap[sport] ?? `${sport}-international`,
+    );
   }
 
   @Get('competition/:slug/fixtures')
@@ -38,10 +42,7 @@ export class KalstropController {
   }
 
   @Get('fixture/:id/details')
-  getFixtureDetails(
-    @Param('id') id: string,
-    @Query('group') group?: string,
-  ) {
+  getFixtureDetails(@Param('id') id: string, @Query('group') group?: string) {
     return this.kalstrop.getFixtureDetails(id, group);
   }
 
@@ -52,6 +53,11 @@ export class KalstropController {
     @Query('tournament') tournament: string,
     @Query('fixture') fixture: string,
   ) {
-    return this.kalstrop.getFixtureSsrGroups(sport, category, tournament, fixture);
+    return this.kalstrop.getFixtureSsrGroups(
+      sport,
+      category,
+      tournament,
+      fixture,
+    );
   }
 }

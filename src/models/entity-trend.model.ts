@@ -13,7 +13,11 @@ export class EntityTrend {
   @Prop({ type: String, required: true, index: true })
   entity!: string;
 
-  @Prop({ type: String, required: true, enum: ['PLAYER', 'TEAM', 'TOURNAMENT'] })
+  @Prop({
+    type: String,
+    required: true,
+    enum: ['PLAYER', 'TEAM', 'TOURNAMENT'],
+  })
   entityType!: EntityType;
 
   @Prop({
@@ -70,6 +74,9 @@ export class EntityTrend {
 export const EntityTrendSchema = SchemaFactory.createForClass(EntityTrend);
 
 // Unique per (entity, type, window) — one doc per slot
-EntityTrendSchema.index({ entity: 1, entityType: 1, window: 1 }, { unique: true });
+EntityTrendSchema.index(
+  { entity: 1, entityType: 1, window: 1 },
+  { unique: true },
+);
 EntityTrendSchema.index({ window: 1, mentionCount: -1 });
 EntityTrendSchema.index({ window: 1, entityType: 1, mentionCount: -1 });

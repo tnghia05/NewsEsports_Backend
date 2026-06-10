@@ -50,7 +50,7 @@ export class PostsService {
     private readonly digestModel: Model<PostCommentDigestDocument>,
     private readonly followsService: FollowsService,
     private readonly pointsService: PointsService,
-  ) { }
+  ) {}
 
   private async attachAuthors<T extends any>(items: T[]) {
     const authorIds = Array.from(
@@ -67,7 +67,11 @@ export class PostsService {
     const byId = new Map(
       users.map((u: any) => [
         String(u._id),
-        { id: String(u._id), displayName: u.displayName, avatarUrl: u.avatarUrl },
+        {
+          id: String(u._id),
+          displayName: u.displayName,
+          avatarUrl: u.avatarUrl,
+        },
       ]),
     );
 
@@ -96,7 +100,7 @@ export class PostsService {
     if (dto.status === 'published') {
       this.pointsService
         .addPoints(author.id, 20, 'post_publish', { postId: String(post._id) })
-        .catch(() => { });
+        .catch(() => {});
     }
     return post;
   }
@@ -148,12 +152,12 @@ export class PostsService {
     const refreshed = isAuthor
       ? post
       : ((await this.postModel
-        .findByIdAndUpdate(
-          post._id,
-          { $inc: { viewCount: 1 } },
-          { returnDocument: 'after' },
-        )
-        .exec()) ?? post);
+          .findByIdAndUpdate(
+            post._id,
+            { $inc: { viewCount: 1 } },
+            { returnDocument: 'after' },
+          )
+          .exec()) ?? post);
 
     if (!author) {
       const [withAuthor] = await this.attachAuthors([refreshed as any]);
@@ -272,7 +276,7 @@ export class PostsService {
         total,
         skip,
       );
-      res.items = await this.attachAuthors(res.items as any[]);
+      res.items = await this.attachAuthors(res.items);
       return res;
     }
 
@@ -314,7 +318,7 @@ export class PostsService {
         total,
         skip,
       );
-      res.items = await this.attachAuthors(res.items as any[]);
+      res.items = await this.attachAuthors(res.items);
       return res;
     }
 
@@ -339,7 +343,7 @@ export class PostsService {
       total,
       skip,
     );
-    res.items = await this.attachAuthors(res.items as any[]);
+    res.items = await this.attachAuthors(res.items);
     return res;
   }
 
@@ -390,7 +394,7 @@ export class PostsService {
       total,
       skip,
     );
-    res.items = await this.attachAuthors(res.items as any[]);
+    res.items = await this.attachAuthors(res.items);
     return res;
   }
 
@@ -453,16 +457,30 @@ export class PostsService {
   }
 
   async getUserStats(userId: string) {
-    const [postCount, commentCount, savedCount, posts, comments] = await Promise.all([
-      this.postModel.countDocuments({ authorId: userId }).exec(),
-      this.commentModel.countDocuments({ authorId: userId, isDeleted: { $ne: true } }).exec(),
-      this.postSaveModel.countDocuments({ userId }).exec(),
-      this.postModel.find({ authorId: userId }).select({ likeCount: 1 }).lean().exec(),
-      this.commentModel.find({ authorId: userId, isDeleted: { $ne: true } }).select({ likeCount: 1 }).lean().exec(),
-    ]);
+    const [postCount, commentCount, savedCount, posts, comments] =
+      await Promise.all([
+        this.postModel.countDocuments({ authorId: userId }).exec(),
+        this.commentModel
+          .countDocuments({ authorId: userId, isDeleted: { $ne: true } })
+          .exec(),
+        this.postSaveModel.countDocuments({ userId }).exec(),
+        this.postModel
+          .find({ authorId: userId })
+          .select({ likeCount: 1 })
+          .lean()
+          .exec(),
+        this.commentModel
+          .find({ authorId: userId, isDeleted: { $ne: true } })
+          .select({ likeCount: 1 })
+          .lean()
+          .exec(),
+      ]);
 
     const postLikes = posts.reduce((sum, p) => sum + (p.likeCount || 0), 0);
-    const commentLikes = comments.reduce((sum, c) => sum + (c.likeCount || 0), 0);
+    const commentLikes = comments.reduce(
+      (sum, c) => sum + (c.likeCount || 0),
+      0,
+    );
 
     return {
       postCount,
@@ -478,10 +496,18 @@ export class PostsService {
     return post;
   }
 
-  async getCommentDigest(postId: string, geminiApiKey?: string | null, force?: boolean) {
+  async getCommentDigest(
+    postId: string,
+    geminiApiKey?: string | null,
+    force?: boolean,
+  ) {
     // ── 1. Get newest comment timestamp (approved or rejected) ────────────────
     const newestComment = await this.commentModel
-      .findOne({ postId, isDeleted: { $ne: true }, moderationStatus: { $in: ['approved', 'rejected'] } })
+      .findOne({
+        postId,
+        isDeleted: { $ne: true },
+        moderationStatus: { $in: ['approved', 'rejected'] },
+      })
       .select({ createdAt: 1 })
       .sort({ createdAt: -1 })
       .lean()
@@ -513,7 +539,9 @@ export class PostsService {
       new Date(cached.lastCommentAt).getTime() >= newestAt.getTime();
 
     if (cacheStillValid) {
-      this.logger.debug(`[Digest] cache HIT postId=${postId} count=${currentCount}`);
+      this.logger.debug(
+        `[Digest] cache HIT postId=${postId} count=${currentCount}`,
+      );
       return {
         summary: cached.summary,
         aggregate: cached.aggregate,
@@ -522,13 +550,19 @@ export class PostsService {
       };
     }
 
-    this.logger.log(`[Digest] cache MISS postId=${postId} count=${currentCount} — rebuilding`);
+    this.logger.log(
+      `[Digest] cache MISS postId=${postId} count=${currentCount} — rebuilding`,
+    );
 
     // ── 3. Fetch post and all approved & rejected comments in parallel ────────
     const [post, comments] = await Promise.all([
       this.requirePost(postId),
       this.commentModel
-        .find({ postId, isDeleted: { $ne: true }, moderationStatus: { $in: ['approved', 'rejected'] } })
+        .find({
+          postId,
+          isDeleted: { $ne: true },
+          moderationStatus: { $in: ['approved', 'rejected'] },
+        })
         .select({
           content: 1,
           sentiment: 1,
@@ -562,26 +596,29 @@ export class PostsService {
     let totalToxicity = 0;
 
     for (const c of comments) {
-      const isToxicComment = c.moderationStatus === 'rejected' || (c.toxicity as any)?.isToxic;
+      const isToxicComment =
+        c.moderationStatus === 'rejected' || (c.toxicity as any)?.isToxic;
       let s4 = c.sentiment4;
       if (isToxicComment) {
         s4 = 'toxic';
       }
 
       if (c.sentiment)
-        aggregate.sentiment[c.sentiment as keyof typeof aggregate.sentiment] =
-          (aggregate.sentiment[c.sentiment as keyof typeof aggregate.sentiment] || 0) + 1;
+        aggregate.sentiment[c.sentiment] =
+          (aggregate.sentiment[c.sentiment] || 0) + 1;
 
       if (s4)
         aggregate.sentiment4[s4 as keyof typeof aggregate.sentiment4] =
-          (aggregate.sentiment4[s4 as keyof typeof aggregate.sentiment4] || 0) + 1;
+          (aggregate.sentiment4[s4 as keyof typeof aggregate.sentiment4] || 0) +
+          1;
 
       if (c.intent)
         aggregate.intent[c.intent as keyof typeof aggregate.intent] =
-          (aggregate.intent[c.intent as keyof typeof aggregate.intent] || 0) + 1;
+          (aggregate.intent[c.intent as keyof typeof aggregate.intent] || 0) +
+          1;
 
       if (Array.isArray(c.aspects))
-        for (const a of c.aspects as string[])
+        for (const a of c.aspects)
           aggregate.aspects[a] = (aggregate.aspects[a] || 0) + 1;
 
       totalQuality += typeof c.qualityScore === 'number' ? c.qualityScore : 0;
@@ -596,23 +633,33 @@ export class PostsService {
 
     // ── 5. Call Gemini only when necessary ───────────────────────────────────
     // Re-use cached summary if aggregate is identical and only a few comments differ
-    const needsNewSummary =
-      !cached?.summary ||
-      !cacheStillValid;
+    const needsNewSummary = !cached?.summary || !cacheStillValid;
 
     let summary: string | null = cached?.summary ?? null;
 
     if (needsNewSummary) {
       if (!geminiApiKey) {
-        this.logger.warn(`[Digest] GEMINI_API_KEY is missing! Skipping Gemini generation for postId=${postId}.`);
+        this.logger.warn(
+          `[Digest] GEMINI_API_KEY is missing! Skipping Gemini generation for postId=${postId}.`,
+        );
       } else {
         const pct = (v: number) => Math.round((v / n) * 100);
-        const dominantSentiment = Object.entries(aggregate.sentiment4).sort((a, b) => b[1] - a[1])[0][0];
-        const dominantIntent = Object.entries(aggregate.intent).sort((a, b) => b[1] - a[1])[0][0];
-        const topAspects = Object.entries(aggregate.aspects).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+        const dominantSentiment = Object.entries(aggregate.sentiment4).sort(
+          (a, b) => b[1] - a[1],
+        )[0][0];
+        const dominantIntent = Object.entries(aggregate.intent).sort(
+          (a, b) => b[1] - a[1],
+        )[0][0];
+        const topAspects = Object.entries(aggregate.aspects)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([k]) => k);
         const sampleTexts = comments
           .filter((c) => ((c as any).qualityScore ?? 0) > -0.3)
-          .sort((a, b) => ((b as any).qualityScore ?? 0) - ((a as any).qualityScore ?? 0))
+          .sort(
+            (a, b) =>
+              ((b as any).qualityScore ?? 0) - ((a as any).qualityScore ?? 0),
+          )
           .slice(0, 5)
           .map((c) => String((c as any).content ?? '').slice(0, 120))
           .filter(Boolean);
@@ -620,7 +667,9 @@ export class PostsService {
         try {
           const { GoogleGenerativeAI } = await import('@google/generative-ai');
           const genAI = new GoogleGenerativeAI(geminiApiKey);
-          const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
+          const model = genAI.getGenerativeModel({
+            model: 'gemini-3.1-flash-lite',
+          });
 
           const prompt =
             `Bạn là một nhà báo/phóng viên Esports sắc sảo và am hiểu cộng đồng từ một trang tin thể thao điện tử hàng đầu Việt Nam. Dưới đây là thông tin bài viết cùng dữ liệu thống kê từ ${n} bình luận của cộng đồng game thủ:\n\n` +
@@ -637,12 +686,19 @@ export class PostsService {
             `Yêu cầu: Hãy đóng vai một nhà báo Esports, viết MỘT đoạn văn ngắn (50–90 từ) bằng tiếng Việt tóm tắt nhanh bức tranh dư luận và bầu không khí tranh luận của cộng đồng game thủ. Trọng tâm chính phải đặt ở phản ứng, góc nhìn và ý kiến của cộng đồng (dựa trên DỮ LIỆU BÌNH LUẬN), chỉ sử dụng thông tin bài viết ở trên làm bối cảnh nền chứ TUYỆT ĐỐI KHÔNG tóm tắt nội dung bài viết. ` +
             `Văn phong phải đậm chất báo chí thể thao điện tử (sử dụng linh hoạt các thuật ngữ như meta, tuyển thủ, combat, phong độ, chiến thuật, lineup, cộng đồng fan, chảo lửa dư luận, v.v. khi phù hợp), lôi cuốn và sắc sảo. KHÔNG liệt kê số liệu khô khan, KHÔNG dùng markdown.`;
 
-          this.logger.log(`[Digest] Calling Gemini API (gemini-3.1-flash-lite) for postId=${postId}`);
+          this.logger.log(
+            `[Digest] Calling Gemini API (gemini-3.1-flash-lite) for postId=${postId}`,
+          );
           const result = await model.generateContent(prompt);
           summary = result.response.text().trim();
-          this.logger.log(`[Digest] Gemini generated summary successfully: "${summary}"`);
+          this.logger.log(
+            `[Digest] Gemini generated summary successfully: "${summary}"`,
+          );
         } catch (e: any) {
-          this.logger.error(`[Digest] Gemini API call failed for postId=${postId}: ${String(e?.message ?? e)}`, e?.stack);
+          this.logger.error(
+            `[Digest] Gemini API call failed for postId=${postId}: ${String(e?.message ?? e)}`,
+            e?.stack,
+          );
           summary = cached?.summary ?? null;
         }
       }
@@ -658,7 +714,8 @@ export class PostsService {
             aggregate,
             commentCount: n,
             lastCommentAt: newestAt,
-            generatedAt: needsNewSummary && summary ? new Date() : cached?.generatedAt,
+            generatedAt:
+              needsNewSummary && summary ? new Date() : cached?.generatedAt,
           },
         },
         { upsert: true, new: true },

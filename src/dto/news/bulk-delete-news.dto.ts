@@ -1,4 +1,9 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsMongoId } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsMongoId,
+} from 'class-validator';
 
 export class BulkDeleteNewsDto {
   @IsArray()

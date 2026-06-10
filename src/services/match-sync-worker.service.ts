@@ -86,7 +86,11 @@ export class MatchSyncWorkerService implements OnModuleInit, OnModuleDestroy {
         upserted++;
 
         const newStatus = (m as any).status as MatchStatus;
-        if (prevDoc && prevDoc.status !== 'finished' && newStatus === 'finished') {
+        if (
+          prevDoc &&
+          prevDoc.status !== 'finished' &&
+          newStatus === 'finished'
+        ) {
           void this.autoSettle(String(prevDoc._id), (m as any).teams ?? []);
         }
       }
@@ -102,10 +106,7 @@ export class MatchSyncWorkerService implements OnModuleInit, OnModuleDestroy {
     return { ok: true, upserted, provider: this.provider };
   }
 
-  private async autoSettle(
-    matchId: string,
-    teams: Array<{ score?: number }>,
-  ) {
+  private async autoSettle(matchId: string, teams: Array<{ score?: number }>) {
     const scoreA = teams[0]?.score ?? 0;
     const scoreB = teams[1]?.score ?? 0;
     try {
@@ -203,7 +204,7 @@ function mapPandaScoreMatch(m: PandaScoreMatch): Partial<MatchDocument> {
     endedAt: m.end_at ? new Date(m.end_at) : undefined,
     provider: 'pandascore',
     syncedAt: new Date(),
-  } as any;
+  };
 }
 
 function normalizeGame(slug?: string): string {

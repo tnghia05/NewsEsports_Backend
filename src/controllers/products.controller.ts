@@ -77,7 +77,10 @@ export class ProductsController {
   @Get('admin/:id/variants')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  listVariantsAdmin(@CurrentUser() admin: JwtUser, @Param('id') productId: string) {
+  listVariantsAdmin(
+    @CurrentUser() admin: JwtUser,
+    @Param('id') productId: string,
+  ) {
     return this.productsService.listVariantsAdmin(admin, productId);
   }
 
@@ -106,7 +109,10 @@ export class ProductsController {
   @Delete('admin/variants/:variantId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  removeVariant(@CurrentUser() admin: JwtUser, @Param('variantId') variantId: string) {
+  removeVariant(
+    @CurrentUser() admin: JwtUser,
+    @Param('variantId') variantId: string,
+  ) {
     return this.productsService.removeVariant(admin, variantId);
   }
 }

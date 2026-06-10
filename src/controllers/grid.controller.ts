@@ -13,7 +13,8 @@ export class GridController {
     @Query('withScores') withScores?: string,
   ) {
     const ids = titleIds ? titleIds.split(',') : ['28', '2'];
-    if (withScores === '1') return this.grid.getScheduleWithScores(ids, from, to);
+    if (withScores === '1')
+      return this.grid.getScheduleWithScores(ids, from, to);
     return this.grid.getSchedule(ids, from, to);
   }
 

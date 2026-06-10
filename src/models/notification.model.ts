@@ -10,8 +10,8 @@ export type NotificationType =
   | 'reply'
   | 'follow'
   | 'post_like'
-  | 'toxic_warning'  // AI detected toxic comment — warn user
-  | 'account_ban';   // Admin banned the account
+  | 'toxic_warning' // AI detected toxic comment — warn user
+  | 'account_ban'; // Admin banned the account
 
 @Schema({ timestamps: true })
 export class Notification {

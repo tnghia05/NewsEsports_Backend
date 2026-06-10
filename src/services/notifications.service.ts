@@ -27,8 +27,13 @@ export class NotificationsService {
     message?: string;
   }) {
     // Prevent self-notifications (except system notifications)
-    if (input.actorId && input.actorId === input.userId &&
-        input.type !== 'toxic_warning' && input.type !== 'account_ban') return { ok: true };
+    if (
+      input.actorId &&
+      input.actorId === input.userId &&
+      input.type !== 'toxic_warning' &&
+      input.type !== 'account_ban'
+    )
+      return { ok: true };
     await this.notificationModel.create({
       ...input,
       isRead: false,

@@ -70,7 +70,7 @@ export class ProductsService {
       patch.description = dto.description?.trim();
     if (dto.imageUrls !== undefined)
       patch.imageUrls = dto.imageUrls.map((x) => x.trim()).filter(Boolean);
-    if (dto.type !== undefined) patch.type = dto.type as any;
+    if (dto.type !== undefined) patch.type = dto.type;
     if (dto.price !== undefined) patch.price = dto.price;
     if (dto.stock !== undefined) patch.stock = dto.stock;
     if (dto.status !== undefined) patch.status = dto.status;
@@ -176,7 +176,8 @@ export class ProductsService {
 
   async listVariantsPublic(productId: string) {
     const product = await this.requireProduct(productId);
-    if (product.status !== 'active') throw new NotFoundException('Product not found');
+    if (product.status !== 'active')
+      throw new NotFoundException('Product not found');
     return this.variantModel
       .find({ productId: product._id, status: 'active' })
       .sort({ createdAt: 1 })
@@ -192,7 +193,11 @@ export class ProductsService {
       .exec();
   }
 
-  async createVariant(admin: JwtUser, productId: string, dto: CreateProductVariantDto) {
+  async createVariant(
+    admin: JwtUser,
+    productId: string,
+    dto: CreateProductVariantDto,
+  ) {
     if (admin.role !== 'admin') throw new ForbiddenException('Forbidden');
     const product = await this.requireProduct(productId);
     try {
@@ -200,21 +205,31 @@ export class ProductsService {
         productId: product._id,
         title: dto.title.trim(),
         skuCode: dto.skuCode.trim(),
-        options: (dto.options ?? []).map((o) => ({ k: o.k.trim(), v: o.v.trim() })),
+        options: (dto.options ?? []).map((o) => ({
+          k: o.k.trim(),
+          v: o.v.trim(),
+        })),
         price: dto.price,
         stock: dto.stock,
         status: dto.status ?? 'active',
       });
     } catch (e: any) {
       const msg = String(e?.message ?? e);
-      if (msg.toLowerCase().includes('duplicate key') && msg.includes('skuCode')) {
+      if (
+        msg.toLowerCase().includes('duplicate key') &&
+        msg.includes('skuCode')
+      ) {
         throw new BadRequestException('Variant skuCode already exists');
       }
       throw e;
     }
   }
 
-  async updateVariant(admin: JwtUser, variantId: string, dto: UpdateProductVariantDto) {
+  async updateVariant(
+    admin: JwtUser,
+    variantId: string,
+    dto: UpdateProductVariantDto,
+  ) {
     if (admin.role !== 'admin') throw new ForbiddenException('Forbidden');
     const variant = await this.variantModel.findById(variantId).exec();
     if (!variant) throw new NotFoundException('Variant not found');
@@ -223,20 +238,30 @@ export class ProductsService {
     if (dto.title !== undefined) patch.title = dto.title.trim();
     if (dto.skuCode !== undefined) patch.skuCode = dto.skuCode.trim();
     if (dto.options !== undefined)
-      patch.options = dto.options.map((o) => ({ k: o.k.trim(), v: o.v.trim() })) as any;
+      patch.options = dto.options.map((o) => ({
+        k: o.k.trim(),
+        v: o.v.trim(),
+      }));
     if (dto.price !== undefined) patch.price = dto.price;
     if (dto.stock !== undefined) patch.stock = dto.stock;
-    if (dto.status !== undefined) patch.status = dto.status as any;
+    if (dto.status !== undefined) patch.status = dto.status;
 
     try {
       const updated = await this.variantModel
-        .findByIdAndUpdate(variant._id, { $set: patch }, { returnDocument: 'after' })
+        .findByIdAndUpdate(
+          variant._id,
+          { $set: patch },
+          { returnDocument: 'after' },
+        )
         .exec();
       if (!updated) throw new NotFoundException('Variant not found');
       return updated;
     } catch (e: any) {
       const msg = String(e?.message ?? e);
-      if (msg.toLowerCase().includes('duplicate key') && msg.includes('skuCode')) {
+      if (
+        msg.toLowerCase().includes('duplicate key') &&
+        msg.includes('skuCode')
+      ) {
         throw new BadRequestException('Variant skuCode already exists');
       }
       throw e;

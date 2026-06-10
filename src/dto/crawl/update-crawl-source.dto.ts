@@ -17,4 +17,3 @@ export class UpdateCrawlSourceDto {
   @MaxLength(200)
   name?: string;
 }
-

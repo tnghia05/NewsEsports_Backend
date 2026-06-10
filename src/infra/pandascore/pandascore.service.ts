@@ -108,7 +108,10 @@ export class PandaScoreService {
   }
 
   async fetchRunningMatches(perPage = 50): Promise<PandaScoreMatch[]> {
-    return this.fetchPage('/matches/running', { per_page: perPage, sort: '-begin_at' });
+    return this.fetchPage('/matches/running', {
+      per_page: perPage,
+      sort: '-begin_at',
+    });
   }
 
   async fetchUpcomingMatches(perPage = 50): Promise<PandaScoreMatch[]> {
@@ -160,7 +163,10 @@ export class PandaScoreService {
   // ── Leagues ──────────────────────────────────────────────────────────────
 
   async fetchLeagues(videogame?: string): Promise<PandaScoreLeague[]> {
-    const params: Record<string, string | number> = { per_page: 100, sort: 'name' };
+    const params: Record<string, string | number> = {
+      per_page: 100,
+      sort: 'name',
+    };
     if (videogame) params['filter[videogame]'] = videogame;
     return this.fetchList<PandaScoreLeague>('/leagues', params);
   }
@@ -168,19 +174,28 @@ export class PandaScoreService {
   // ── Series ───────────────────────────────────────────────────────────────
 
   async fetchRunningSeries(videogame?: string): Promise<PandaScoreSerie[]> {
-    const params: Record<string, string | number> = { per_page: 50, sort: '-begin_at' };
+    const params: Record<string, string | number> = {
+      per_page: 50,
+      sort: '-begin_at',
+    };
     if (videogame) params['filter[videogame]'] = videogame;
     return this.fetchList<PandaScoreSerie>('/series/running', params);
   }
 
   async fetchUpcomingSeries(videogame?: string): Promise<PandaScoreSerie[]> {
-    const params: Record<string, string | number> = { per_page: 50, sort: 'begin_at' };
+    const params: Record<string, string | number> = {
+      per_page: 50,
+      sort: 'begin_at',
+    };
     if (videogame) params['filter[videogame]'] = videogame;
     return this.fetchList<PandaScoreSerie>('/series/upcoming', params);
   }
 
   async fetchPastSeries(videogame?: string): Promise<PandaScoreSerie[]> {
-    const params: Record<string, string | number> = { per_page: 50, sort: '-end_at' };
+    const params: Record<string, string | number> = {
+      per_page: 50,
+      sort: '-end_at',
+    };
     if (videogame) params['filter[videogame]'] = videogame;
     return this.fetchList<PandaScoreSerie>('/series/past', params);
   }
@@ -195,34 +210,58 @@ export class PandaScoreService {
     status?: 'running' | 'upcoming' | 'past',
   ): Promise<PandaScoreMatch[]> {
     const safe = encodeURIComponent(slug);
-    const path = status ? `/series/${safe}/matches/${status}` : `/series/${safe}/matches`;
-    return this.fetchList<PandaScoreMatch>(path, { per_page: 100, sort: 'scheduled_at' });
+    const path = status
+      ? `/series/${safe}/matches/${status}`
+      : `/series/${safe}/matches`;
+    return this.fetchList<PandaScoreMatch>(path, {
+      per_page: 100,
+      sort: 'scheduled_at',
+    });
   }
 
   // ── Tournaments ───────────────────────────────────────────────────────────
 
-  async fetchRunningTournaments(videogame?: string): Promise<PandaScoreTournament[]> {
-    const params: Record<string, string | number> = { per_page: 50, sort: '-begin_at' };
+  async fetchRunningTournaments(
+    videogame?: string,
+  ): Promise<PandaScoreTournament[]> {
+    const params: Record<string, string | number> = {
+      per_page: 50,
+      sort: '-begin_at',
+    };
     if (videogame) params['filter[videogame]'] = videogame;
     return this.fetchList<PandaScoreTournament>('/tournaments/running', params);
   }
 
-  async fetchTournamentStandings(tournamentId: string): Promise<PandaScoreStanding[]> {
+  async fetchTournamentStandings(
+    tournamentId: string,
+  ): Promise<PandaScoreStanding[]> {
     const safe = encodeURIComponent(tournamentId);
-    return this.fetchList<PandaScoreStanding>(`/tournaments/${safe}/standings`, { per_page: 50 });
+    return this.fetchList<PandaScoreStanding>(
+      `/tournaments/${safe}/standings`,
+      { per_page: 50 },
+    );
   }
 
   async fetchTournamentTeams(tournamentId: string): Promise<PandaScoreTeam[]> {
     const safe = encodeURIComponent(tournamentId);
-    return this.fetchList<PandaScoreTeam>(`/tournaments/${safe}/teams`, { per_page: 50 });
+    return this.fetchList<PandaScoreTeam>(`/tournaments/${safe}/teams`, {
+      per_page: 50,
+    });
   }
 
-  async fetchTournamentRosters(tournamentId: string): Promise<PandaScoreRoster[]> {
+  async fetchTournamentRosters(
+    tournamentId: string,
+  ): Promise<PandaScoreRoster[]> {
     const safe = encodeURIComponent(tournamentId);
-    return this.fetchList<PandaScoreRoster>(`/tournaments/${safe}/rosters`, { per_page: 50 });
+    return this.fetchList<PandaScoreRoster>(`/tournaments/${safe}/rosters`, {
+      per_page: 50,
+    });
   }
 
-  async fetchGameDetail(gameSlug: string, gameId: string): Promise<unknown | null> {
+  async fetchGameDetail(
+    gameSlug: string,
+    gameId: string,
+  ): Promise<unknown | null> {
     // Defensive: only allow simple slugs to avoid path tricks.
     // Examples: lol, csgo, dota2, valorant, ow2, rl, mlbb, cod-mw...
     if (!/^[a-z0-9-]+$/i.test(gameSlug)) return null;
@@ -267,9 +306,13 @@ export class PandaScoreService {
       return Array.isArray(data) ? (data as T[]) : [];
     } catch (e: any) {
       if (e?.name === 'AbortError') {
-        this.logger.warn(`PandaScore ${path} timed out after ${this.timeoutMs}ms`);
+        this.logger.warn(
+          `PandaScore ${path} timed out after ${this.timeoutMs}ms`,
+        );
       } else {
-        this.logger.warn(`PandaScore ${path} fetch error: ${String(e?.message ?? e)}`);
+        this.logger.warn(
+          `PandaScore ${path} fetch error: ${String(e?.message ?? e)}`,
+        );
       }
       return [];
     } finally {
@@ -312,9 +355,13 @@ export class PandaScoreService {
       return (await res.json()) as unknown;
     } catch (e: any) {
       if (e?.name === 'AbortError') {
-        this.logger.warn(`PandaScore ${path} timed out after ${this.timeoutMs}ms`);
+        this.logger.warn(
+          `PandaScore ${path} timed out after ${this.timeoutMs}ms`,
+        );
       } else {
-        this.logger.warn(`PandaScore ${path} fetch error: ${String(e?.message ?? e)}`);
+        this.logger.warn(
+          `PandaScore ${path} fetch error: ${String(e?.message ?? e)}`,
+        );
       }
       return null;
     } finally {

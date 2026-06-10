@@ -103,4 +103,3 @@ function normalizeUrl(url: string) {
     throw new BadRequestException('Invalid URL');
   }
 }
-

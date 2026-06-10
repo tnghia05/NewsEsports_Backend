@@ -29,15 +29,28 @@ describe('OrderReservationsService', () => {
       return chainExec({ modifiedCount: updateOneCalls === 1 ? 1 : 0 });
     });
 
-    const productUpdateOne = jest.fn().mockReturnValue(chainExec({ modifiedCount: 1 }));
-    const variantUpdateOne = jest.fn().mockReturnValue(chainExec({ modifiedCount: 1 }));
+    const productUpdateOne = jest
+      .fn()
+      .mockReturnValue(chainExec({ modifiedCount: 1 }));
+    const variantUpdateOne = jest
+      .fn()
+      .mockReturnValue(chainExec({ modifiedCount: 1 }));
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         OrderReservationsService,
-        { provide: getModelToken(OrderModelName), useValue: { findById, updateOne } },
-        { provide: getModelToken(ProductModelName), useValue: { updateOne: productUpdateOne } },
-        { provide: getModelToken(ProductVariantModelName), useValue: { updateOne: variantUpdateOne } },
+        {
+          provide: getModelToken(OrderModelName),
+          useValue: { findById, updateOne },
+        },
+        {
+          provide: getModelToken(ProductModelName),
+          useValue: { updateOne: productUpdateOne },
+        },
+        {
+          provide: getModelToken(ProductVariantModelName),
+          useValue: { updateOne: variantUpdateOne },
+        },
       ],
     }).compile();
 

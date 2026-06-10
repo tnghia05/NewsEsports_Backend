@@ -11,10 +11,7 @@ import {
   type CommentDocument,
 } from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
-import {
-  NewsModelName,
-  type NewsDocument,
-} from '../models/news.model';
+import { NewsModelName, type NewsDocument } from '../models/news.model';
 import type { JwtUser } from '../types/auth';
 import type { QueryCommentsDto } from '../dto/comments/query-comments.dto';
 import type { CreateCommentDto } from '../dto/comments/create-comment.dto';
@@ -149,7 +146,7 @@ export class CommentsService {
     } else if (opts.ownerId && viewer.id === opts.ownerId) {
       // Post/news owner: sees approved + pending + under_review from others,
       // but rejected is silently hidden for everyone except admin
-      filter.moderationStatus = { $ne: 'rejected' } as any;
+      filter.moderationStatus = { $ne: 'rejected' };
     } else {
       // Regular user: approved comments + their own pending/under_review (not rejected)
       filter['$or'] = [
@@ -191,7 +188,8 @@ export class CommentsService {
     // ── Ban check ──
     const banStatus = await this.usersService.isBanned(viewer.id);
     if (banStatus.banned) {
-      const isPermanent = banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
+      const isPermanent =
+        banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
       const untilStr = isPermanent
         ? 'vĩnh viễn'
         : `đến ${new Date(banStatus.until!).toLocaleDateString('vi-VN')}`;
@@ -236,7 +234,10 @@ export class CommentsService {
 
     await this.enqueueModerationJob(String(created._id));
     this.pointsService
-      .addPoints(viewer.id, 5, 'comment_create', { postId, commentId: String(created._id) })
+      .addPoints(viewer.id, 5, 'comment_create', {
+        postId,
+        commentId: String(created._id),
+      })
       .catch(() => {});
     return created;
   }
@@ -245,7 +246,8 @@ export class CommentsService {
     // ── Ban check ──
     const banStatus = await this.usersService.isBanned(viewer.id);
     if (banStatus.banned) {
-      const isPermanent = banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
+      const isPermanent =
+        banStatus.until && new Date(banStatus.until).getFullYear() >= 2099;
       const untilStr = isPermanent
         ? 'vĩnh viễn'
         : `đến ${new Date(banStatus.until!).toLocaleDateString('vi-VN')}`;
@@ -289,7 +291,10 @@ export class CommentsService {
 
     await this.enqueueModerationJob(String(created._id));
     this.pointsService
-      .addPoints(viewer.id, 5, 'comment_create', { newsId, commentId: String(created._id) })
+      .addPoints(viewer.id, 5, 'comment_create', {
+        newsId,
+        commentId: String(created._id),
+      })
       .catch(() => {});
     return created;
   }

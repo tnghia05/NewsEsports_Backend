@@ -29,4 +29,3 @@ export class CrawlSource {
 export const CrawlSourceSchema = SchemaFactory.createForClass(CrawlSource);
 
 CrawlSourceSchema.index({ enabled: 1, createdAt: -1 });
-

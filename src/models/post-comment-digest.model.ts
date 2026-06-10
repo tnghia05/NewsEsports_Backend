@@ -20,8 +20,18 @@ export class PostCommentDigest {
   aggregate!: {
     commentCount: number;
     sentiment: { positive: number; neutral: number; negative: number };
-    sentiment4: { positive: number; negative: number; neutral: number; toxic: number };
-    intent: { praise: number; complain: number; question: number; other: number };
+    sentiment4: {
+      positive: number;
+      negative: number;
+      neutral: number;
+      toxic: number;
+    };
+    intent: {
+      praise: number;
+      complain: number;
+      question: number;
+      other: number;
+    };
     aspects: Record<string, number>;
     avgQualityScore: number;
     avgToxicityScore: number;
@@ -41,4 +51,5 @@ export class PostCommentDigest {
   generatedAt?: Date;
 }
 
-export const PostCommentDigestSchema = SchemaFactory.createForClass(PostCommentDigest);
+export const PostCommentDigestSchema =
+  SchemaFactory.createForClass(PostCommentDigest);

@@ -110,7 +110,8 @@ export class AdminController {
   listToxicUsers(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
-    @Query('minStrikes', new DefaultValuePipe(1), ParseIntPipe) minStrikes: number,
+    @Query('minStrikes', new DefaultValuePipe(1), ParseIntPipe)
+    minStrikes: number,
   ) {
     return this.usersService.listToxicUsers({ page, limit, minStrikes });
   }
@@ -124,7 +125,10 @@ export class AdminController {
   ) {
     if (!reason?.trim()) throw new BadRequestException('reason is required');
     const days = Number(durationDays);
-    if (isNaN(days) || days < 0) throw new BadRequestException('durationDays must be >= 0 (0 = permanent)');
+    if (isNaN(days) || days < 0)
+      throw new BadRequestException(
+        'durationDays must be >= 0 (0 = permanent)',
+      );
 
     const user = await this.usersService.findById(userId);
     if (!user) throw new NotFoundException('User not found');
@@ -156,7 +160,8 @@ export class AdminController {
     await this.notificationsService.create({
       userId,
       type: 'account_ban',
-      message: '✅ Lệnh khóa tài khoản của bạn đã được gỡ bỏ. Vui lòng tuân thủ nội quy để tránh bị khóa trong tương lai.',
+      message:
+        '✅ Lệnh khóa tài khoản của bạn đã được gỡ bỏ. Vui lòng tuân thủ nội quy để tránh bị khóa trong tương lai.',
     });
 
     return { ok: true, userId, unbanned: true };
