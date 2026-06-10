@@ -87,7 +87,10 @@ import {
 } from '../models/hashtag-event.model';
 import { HotTopicModelName, HotTopicSchema } from '../models/hot-topic.model';
 import { ProductModelName, ProductSchema } from '../models/product.model';
-import { ProductVariantModelName, ProductVariantSchema } from '../models/product-variant.model';
+import {
+  ProductVariantModelName,
+  ProductVariantSchema,
+} from '../models/product-variant.model';
 import { OrderModelName, OrderSchema } from '../models/order.model';
 import { PaymentModelName, PaymentSchema } from '../models/payment.model';
 import {

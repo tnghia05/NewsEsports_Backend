@@ -73,7 +73,13 @@ export class PointsService {
       .exec();
     if (!user) throw new NotFoundException('User not found');
     const balanceAfter = (user as any).points ?? 0;
-    await this.ledgerModel.create({ userId, delta, balanceAfter, reason, meta });
+    await this.ledgerModel.create({
+      userId,
+      delta,
+      balanceAfter,
+      reason,
+      meta,
+    });
     return balanceAfter;
   }
 
@@ -92,7 +98,9 @@ export class PointsService {
     return this.addPoints(userId, -amount, reason, meta);
   }
 
-  async checkin(userId: string): Promise<{ points: number; alreadyDone: boolean }> {
+  async checkin(
+    userId: string,
+  ): Promise<{ points: number; alreadyDone: boolean }> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -112,7 +120,11 @@ export class PointsService {
       return { points: balance, alreadyDone: true };
     }
 
-    const balance = await this.addPoints(userId, POINT_REWARDS.checkin, 'checkin');
+    const balance = await this.addPoints(
+      userId,
+      POINT_REWARDS.checkin,
+      'checkin',
+    );
     return { points: balance, alreadyDone: false };
   }
 }

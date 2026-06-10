@@ -47,4 +47,3 @@ export class CrawlSourcesController {
     return this.crawlSourcesService.remove(admin, id);
   }
 }
-

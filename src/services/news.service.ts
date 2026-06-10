@@ -102,10 +102,10 @@ export class NewsService {
 
   async removeMany(admin: JwtUser, ids: string[]) {
     if (admin.role !== 'admin') throw new ForbiddenException('Forbidden');
-    const uniq = [...new Set(ids.map(id => id.trim()).filter(Boolean))];
+    const uniq = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
     const oids = uniq
-      .filter(id => Types.ObjectId.isValid(id))
-      .map(id => new Types.ObjectId(id));
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
     if (!oids.length) throw new BadRequestException('No valid ids');
     const res = await this.newsModel.deleteMany({ _id: { $in: oids } }).exec();
     return { ok: true, deleted: res.deletedCount ?? 0 };

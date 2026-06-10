@@ -31,7 +31,10 @@ export class KalstropGateway implements OnGatewayDisconnect {
   @WebSocketServer() server!: Server;
   private readonly logger = new Logger(KalstropGateway.name);
 
-  private readonly clientSubs = new Map<string, Map<string, { subId: string; cb: (u: OddsUpdate) => void }>>();
+  private readonly clientSubs = new Map<
+    string,
+    Map<string, { subId: string; cb: (u: OddsUpdate) => void }>
+  >();
 
   constructor(private readonly kalstropWs: KalstropWsService) {}
 
@@ -40,7 +43,9 @@ export class KalstropGateway implements OnGatewayDisconnect {
     if (subs) {
       subs.forEach(({ subId, cb }) => this.kalstropWs.unsubscribe(subId, cb));
       this.clientSubs.delete(client.id);
-      this.logger.debug(`Client ${client.id} disconnected — cleaned ${subs.size} subs`);
+      this.logger.debug(
+        `Client ${client.id} disconnected — cleaned ${subs.size} subs`,
+      );
     }
   }
 

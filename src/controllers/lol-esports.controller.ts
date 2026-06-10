@@ -19,10 +19,7 @@ export class LoLEsportsController {
   }
 
   @Get('event/:matchId')
-  getEventDetails(
-    @Param('matchId') matchId: string,
-    @Query('hl') hl?: string,
-  ) {
+  getEventDetails(@Param('matchId') matchId: string, @Query('hl') hl?: string) {
     return this.lolesports.getEventDetails(matchId, hl ?? 'vi-VN');
   }
 

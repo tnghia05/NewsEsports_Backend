@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { CommentModelName, type CommentDocument } from '../models/comment.model';
+import {
+  CommentModelName,
+  type CommentDocument,
+} from '../models/comment.model';
 import { PostModelName, type PostDocument } from '../models/post.model';
 import {
   AdminAlertModelName,
@@ -33,31 +36,79 @@ export class AiStatsService {
     const since24h = new Date(now - 24 * 60 * 60_000);
     const since7d = new Date(now - 7 * 24 * 60 * 60_000);
 
-    const [totalUsers, todayUsers, totalPosts, todayPosts, totalComments, todayComments, pendingReview, moderationQueue, postChart, commentChart] =
-      await Promise.all([
-        this.userModel.countDocuments().exec(),
-        this.userModel.countDocuments({ createdAt: { $gte: since24h } }).exec(),
-        this.postModel.countDocuments({ status: 'published' }).exec(),
-        this.postModel.countDocuments({ status: 'published', createdAt: { $gte: since24h } }).exec(),
-        this.commentModel.countDocuments({ isDeleted: { $ne: true } }).exec(),
-        this.commentModel.countDocuments({ isDeleted: { $ne: true }, createdAt: { $gte: since24h } }).exec(),
-        this.commentModel.countDocuments({ moderationStatus: 'under_review', isDeleted: { $ne: true } }).exec(),
-        this.commentModel.countDocuments({ moderationStatus: 'pending', isDeleted: { $ne: true } }).exec(),
-        this.postModel.aggregate([
+    const [
+      totalUsers,
+      todayUsers,
+      totalPosts,
+      todayPosts,
+      totalComments,
+      todayComments,
+      pendingReview,
+      moderationQueue,
+      postChart,
+      commentChart,
+    ] = await Promise.all([
+      this.userModel.countDocuments().exec(),
+      this.userModel.countDocuments({ createdAt: { $gte: since24h } }).exec(),
+      this.postModel.countDocuments({ status: 'published' }).exec(),
+      this.postModel
+        .countDocuments({ status: 'published', createdAt: { $gte: since24h } })
+        .exec(),
+      this.commentModel.countDocuments({ isDeleted: { $ne: true } }).exec(),
+      this.commentModel
+        .countDocuments({
+          isDeleted: { $ne: true },
+          createdAt: { $gte: since24h },
+        })
+        .exec(),
+      this.commentModel
+        .countDocuments({
+          moderationStatus: 'under_review',
+          isDeleted: { $ne: true },
+        })
+        .exec(),
+      this.commentModel
+        .countDocuments({
+          moderationStatus: 'pending',
+          isDeleted: { $ne: true },
+        })
+        .exec(),
+      this.postModel
+        .aggregate([
           { $match: { status: 'published', createdAt: { $gte: since7d } } },
-          { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
+              count: { $sum: 1 },
+            },
+          },
           { $sort: { _id: 1 } },
-        ]).exec(),
-        this.commentModel.aggregate([
-          { $match: { isDeleted: { $ne: true }, createdAt: { $gte: since7d } } },
-          { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        ])
+        .exec(),
+      this.commentModel
+        .aggregate([
+          {
+            $match: { isDeleted: { $ne: true }, createdAt: { $gte: since7d } },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
+              count: { $sum: 1 },
+            },
+          },
           { $sort: { _id: 1 } },
-        ]).exec(),
-      ]);
+        ])
+        .exec(),
+    ]);
 
     // Merge post+comment per day into unified chart
     const chartMap = new Map<string, { posts: number; comments: number }>();
-    for (const r of postChart) chartMap.set(r._id, { posts: Number(r.count), comments: 0 });
+    for (const r of postChart)
+      chartMap.set(r._id, { posts: Number(r.count), comments: 0 });
     for (const r of commentChart) {
       const entry = chartMap.get(r._id) ?? { posts: 0, comments: 0 };
       entry.comments = Number(r.count);
@@ -125,7 +176,8 @@ export class AiStatsService {
     return rows.map((r: any) => ({
       label: r._id,
       count: Number(r.count),
-      ratio: total > 0 ? Math.round((Number(r.count) / total) * 10000) / 10000 : 0,
+      ratio:
+        total > 0 ? Math.round((Number(r.count) / total) * 10000) / 10000 : 0,
     }));
   }
 
@@ -217,7 +269,10 @@ export class AiStatsService {
     const page = Math.max(1, opts.page);
     const limit = Math.min(50, Math.max(1, opts.limit));
     const skip = (page - 1) * limit;
-    const filter = { moderationStatus: 'under_review', isDeleted: { $ne: true } };
+    const filter = {
+      moderationStatus: 'under_review',
+      isDeleted: { $ne: true },
+    };
 
     const [items, total] = await Promise.all([
       this.commentModel
@@ -238,7 +293,9 @@ export class AiStatsService {
         authorId: c.authorId,
         content: c.content,
         confidence: c.sentiment4Scores
-          ? Math.max(...Object.values(c.sentiment4Scores as Record<string, number>))
+          ? Math.max(
+              ...Object.values(c.sentiment4Scores as Record<string, number>),
+            )
           : undefined,
         sentiment4: c.sentiment4,
         intent: c.intent,

@@ -1,4 +1,10 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class R2PresignDto {
   @IsString()
@@ -15,4 +21,3 @@ export class R2PresignDto {
   @IsIn(['post', 'product', 'avatar', 'video', 'misc'])
   folder?: 'post' | 'product' | 'avatar' | 'video' | 'misc';
 }
-

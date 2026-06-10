@@ -25,7 +25,9 @@ export class R2Service {
     });
 
     if (!endpoint || !accessKeyId || !secretAccessKey || !this.bucket) {
-      this.logger.warn('R2 disabled: missing R2_ENDPOINT/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_BUCKET');
+      this.logger.warn(
+        'R2 disabled: missing R2_ENDPOINT/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_BUCKET',
+      );
       return;
     }
 
@@ -35,7 +37,9 @@ export class R2Service {
       credentials: { accessKeyId, secretAccessKey },
     });
 
-    this.logger.log(`R2 enabled bucket=${this.bucket} endpoint=${redactEndpoint(endpoint)} publicBaseUrl=${this.publicBaseUrl ?? 'n/a'}`);
+    this.logger.log(
+      `R2 enabled bucket=${this.bucket} endpoint=${redactEndpoint(endpoint)} publicBaseUrl=${this.publicBaseUrl ?? 'n/a'}`,
+    );
   }
 
   async presignPutObject(params: {
@@ -44,7 +48,8 @@ export class R2Service {
     folder: string;
     userId?: string;
   }) {
-    if (!this.client || !this.bucket) throw new BadRequestException('R2 is not configured');
+    if (!this.client || !this.bucket)
+      throw new BadRequestException('R2 is not configured');
     if (!this.publicBaseUrl)
       throw new BadRequestException('R2_PUBLIC_BASE_URL is required');
 
@@ -68,7 +73,9 @@ export class R2Service {
       ContentType: params.contentType,
     });
 
-    const uploadUrl = await getSignedUrl(this.client, cmd, { expiresIn: 60 * 5 });
+    const uploadUrl = await getSignedUrl(this.client, cmd, {
+      expiresIn: 60 * 5,
+    });
     const publicUrl = joinUrl(this.publicBaseUrl, key);
 
     return { key, uploadUrl, publicUrl, expiresInSeconds: 60 * 5 };
@@ -91,7 +98,12 @@ function sanitizePathPart(input: string) {
 function sanitizeFileName(input: string) {
   // keep it short and safe (avoid path traversal)
   const base = input.split(/[\\/]/).pop() ?? 'file';
-  return base.replace(/[^\w.\- ]/g, '').trim().slice(0, 255) || 'file';
+  return (
+    base
+      .replace(/[^\w.\- ]/g, '')
+      .trim()
+      .slice(0, 255) || 'file'
+  );
 }
 
 function guessExtFromNameOrType(fileName: string, contentType: string) {
@@ -125,4 +137,3 @@ function isAllowedContentType(ct: string) {
 function joinUrl(base: string, path: string) {
   return `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 }
-

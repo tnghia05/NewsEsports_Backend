@@ -16,7 +16,7 @@ type CreateUserInput = {
 export class UsersService {
   constructor(
     @InjectModel(UserModelName) private readonly userModel: Model<UserDocument>,
-  ) { }
+  ) {}
 
   findById(id: string) {
     return this.userModel.findById(id).exec();
@@ -52,10 +52,15 @@ export class UsersService {
       .exec();
   }
 
-  async updateUser(userId: string, update: { displayName?: string; avatarUrl?: string }) {
+  async updateUser(
+    userId: string,
+    update: { displayName?: string; avatarUrl?: string },
+  ) {
     const patch: any = {};
-    if (update.displayName !== undefined) patch.displayName = update.displayName.trim();
-    if (update.avatarUrl !== undefined) patch.avatarUrl = update.avatarUrl.trim();
+    if (update.displayName !== undefined)
+      patch.displayName = update.displayName.trim();
+    if (update.avatarUrl !== undefined)
+      patch.avatarUrl = update.avatarUrl.trim();
 
     return this.userModel
       .findByIdAndUpdate(userId, { $set: patch }, { returnDocument: 'after' })
@@ -65,7 +70,10 @@ export class UsersService {
   // ── Ban management ────────────────────────────────────────────────
 
   /** Ban a useer. durationDays = 0 means permanent (year 2099). */
-  async banUser(userId: string, opts: { durationDays: number; reason: string }) {
+  async banUser(
+    userId: string,
+    opts: { durationDays: number; reason: string },
+  ) {
     const PERMANENT_DATE = new Date('2099-01-01T00:00:00Z');
     const banUntil =
       opts.durationDays === 0
@@ -93,7 +101,11 @@ export class UsersService {
   }
 
   /** List users with high toxic strike count (for admin review panel). */
-  async listToxicUsers(opts: { page: number; limit: number; minStrikes?: number }) {
+  async listToxicUsers(opts: {
+    page: number;
+    limit: number;
+    minStrikes?: number;
+  }) {
     const page = Math.max(1, opts.page || 1);
     const limit = Math.min(100, Math.max(1, opts.limit || 20));
     const skip = (page - 1) * limit;
@@ -134,7 +146,9 @@ export class UsersService {
   }
 
   /** Check if user is currently banned (used by CommentsService guard). */
-  async isBanned(userId: string): Promise<{ banned: boolean; until?: Date; reason?: string }> {
+  async isBanned(
+    userId: string,
+  ): Promise<{ banned: boolean; until?: Date; reason?: string }> {
     const user = await this.userModel
       .findById(userId)
       .select({ banUntil: 1, banReason: 1 })
@@ -143,7 +157,11 @@ export class UsersService {
     if (!user?.banUntil) return { banned: false };
     const now = new Date();
     if (new Date(user.banUntil) > now) {
-      return { banned: true, until: user.banUntil, reason: user.banReason ?? undefined };
+      return {
+        banned: true,
+        until: user.banUntil,
+        reason: user.banReason ?? undefined,
+      };
     }
     return { banned: false };
   }

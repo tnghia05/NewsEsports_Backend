@@ -23,7 +23,8 @@ import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class CommentModerationWorkerService
-  implements OnModuleInit, OnModuleDestroy {
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(CommentModerationWorkerService.name);
   private timer?: NodeJS.Timeout;
   private running = false;
@@ -46,10 +47,12 @@ export class CommentModerationWorkerService
     private readonly notificationsService: NotificationsService,
   ) {
     this.confidenceThreshold = Number(
-      this.config.get<string>('AI_CONFIDENCE_THRESHOLD', { infer: true }) ?? 0.6,
+      this.config.get<string>('AI_CONFIDENCE_THRESHOLD', { infer: true }) ??
+        0.6,
     );
     this.toxicReviewThreshold = Number(
-      this.config.get<string>('AI_TOXIC_REVIEW_THRESHOLD', { infer: true }) ?? 0.4,
+      this.config.get<string>('AI_TOXIC_REVIEW_THRESHOLD', { infer: true }) ??
+        0.4,
     );
   }
 
@@ -176,12 +179,11 @@ export class CommentModerationWorkerService
         !inGrayZone &&
         ai.confidence !== undefined &&
         ai.confidence < this.confidenceThreshold;
-      const moderationStatus =
-        rejected
-          ? 'rejected'
-          : inGrayZone || lowConfidence
-            ? 'under_review'
-            : 'approved';
+      const moderationStatus = rejected
+        ? 'rejected'
+        : inGrayZone || lowConfidence
+          ? 'under_review'
+          : 'approved';
 
       // #10 Quality score: soft-probability weighted formula
       const qualityScore = computeQualityScore(ai);
@@ -219,7 +221,8 @@ export class CommentModerationWorkerService
         const user = await this.userModel.findById(comment.authorId).exec();
         const now = new Date();
         const fiveMinutesAgo = new Date(now.getTime() - 5 * 60_000);
-        const shouldWarn = !user?.lastWarnedAt || user.lastWarnedAt < fiveMinutesAgo;
+        const shouldWarn =
+          !user?.lastWarnedAt || user.lastWarnedAt < fiveMinutesAgo;
 
         // Increment strike count
         const newStrikeCount = (user?.toxicStrikeCount ?? 0) + 1;
@@ -334,6 +337,10 @@ function computeQualityScore(ai: AiModerationResult): number {
   const toxicPenalty = ai.toxicity.score;
 
   const raw =
-    praise * 1.0 + question * 0.7 + other * 0.3 - complain * 0.2 - toxicPenalty * 1.0;
+    praise * 1.0 +
+    question * 0.7 +
+    other * 0.3 -
+    complain * 0.2 -
+    toxicPenalty * 1.0;
   return Math.max(-1, Math.min(1, raw));
 }

@@ -58,7 +58,8 @@ export class NewsCrawlWorkerService implements OnModuleInit, OnModuleDestroy {
 
   private async runCrawl() {
     const sources = await this.crawlSourcesService.listEnabledUrls();
-    if (!sources.length) return { ok: true, sources: 0, imported: 0, skipped: 0 };
+    if (!sources.length)
+      return { ok: true, sources: 0, imported: 0, skipped: 0 };
 
     const started = Date.now();
     let imported = 0;
@@ -72,7 +73,9 @@ export class NewsCrawlWorkerService implements OnModuleInit, OnModuleDestroy {
           if (created) imported++;
           else skipped++;
         }
-        await this.crawlSourcesService.markCrawlResult(listingUrl, { ok: true });
+        await this.crawlSourcesService.markCrawlResult(listingUrl, {
+          ok: true,
+        });
       } catch (e: any) {
         const err = String(e?.message ?? e);
         this.logger.warn(`crawl failed listing=${listingUrl} err=${err}`);
@@ -326,4 +329,3 @@ function shortHash(s: string) {
   }
   return (h >>> 0).toString(16).slice(0, 12);
 }
-

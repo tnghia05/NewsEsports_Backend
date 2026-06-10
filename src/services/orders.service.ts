@@ -88,19 +88,29 @@ export class OrdersService {
     }));
 
     // Fetch products
-    const uniqueProductIds = Array.from(new Set(normalized.map((x) => x.productId)));
-    const products = await this.productModel.find({ _id: { $in: uniqueProductIds }, status: 'active' }).exec();
-    if (products.length !== uniqueProductIds.length) throw new BadRequestException('Some products are missing or inactive');
+    const uniqueProductIds = Array.from(
+      new Set(normalized.map((x) => x.productId)),
+    );
+    const products = await this.productModel
+      .find({ _id: { $in: uniqueProductIds }, status: 'active' })
+      .exec();
+    if (products.length !== uniqueProductIds.length)
+      throw new BadRequestException('Some products are missing or inactive');
     const productById = new Map<string, ProductDocument>();
     for (const p of products) productById.set(String(p._id), p);
 
     // Fetch variants (if any)
-    const variantIds = normalized.map((x) => x.variantId).filter(Boolean) as string[];
+    const variantIds = normalized
+      .map((x) => x.variantId)
+      .filter(Boolean) as string[];
     const uniqueVariantIds = Array.from(new Set(variantIds));
     const variants = uniqueVariantIds.length
-      ? await this.variantModel.find({ _id: { $in: uniqueVariantIds }, status: 'active' }).exec()
+      ? await this.variantModel
+          .find({ _id: { $in: uniqueVariantIds }, status: 'active' })
+          .exec()
       : [];
-    if (variants.length !== uniqueVariantIds.length) throw new BadRequestException('Some variants are missing or inactive');
+    if (variants.length !== uniqueVariantIds.length)
+      throw new BadRequestException('Some variants are missing or inactive');
     const variantById = new Map<string, ProductVariantDocument>();
     for (const v of variants) variantById.set(String(v._id), v);
 
@@ -110,7 +120,8 @@ export class OrdersService {
       if (it.variantId) {
         const v = variantById.get(it.variantId);
         if (!v) throw new BadRequestException('Invalid variant');
-        if (String(v.productId) !== String(p._id)) throw new BadRequestException('Variant does not belong to product');
+        if (String(v.productId) !== String(p._id))
+          throw new BadRequestException('Variant does not belong to product');
         const lineTotal = v.price * it.qty;
         return {
           productId: p._id,
@@ -185,11 +196,17 @@ export class OrdersService {
           const prev: any = items[j];
           if (prev.variantId) {
             await this.variantModel
-              .updateOne({ _id: prev.variantId }, { $inc: { reserved: -prev.qty } })
+              .updateOne(
+                { _id: prev.variantId },
+                { $inc: { reserved: -prev.qty } },
+              )
               .exec();
           } else {
             await this.productModel
-              .updateOne({ _id: prev.productId }, { $inc: { reserved: -prev.qty } })
+              .updateOne(
+                { _id: prev.productId },
+                { $inc: { reserved: -prev.qty } },
+              )
               .exec();
           }
         }
@@ -358,7 +375,7 @@ export class OrdersService {
       : await this.orderModel.findOne({ orderCode: orderRef }).exec();
     if (!order) throw new NotFoundException('Order not found');
 
-    assertAllowedTransition(order.status as any, input.status);
+    assertAllowedTransition(order.status, input.status);
 
     const patch: Record<string, any> = { status: input.status };
     if (input.trackingCode !== undefined)
@@ -419,10 +436,13 @@ export class OrdersService {
       ? await this.orderModel.findById(orderRef).exec()
       : await this.orderModel.findOne({ orderCode: orderRef }).exec();
     if (!order) throw new NotFoundException('Order not found');
-    if (String(order.userId) !== user.id) throw new ForbiddenException('Forbidden');
+    if (String(order.userId) !== user.id)
+      throw new ForbiddenException('Forbidden');
 
     if (order.status !== 'pending_payment') {
-      throw new BadRequestException(`Cannot cancel order in status ${order.status}`);
+      throw new BadRequestException(
+        `Cannot cancel order in status ${order.status}`,
+      );
     }
 
     const updated = await this.orderModel
@@ -474,9 +494,14 @@ export class OrdersService {
               cancelledAt: new Date(),
             },
             $push: {
-              auditLog: this.auditEntry(admin, 'admin.cancel', dto.reason?.trim(), {
-                restoreStock: false,
-              }),
+              auditLog: this.auditEntry(
+                admin,
+                'admin.cancel',
+                dto.reason?.trim(),
+                {
+                  restoreStock: false,
+                },
+              ),
             },
           },
           { returnDocument: 'after' },
@@ -497,12 +522,14 @@ export class OrdersService {
         );
       }
       if (!order.inventoryFinalized) {
-        throw new BadRequestException('Cannot restore stock: inventory not finalized');
+        throw new BadRequestException(
+          'Cannot restore stock: inventory not finalized',
+        );
       }
       await this.reservations.restoreStockFromOrderItems(order);
     }
 
-    assertAllowedTransition(order.status as any, 'cancelled');
+    assertAllowedTransition(order.status, 'cancelled');
 
     const updated = await this.orderModel
       .findOneAndUpdate(
@@ -514,10 +541,15 @@ export class OrdersService {
             cancelledAt: new Date(),
           },
           $push: {
-            auditLog: this.auditEntry(admin, 'admin.cancel', dto.reason?.trim(), {
-              from: order.status,
-              restoreStock: restore,
-            }),
+            auditLog: this.auditEntry(
+              admin,
+              'admin.cancel',
+              dto.reason?.trim(),
+              {
+                from: order.status,
+                restoreStock: restore,
+              },
+            ),
           },
         },
         { returnDocument: 'after' },
@@ -604,7 +636,9 @@ function assertAllowedTransition(from: string, to: string) {
 
   const next = allowed[from] ?? [];
   if (!next.includes(to)) {
-    throw new BadRequestException(`Invalid status transition: ${from} -> ${to}`);
+    throw new BadRequestException(
+      `Invalid status transition: ${from} -> ${to}`,
+    );
   }
 }
 

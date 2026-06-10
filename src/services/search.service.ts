@@ -86,10 +86,7 @@ export class SearchService {
     const q = query.q.trim();
     const rx = new RegExp(escapeRegex(q), 'i');
     const filter: any = {
-      $or: [
-        { displayName: { $regex: rx } },
-        { email: { $regex: rx } },
-      ],
+      $or: [{ displayName: { $regex: rx } }, { email: { $regex: rx } }],
     };
     const items = await this.userModel
       .find(filter)

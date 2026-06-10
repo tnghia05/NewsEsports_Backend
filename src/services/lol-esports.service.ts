@@ -59,7 +59,11 @@ export class LoLEsportsService {
     return t.toISOString().replace(/\.\d{3}Z$/, '.000Z');
   }
 
-  private async fetchWithRetry(baseUrl: string, gameId: string, offsets: number[]): Promise<any> {
+  private async fetchWithRetry(
+    baseUrl: string,
+    gameId: string,
+    offsets: number[],
+  ): Promise<any> {
     for (const offset of offsets) {
       const st = this.getDelayedStartingTime(offset);
       const url = `${baseUrl}/${gameId}?startingTime=${encodeURIComponent(st)}`;
@@ -71,7 +75,9 @@ export class LoLEsportsService {
       }
       const body = await res.text().catch(() => '');
       if (!body.includes('ahead of broadcast')) {
-        this.logger.warn(`fetchWithRetry ${offset}s: ${res.status} ${body.slice(0, 100)}`);
+        this.logger.warn(
+          `fetchWithRetry ${offset}s: ${res.status} ${body.slice(0, 100)}`,
+        );
         return null;
       }
     }
@@ -87,14 +93,22 @@ export class LoLEsportsService {
         const startData = await startRes.json();
         const gameStartTs = startData?.frames?.[0]?.rfc460Timestamp;
         if (gameStartTs) {
-          const lastTs = new Date(data.frames[data.frames.length - 1].rfc460Timestamp).getTime();
-          data.gameMetadata.gameTime = Math.floor((lastTs - new Date(gameStartTs).getTime()) / 1000);
+          const lastTs = new Date(
+            data.frames[data.frames.length - 1].rfc460Timestamp,
+          ).getTime();
+          data.gameMetadata.gameTime = Math.floor(
+            (lastTs - new Date(gameStartTs).getTime()) / 1000,
+          );
           return data;
         }
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     const frames: any[] = data.frames;
-    const lastTs = new Date(frames[frames.length - 1].rfc460Timestamp).getTime();
+    const lastTs = new Date(
+      frames[frames.length - 1].rfc460Timestamp,
+    ).getTime();
     const firstTs = new Date(frames[0].rfc460Timestamp).getTime();
     data.gameMetadata.gameTime = Math.floor((lastTs - firstTs) / 1000);
     return data;
@@ -109,7 +123,11 @@ export class LoLEsportsService {
           false,
         );
       } else {
-        data = await this.fetchWithRetry(`${LIVE_STATS_API}/window`, gameId, [175, 185, 200, 220]);
+        data = await this.fetchWithRetry(
+          `${LIVE_STATS_API}/window`,
+          gameId,
+          [175, 185, 200, 220],
+        );
       }
       return this.injectGameTime(gameId, data);
     } catch (err) {
@@ -126,7 +144,11 @@ export class LoLEsportsService {
           false,
         );
       }
-      return await this.fetchWithRetry(`${LIVE_STATS_API}/details`, gameId, [175, 185, 200, 220]);
+      return await this.fetchWithRetry(
+        `${LIVE_STATS_API}/details`,
+        gameId,
+        [175, 185, 200, 220],
+      );
     } catch (err) {
       this.logger.warn(`getLiveStatsDetails failed for ${gameId}: ${err}`);
       return null;
@@ -139,26 +161,37 @@ export class LoLEsportsService {
     return date.toISOString().replace(/\.\d{3}Z$/, '.000Z');
   }
 
-  private async findFinishedFrame(gameId: string, firstFrameTime: string): Promise<any | null> {
+  private async findFinishedFrame(
+    gameId: string,
+    firstFrameTime: string,
+  ): Promise<any | null> {
     const base = new Date(firstFrameTime).getTime();
     for (let minOffset = 15; minOffset <= 60; minOffset += 5) {
       const t = new Date(base + minOffset * 60 * 1000);
       const st = this.roundToTenSeconds(t);
       try {
-        const res = await fetch(`${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`);
+        const res = await fetch(
+          `${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`,
+        );
         if (!res.ok) continue;
         const data = await res.json();
         const frames: any[] = data?.frames ?? [];
-        const finishedFrame = frames.find((f: any) => f.gameState === 'finished');
-        if (finishedFrame) return { frame: finishedFrame, metadata: data.gameMetadata };
+        const finishedFrame = frames.find(
+          (f: any) => f.gameState === 'finished',
+        );
+        if (finishedFrame)
+          return { frame: finishedFrame, metadata: data.gameMetadata };
         const lastFrame = frames[frames.length - 1];
         if (lastFrame?.blueTeam?.totalGold > 0) {
           const lastIdx = frames.length - 1;
           for (let i = lastIdx; i >= 0; i--) {
-            if (frames[i].gameState === 'finished') return { frame: frames[i], metadata: data.gameMetadata };
+            if (frames[i].gameState === 'finished')
+              return { frame: frames[i], metadata: data.gameMetadata };
           }
         }
-      } catch { continue; }
+      } catch {
+        continue;
+      }
     }
     return null;
   }
@@ -173,24 +206,33 @@ export class LoLEsportsService {
 
       if (!result) {
         const st = this.getDelayedStartingTime(175);
-        const res = await fetch(`${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`);
+        const res = await fetch(
+          `${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`,
+        );
         if (res.ok) {
           const data = await res.json();
           const frames: any[] = data?.frames ?? [];
-          const finished = frames.find((f: any) => f.gameState === 'finished') ?? frames[frames.length - 1];
-          if (finished?.blueTeam?.totalGold > 0) result = { frame: finished, metadata: data.gameMetadata };
+          const finished =
+            frames.find((f: any) => f.gameState === 'finished') ??
+            frames[frames.length - 1];
+          if (finished?.blueTeam?.totalGold > 0)
+            result = { frame: finished, metadata: data.gameMetadata };
         }
       }
 
       if (!result) return null;
 
       const { frame, metadata } = result;
-      const blueParticipantsMeta: any[] = metadata?.blueTeamMetadata?.participantMetadata ?? [];
-      const redParticipantsMeta: any[] = metadata?.redTeamMetadata?.participantMetadata ?? [];
+      const blueParticipantsMeta: any[] =
+        metadata?.blueTeamMetadata?.participantMetadata ?? [];
+      const redParticipantsMeta: any[] =
+        metadata?.redTeamMetadata?.participantMetadata ?? [];
 
       const mapParticipants = (participants: any[], metaList: any[]) =>
         participants.map((p: any) => {
-          const meta = metaList.find((m: any) => m.participantId === p.participantId) ?? {};
+          const meta =
+            metaList.find((m: any) => m.participantId === p.participantId) ??
+            {};
           return {
             participantId: p.participantId,
             summonerName: meta.summonerName ?? '',
@@ -214,7 +256,10 @@ export class LoLEsportsService {
           inhibitors: frame.blueTeam.inhibitors,
           barons: frame.blueTeam.barons,
           dragons: frame.blueTeam.dragons,
-          participants: mapParticipants(frame.blueTeam.participants ?? [], blueParticipantsMeta),
+          participants: mapParticipants(
+            frame.blueTeam.participants ?? [],
+            blueParticipantsMeta,
+          ),
         },
         redTeam: {
           totalGold: frame.redTeam.totalGold,
@@ -223,7 +268,10 @@ export class LoLEsportsService {
           inhibitors: frame.redTeam.inhibitors,
           barons: frame.redTeam.barons,
           dragons: frame.redTeam.dragons,
-          participants: mapParticipants(frame.redTeam.participants ?? [], redParticipantsMeta),
+          participants: mapParticipants(
+            frame.redTeam.participants ?? [],
+            redParticipantsMeta,
+          ),
         },
       };
     } catch (err) {
@@ -255,14 +303,18 @@ export class LoLEsportsService {
         const t = new Date(gameStartTs + minOffset * 60 * 1000);
         const st = this.roundToTenSeconds(t);
         try {
-          const res = await fetch(`${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`);
+          const res = await fetch(
+            `${LIVE_STATS_API}/window/${gameId}?startingTime=${encodeURIComponent(st)}`,
+          );
           if (!res.ok) break;
           const data = await res.json();
           const frames: any[] = data?.frames ?? [];
           if (!frames.length) break;
           allFrames.push(...frames);
           if (frames.some((f: any) => f.gameState === 'finished')) done = true;
-        } catch { break; }
+        } catch {
+          break;
+        }
       }
 
       // Deduplicate by timestamp, then sample ~every 6 frames (≈1 min at 10s per frame)
@@ -278,7 +330,9 @@ export class LoLEsportsService {
       return sampled.map((f: any) => {
         const blueGold: number = f.blueTeam?.totalGold ?? 0;
         const redGold: number = f.redTeam?.totalGold ?? 0;
-        const minute = Math.floor((new Date(f.rfc460Timestamp).getTime() - gameStartTs!) / 60000);
+        const minute = Math.floor(
+          (new Date(f.rfc460Timestamp).getTime() - gameStartTs) / 60000,
+        );
         return { minute, blueGold, redGold, diff: blueGold - redGold };
       });
     } catch (err) {
@@ -312,17 +366,25 @@ export class LoLEsportsService {
     const inProgressGame = games.find((g) => g.state === 'inProgress');
     // LoLEsports API sometimes returns 'completed' between BO3 games.
     // Detect ongoing series: neither team has enough wins AND at least one game played.
-    const teamWins = (e.match?.teams ?? []).map((t: any) => t.result?.gameWins ?? 0) as number[];
-    const winsNeeded = e.match?.strategy?.count ? Math.ceil(e.match.strategy.count / 2) : 2;
-    const seriesStillOngoing = teamWins.length === 2
-      && teamWins[0] < winsNeeded && teamWins[1] < winsNeeded
-      && teamWins[0] + teamWins[1] > 0;
-    const gamesPlayed = games.filter((g: any) => g.state === 'completed' || g.state === 'inProgress').length;
+    const teamWins = (e.match?.teams ?? []).map(
+      (t: any) => t.result?.gameWins ?? 0,
+    ) as number[];
+    const winsNeeded = e.match?.strategy?.count
+      ? Math.ceil(e.match.strategy.count / 2)
+      : 2;
+    const seriesStillOngoing =
+      teamWins.length === 2 &&
+      teamWins[0] < winsNeeded &&
+      teamWins[1] < winsNeeded &&
+      teamWins[0] + teamWins[1] > 0;
+    const gamesPlayed = games.filter(
+      (g: any) => g.state === 'completed' || g.state === 'inProgress',
+    ).length;
     const resolvedState = inProgressGame
       ? 'inProgress'
-      : (seriesStillOngoing && e.state === 'completed')
+      : seriesStillOngoing && e.state === 'completed'
         ? 'inProgress'
-        : (e.state === 'completed' && gamesPlayed === 0)
+        : e.state === 'completed' && gamesPlayed === 0
           ? 'unstarted'
           : e.state;
 

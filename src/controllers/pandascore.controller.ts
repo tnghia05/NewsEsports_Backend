@@ -10,7 +10,8 @@ import { PandaScoreService } from '../infra/pandascore/pandascore.service';
 
 /** Helper to build a 503 when token is missing */
 function guardToken(configured: boolean) {
-  if (!configured) throw new ServiceUnavailableException('PANDASCORE_TOKEN not configured');
+  if (!configured)
+    throw new ServiceUnavailableException('PANDASCORE_TOKEN not configured');
 }
 
 @Controller('pandascore')
@@ -126,5 +127,3 @@ export class PandaScoreController {
     return data;
   }
 }
-
-

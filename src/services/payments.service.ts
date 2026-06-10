@@ -21,7 +21,10 @@ import {
 import type { VNPayCreatePaymentUrlDto } from '../dto/shop/payments/vnpay-create-payment-url.dto';
 import type { JwtUser } from '../types/auth';
 import { OrderReservationsService } from './order-reservations.service';
-import { ProductModelName, type ProductDocument } from '../models/product.model';
+import {
+  ProductModelName,
+  type ProductDocument,
+} from '../models/product.model';
 import {
   ProductVariantModelName,
   type ProductVariantDocument,
@@ -93,12 +96,16 @@ export class PaymentsService {
     const order = Types.ObjectId.isValid(orderRef)
       ? await this.orderModel
           .findOne({
-            $or: [{ orderCode: orderRef }, { _id: new Types.ObjectId(orderRef) }],
+            $or: [
+              { orderCode: orderRef },
+              { _id: new Types.ObjectId(orderRef) },
+            ],
           })
           .exec()
       : await this.orderModel.findOne({ orderCode: orderRef }).exec();
     if (!order) throw new NotFoundException('Order not found');
-    if (String(order.userId) !== user.id) throw new ForbiddenException('Forbidden');
+    if (String(order.userId) !== user.id)
+      throw new ForbiddenException('Forbidden');
     if (order.status !== 'pending_payment')
       throw new BadRequestException(`Order status is ${order.status}`);
     if (order.reservedUntil && order.reservedUntil.getTime() < Date.now()) {
@@ -186,7 +193,9 @@ export class PaymentsService {
     if (!verify.isSuccess) {
       // Payment failed/cancelled on gateway
       await this.markPaymentResult(verify.vnp_TxnRef, 'failed', verify);
-      await this.reservations.releasePendingReservationByTxnRef(verify.vnp_TxnRef);
+      await this.reservations.releasePendingReservationByTxnRef(
+        verify.vnp_TxnRef,
+      );
       return { RspCode: '00', Message: 'Confirm Success' };
     }
 
@@ -242,7 +251,11 @@ export class PaymentsService {
       if (it.variantId) {
         const updated = await this.variantModel
           .updateOne(
-            { _id: it.variantId, reserved: { $gte: qty }, stock: { $gte: qty } },
+            {
+              _id: it.variantId,
+              reserved: { $gte: qty },
+              stock: { $gte: qty },
+            },
             { $inc: { reserved: -qty, stock: -qty } },
           )
           .exec();
@@ -255,7 +268,11 @@ export class PaymentsService {
       } else {
         const updated = await this.productModel
           .updateOne(
-            { _id: it.productId, reserved: { $gte: qty }, stock: { $gte: qty } },
+            {
+              _id: it.productId,
+              reserved: { $gte: qty },
+              stock: { $gte: qty },
+            },
             { $inc: { reserved: -qty, stock: -qty } },
           )
           .exec();

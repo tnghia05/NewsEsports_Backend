@@ -5,7 +5,11 @@ export type CommentDocument = HydratedDocument<Comment>;
 
 export const CommentModelName = 'Comment';
 
-export type CommentModerationStatus = 'pending' | 'approved' | 'rejected' | 'under_review';
+export type CommentModerationStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'under_review';
 export type CommentSentiment = 'positive' | 'neutral' | 'negative';
 
 @Schema({ timestamps: true })
@@ -82,7 +86,9 @@ export class Comment {
   @Prop({ type: Number })
   qualityScore?: number;
 
-  @Prop({ type: [{ text: { type: String }, type: { type: String }, _id: false }] })
+  @Prop({
+    type: [{ text: { type: String }, type: { type: String }, _id: false }],
+  })
   aiEntities?: { text: string; type: string }[];
 
   @Prop({ type: Number, default: 0 })

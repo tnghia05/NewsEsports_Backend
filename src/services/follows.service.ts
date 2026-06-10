@@ -163,7 +163,9 @@ export class FollowsService {
     };
   }
 
-  async getFollowStats(userId: string): Promise<{ followersCount: number; followingCount: number }> {
+  async getFollowStats(
+    userId: string,
+  ): Promise<{ followersCount: number; followingCount: number }> {
     const [followersCount, followingCount] = await Promise.all([
       this.followModel.countDocuments({ followeeId: userId }).exec(),
       this.followModel.countDocuments({ followerId: userId }).exec(),

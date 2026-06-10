@@ -29,7 +29,10 @@ const EnvSchema = z.object({
     emptyStringToUndefined,
     z.coerce.number().int().positive().optional(),
   ),
-  AI_SERVICE_URL: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
+  AI_SERVICE_URL: z.preprocess(
+    emptyStringToUndefined,
+    z.string().url().optional(),
+  ),
   AI_TIMEOUT_MS: z.preprocess(
     emptyStringToUndefined,
     z.coerce.number().int().positive().optional(),

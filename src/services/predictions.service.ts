@@ -74,13 +74,15 @@ export class PredictionsService {
       .find({ matchId, status: 'pending' })
       .exec();
 
-    const results: { userId: string; status: 'won' | 'lost'; pointsWon?: number }[] = [];
+    const results: {
+      userId: string;
+      status: 'won' | 'lost';
+      pointsWon?: number;
+    }[] = [];
 
     for (const pred of predictions) {
       const isWin = pred.teamIndex === winnerTeamIndex;
-      const pointsWon = isWin
-        ? Math.floor(pred.pointsBet * pred.oddsAtBet)
-        : 0;
+      const pointsWon = isWin ? Math.floor(pred.pointsBet * pred.oddsAtBet) : 0;
 
       pred.status = isWin ? 'won' : 'lost';
       pred.settledAt = new Date();
@@ -96,7 +98,11 @@ export class PredictionsService {
         );
       }
 
-      results.push({ userId: pred.userId, status: pred.status, pointsWon: isWin ? pointsWon : undefined });
+      results.push({
+        userId: pred.userId,
+        status: pred.status,
+        pointsWon: isWin ? pointsWon : undefined,
+      });
     }
 
     return { settled: results.length, results };
@@ -155,7 +161,8 @@ export class PredictionsService {
     const userMap = new Map(users.map((u) => [String(u._id), u]));
     return predictions.map((p) => ({
       ...p,
-      displayName: (userMap.get(String(p.userId)) as any)?.displayName ?? p.userId,
+      displayName:
+        (userMap.get(String(p.userId)) as any)?.displayName ?? p.userId,
     }));
   }
 
@@ -178,7 +185,13 @@ export class PredictionsService {
     ]);
 
     const matchIds = agg
-      .map((r) => { try { return new Types.ObjectId(String(r._id)); } catch { return null; } })
+      .map((r) => {
+        try {
+          return new Types.ObjectId(String(r._id));
+        } catch {
+          return null;
+        }
+      })
       .filter((id): id is Types.ObjectId => id !== null);
     const matches = await this.matchModel
       .find({ _id: { $in: matchIds } })

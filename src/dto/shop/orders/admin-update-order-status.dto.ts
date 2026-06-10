@@ -25,4 +25,3 @@ export class AdminUpdateOrderStatusDto {
   @IsString()
   trackingCode?: string;
 }
-

@@ -22,7 +22,10 @@ import { PredictionsService } from '../services/predictions.service';
 import { PlacePredictionDto } from '../dto/points/place-prediction.dto';
 import { SettlePredictionDto } from '../dto/points/settle-prediction.dto';
 import { RedeemProductDto } from '../dto/points/redeem-product.dto';
-import { ProductModelName, type ProductDocument } from '../models/product.model';
+import {
+  ProductModelName,
+  type ProductDocument,
+} from '../models/product.model';
 import { UserModelName, type UserDocument } from '../models/user.model';
 
 @Controller('points')
@@ -126,10 +129,7 @@ export class PointsController {
   @Post('predictions/settle/:matchId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  settle(
-    @Param('matchId') matchId: string,
-    @Body() dto: SettlePredictionDto,
-  ) {
+  settle(@Param('matchId') matchId: string, @Body() dto: SettlePredictionDto) {
     return this.predictionsService.settle(matchId, dto.winnerTeamIndex);
   }
 
@@ -158,10 +158,7 @@ export class PointsController {
 
   @Get('store')
   @UseGuards(OptionalJwtAuthGuard)
-  async getStore(
-    @Query('limit') limit?: string,
-    @Query('skip') skip?: string,
-  ) {
+  async getStore(@Query('limit') limit?: string, @Query('skip') skip?: string) {
     const lim = limit ? Number(limit) : 24;
     const sk = skip ? Number(skip) : 0;
     const [items, total] = await Promise.all([
@@ -172,7 +169,10 @@ export class PointsController {
         .limit(lim)
         .lean()
         .exec(),
-      this.productModel.countDocuments({ pointsPrice: { $gt: 0 }, status: 'active' }),
+      this.productModel.countDocuments({
+        pointsPrice: { $gt: 0 },
+        status: 'active',
+      }),
     ]);
     return { items, total };
   }
@@ -187,7 +187,7 @@ export class PointsController {
     if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
     if (!product.pointsPrice || product.pointsPrice <= 0)
       throw new BadRequestException('Sản phẩm này không thể đổi bằng điểm');
-    if ((product.stock - (product.reserved ?? 0)) <= 0)
+    if (product.stock - (product.reserved ?? 0) <= 0)
       throw new BadRequestException('Sản phẩm đã hết hàng');
 
     await this.pointsService.deductPoints(
@@ -197,6 +197,10 @@ export class PointsController {
       { productId: dto.productId, variantId: dto.variantId },
     );
 
-    return { success: true, productName: product.name, pointsSpent: product.pointsPrice };
+    return {
+      success: true,
+      productName: product.name,
+      pointsSpent: product.pointsPrice,
+    };
   }
 }

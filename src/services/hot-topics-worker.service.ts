@@ -97,9 +97,12 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
   /** Manual trigger — rate-limited to once per 30s. Returns false if debounced. */
   async triggerRecompute(): Promise<{ triggered: boolean; message: string }> {
     const now = Date.now();
-    const remaining = this.MANUAL_DEBOUNCE_MS - (now - this.lastManualTriggerAt);
+    const remaining =
+      this.MANUAL_DEBOUNCE_MS - (now - this.lastManualTriggerAt);
     if (remaining > 0) {
-      this.logger.log(`[manual-refresh] debounced — ${Math.ceil(remaining / 1000)}s remaining`);
+      this.logger.log(
+        `[manual-refresh] debounced — ${Math.ceil(remaining / 1000)}s remaining`,
+      );
       return {
         triggered: false,
         message: `Vui lòng chờ ${Math.ceil(remaining / 1000)}s trước khi làm mới lại.`,
@@ -112,7 +115,9 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     this.lastManualTriggerAt = now;
     this.logger.log('[manual-refresh] triggered by user — starting recompute');
     this.tick().catch((e: any) =>
-      this.logger.error(`[manual-refresh] tick error: ${String(e?.message ?? e)}`),
+      this.logger.error(
+        `[manual-refresh] tick error: ${String(e?.message ?? e)}`,
+      ),
     );
     return { triggered: true, message: 'Đã kích hoạt recompute.' };
   }
@@ -193,8 +198,7 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
 
     if (!rows.length) return;
 
-    const bulk =
-      this.entityTrendModel.collection.initializeUnorderedBulkOp();
+    const bulk = this.entityTrendModel.collection.initializeUnorderedBulkOp();
 
     for (const r of rows) {
       const total = Number(r.mentionCount) || 1;
@@ -231,9 +235,7 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       })
       .exec();
 
-    this.logger.log(
-      `entityTrends window=${window} entities=${rows.length}`,
-    );
+    this.logger.log(`entityTrends window=${window} entities=${rows.length}`);
   }
 
   // #9 Toxicity spike: compare 3h toxic ratio vs 24h toxic ratio per tag.
@@ -256,7 +258,10 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     for (const t of topics24h as any[]) {
       const trend = t.trend;
       if (trend?.sampleCount > 0) {
-        ratio24hMap.set(String(t.tag), (trend.toxicCount ?? 0) / trend.sampleCount);
+        ratio24hMap.set(
+          String(t.tag),
+          (trend.toxicCount ?? 0) / trend.sampleCount,
+        );
       }
     }
 
@@ -310,7 +315,8 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       .lean()
       .exec();
     const prevHotnessMap = new Map<string, number>();
-    for (const d of prevDocs) prevHotnessMap.set(String(d.tag), Number(d.hotness) || 0);
+    for (const d of prevDocs)
+      prevHotnessMap.set(String(d.tag), Number(d.hotness) || 0);
 
     // Find postIds that have new comments in the window (so commenting on an old post counts).
     const commentPostIds = await this.commentModel
@@ -482,33 +488,45 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     }
 
     // #2 Like signal: likes on active posts within window
-    const likeRows = uniquePostIds.length > 0
-      ? await this.postLikeModel
-          .aggregate([
-            { $match: { postId: { $in: uniquePostIds }, createdAt: { $gte: sinceDate } } },
-            { $group: { _id: '$postId', count: { $sum: 1 } } },
-          ])
-          .exec()
-      : [];
+    const likeRows =
+      uniquePostIds.length > 0
+        ? await this.postLikeModel
+            .aggregate([
+              {
+                $match: {
+                  postId: { $in: uniquePostIds },
+                  createdAt: { $gte: sinceDate },
+                },
+              },
+              { $group: { _id: '$postId', count: { $sum: 1 } } },
+            ])
+            .exec()
+        : [];
     const postLikeMap = new Map<string, number>();
-    for (const r of likeRows) postLikeMap.set(String(r._id), Number(r.count) || 0);
+    for (const r of likeRows)
+      postLikeMap.set(String(r._id), Number(r.count) || 0);
 
     const tagLikeMap = new Map<string, number>();
     for (const [tag, pids] of tagToPostIds) {
-      tagLikeMap.set(tag, pids.reduce((s, pid) => s + (postLikeMap.get(pid) ?? 0), 0));
+      tagLikeMap.set(
+        tag,
+        pids.reduce((s, pid) => s + (postLikeMap.get(pid) ?? 0), 0),
+      );
     }
 
     // #4 Search volume: merge HotKeyword scores for matching tags
     const kwWindow = window === '7d' ? '7d' : '24h';
-    const kwDocs = tagList.length > 0
-      ? await this.hotKeywordModel
-          .find({ window: kwWindow, keyword: { $in: tagList } })
-          .select({ keyword: 1, score: 1 })
-          .lean()
-          .exec()
-      : [];
+    const kwDocs =
+      tagList.length > 0
+        ? await this.hotKeywordModel
+            .find({ window: kwWindow, keyword: { $in: tagList } })
+            .select({ keyword: 1, score: 1 })
+            .lean()
+            .exec()
+        : [];
     const searchMap = new Map<string, number>();
-    for (const kw of kwDocs) searchMap.set(String(kw.keyword), Number(kw.score) || 0);
+    for (const kw of kwDocs)
+      searchMap.set(String(kw.keyword), Number(kw.score) || 0);
 
     const now = new Date();
     const bulk = this.hotTopicModel.collection.initializeUnorderedBulkOp();
@@ -516,7 +534,14 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
     const scored: Array<{
       tag: string;
       hotness: number;
-      components: { read: number; discuss: number; originalUsers: number; likes: number; searchVolume: number; velocityScore: number };
+      components: {
+        read: number;
+        discuss: number;
+        originalUsers: number;
+        likes: number;
+        searchVolume: number;
+        velocityScore: number;
+      };
     }> = [];
 
     for (const r of rows) {
@@ -541,11 +566,11 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       const searchScore = Math.log1p(searchVolume);
 
       const raw =
-        0.20 * readScore +
-        0.20 * discussScore +
+        0.2 * readScore +
+        0.2 * discussScore +
         0.25 * originalScore +
         0.15 * likeScore +
-        0.20 * searchScore;
+        0.2 * searchScore;
 
       // #5 Score decay: topics with no recent activity are penalized
       // decayFactor range: 0.4 (all old activity) → 1.6 (all recent)
@@ -553,7 +578,8 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       const recentComments = recentCommentMap.get(tag) ?? 0;
       const totalActivity = postCount + commentCount;
       const recentActivity = recentPosts + recentComments;
-      const recencyRatio = totalActivity > 0 ? recentActivity / totalActivity : 0;
+      const recencyRatio =
+        totalActivity > 0 ? recentActivity / totalActivity : 0;
       const decayFactor = 0.4 + 1.2 * recencyRatio; // 0.4 .. 1.6
 
       const baseHotness = clamp01((raw * decayFactor) / 4.5) * 10;
@@ -562,21 +588,32 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
       const prevH = prevHotnessMap.get(tag) ?? 0;
       const velocity = prevH > 0 ? baseHotness / (prevH + 0.1) : 1.0;
       // velocityBoost: 0.85 (shrinking) → 1.0 (stable) → 1.35 (3× spike)
-      const velocityBoost = 0.85 + 0.15 * clamp01(Math.log1p(velocity) / Math.log1p(3));
+      const velocityBoost =
+        0.85 + 0.15 * clamp01(Math.log1p(velocity) / Math.log1p(3));
 
       const hotness = clamp01((baseHotness * velocityBoost) / 10) * 10;
 
       scored.push({
         tag,
         hotness,
-        components: { read, discuss, originalUsers, likes, searchVolume, velocityScore: round2(velocity) },
+        components: {
+          read,
+          discuss,
+          originalUsers,
+          likes,
+          searchVolume,
+          velocityScore: round2(velocity),
+        },
       });
     }
 
     scored.sort((a, b) => b.hotness - a.hotness);
     const topN = scored.slice(0, Math.min(Math.max(1, this.topN), 50));
     this.logger.log(
-      `recompute window=${window} scored top3=[${topN.slice(0, 3).map((s) => `${s.tag}:${s.hotness.toFixed(2)}`).join(', ')}]`,
+      `recompute window=${window} scored top3=[${topN
+        .slice(0, 3)
+        .map((s) => `${s.tag}:${s.hotness.toFixed(2)}`)
+        .join(', ')}]`,
     );
 
     for (const s of topN) {
@@ -609,7 +646,10 @@ export class HotTopicsWorkerService implements OnModuleInit, OnModuleDestroy {
             const lastTrendAt = (existing as any)?.trendUpdatedAt
               ? new Date((existing as any).trendUpdatedAt).getTime()
               : 0;
-            if (lastTrendAt && Date.now() - lastTrendAt < this.trendCooldownMs) {
+            if (
+              lastTrendAt &&
+              Date.now() - lastTrendAt < this.trendCooldownMs
+            ) {
               return;
             }
 
